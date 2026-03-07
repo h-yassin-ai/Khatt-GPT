@@ -1,0 +1,855 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { getNextSegment, submitTranscription, flagSegment, getRecentTranscriptions, updateTranscription } from './actions'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import Zoom from 'react-medium-image-zoom'
+import 'react-medium-image-zoom/dist/styles.css'
+import { Flag, SkipForward, Send, AlertCircle, Sparkles, Keyboard, BookOpen, Search, X, ChevronRight, Loader2, History, ImageIcon, CheckCircle2, PenLine, Highlighter } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { OnboardingModal } from '@/components/OnboardingModal'
+import DraggableKeyboard from '@/components/DraggableKeyboard'
+import { useRef } from 'react'
+import { get, set } from 'idb-keyval'
+import { motion, AnimatePresence } from 'framer-motion'
+
+type SegmentData = {
+    id: string;
+    image_url: string;
+    order_index: number;
+    polygon?: any;
+    manuscript_title: string;
+    manuscript_description?: string;
+    manuscript_reference_text_url?: string;
+    page_image_url: string;
+}
+
+export default function TranscribePage() {
+    const [segment, setSegment] = useState<SegmentData | null>(null)
+    const [text, setText] = useState('')
+    const [loading, setLoading] = useState(true)
+    const [submitting, setSubmitting] = useState(false)
+    const [sessionCount, setSessionCount] = useState(0)
+    const [errorObj, setErrorObj] = useState<string | null>(null)
+    const [showKeyboard, setShowKeyboard] = useState(false)
+    const [isOffline, setIsOffline] = useState(false)
+    const [showContext, setShowContext] = useState(false)
+    const [showReference, setShowReference] = useState(false)
+    const [referenceText, setReferenceText] = useState('')
+    const [loadingRef, setLoadingRef] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [panelWidth, setPanelWidth] = useState(380)
+    const [isResizing, setIsResizing] = useState(false)
+    const [activeTab, setActiveTab] = useState<'reference' | 'recent'>('reference')
+    const [recentTranscriptions, setRecentTranscriptions] = useState<any[]>([])
+    const [isEditing, setIsEditing] = useState<string | null>(null)
+    const [imgSize, setImgSize] = useState({ width: 0, height: 0 })
+    const [zoomScale, setZoomScale] = useState(1)
+    const [zoomPos, setZoomPos] = useState({ x: 0, y: 0 })
+    const [isDraggingZoom, setIsDraggingZoom] = useState(false)
+    const textareaRef = useRef<HTMLTextAreaElement>(null)
+    const zoomContainerRef = useRef<HTMLDivElement>(null)
+    const imageContainerRef = useRef<HTMLDivElement>(null)
+
+    const { toast } = useToast()
+
+    const loadSegment = useCallback(async () => {
+        setLoading(true)
+        setErrorObj(null)
+        setText('')
+        try {
+            const nextSeg = await getNextSegment()
+            setSegment(nextSeg as any)
+        } catch (err: any) {
+            setErrorObj(err.message)
+        } finally {
+            setLoading(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        loadSegment()
+        fetchRecent()
+    }, [loadSegment])
+
+    const fetchRecent = async () => {
+        const recent = await getRecentTranscriptions()
+        setRecentTranscriptions(recent)
+    }
+
+    // Fetch reference text when segment changes
+    useEffect(() => {
+        if (segment?.manuscript_reference_text_url) {
+            const fetchRef = async () => {
+                setLoadingRef(true)
+                try {
+                    const res = await fetch(segment.manuscript_reference_text_url!)
+                    const content = await res.text()
+                    setReferenceText(content)
+                } catch (e) {
+                    console.error("Failed to fetch reference text", e)
+                } finally {
+                    setLoadingRef(false)
+                }
+            }
+            fetchRef()
+        } else {
+            setReferenceText('')
+            setShowReference(false)
+        }
+    }, [segment])
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                if (text.trim() && !submitting && segment) {
+                    handleSubmit()
+                }
+            }
+            if (e.ctrlKey && e.key === 'ArrowRight') {
+                if (!submitting) {
+                    handleSkip()
+                }
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [text, submitting, segment])
+
+    // Online/Offline sync listener
+    useEffect(() => {
+        setIsOffline(!navigator.onLine)
+
+        const handleOnline = async () => {
+            setIsOffline(false)
+            const queue: { id: string, text: string }[] = await get('waraka_offline_queue') || []
+            if (queue.length > 0) {
+                toast({ title: "Back online! Syncing transcriptions..." })
+                for (const item of queue) {
+                    await submitTranscription(item.id, item.text).catch(console.error)
+                }
+                await set('waraka_offline_queue', [])
+                toast({ title: "Offline transcriptions synced! 🎉", description: `Successfully synced ${queue.length} transcripts.` })
+            }
+        }
+
+        const handleOffline = () => setIsOffline(true)
+
+        window.addEventListener('online', handleOnline)
+        window.addEventListener('offline', handleOffline)
+        return () => {
+            window.removeEventListener('online', handleOnline)
+            window.removeEventListener('offline', handleOffline)
+        }
+    }, [toast])
+
+    // Resizing logic
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isResizing) return
+            const newWidth = e.clientX
+            if (newWidth > 200 && newWidth < 800) {
+                setPanelWidth(newWidth)
+            }
+        }
+        const handleMouseUp = () => {
+            setIsResizing(false)
+            document.body.style.cursor = 'default'
+            document.body.style.userSelect = 'auto'
+        }
+
+        if (isResizing) {
+            window.addEventListener('mousemove', handleMouseMove)
+            window.addEventListener('mouseup', handleMouseUp)
+        }
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove)
+            window.removeEventListener('mouseup', handleMouseUp)
+        }
+    }, [isResizing])
+
+    // Segment Zoom & Pan Logic
+    const handleSegmentWheel = (e: React.WheelEvent) => {
+        if (e.ctrlKey || e.metaKey) return // Allow browser zoom
+        e.preventDefault()
+        const delta = -e.deltaY
+        const scaleStep = 0.1
+        const newScale = Math.min(Math.max(zoomScale + (delta > 0 ? scaleStep : -scaleStep), 0.5), 5)
+        setZoomScale(newScale)
+    }
+
+    const handleSegmentMouseDown = (e: React.MouseEvent) => {
+        if (zoomScale > 1) {
+            setIsDraggingZoom(true)
+        }
+    }
+
+    useEffect(() => {
+        const handleGlobalMouseMove = (e: MouseEvent) => {
+            if (isDraggingZoom) {
+                setZoomPos(prev => ({
+                    x: prev.x + e.movementX,
+                    y: prev.y + e.movementY
+                }))
+            }
+        }
+        const handleGlobalMouseUp = () => setIsDraggingZoom(false)
+
+        if (isDraggingZoom) {
+            window.addEventListener('mousemove', handleGlobalMouseMove)
+            window.addEventListener('mouseup', handleGlobalMouseUp)
+        }
+        return () => {
+            window.removeEventListener('mousemove', handleGlobalMouseMove)
+            window.removeEventListener('mouseup', handleGlobalMouseUp)
+        }
+    }, [isDraggingZoom])
+
+    const resetZoom = () => {
+        setZoomScale(1)
+        setZoomPos({ x: 0, y: 0 })
+        setImgSize({ width: 0, height: 0 })
+    }
+
+    // Reset zoom when segment changes
+    useEffect(() => {
+        resetZoom()
+    }, [segment?.id])
+
+    const handlePageImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        const img = e.currentTarget
+        const natW = img.naturalWidth
+        const natH = img.naturalHeight
+        setImgSize({ width: natW, height: natH })
+
+        if (!imageContainerRef.current || !segment?.polygon || !Array.isArray(segment.polygon) || segment.polygon.length === 0) return
+
+        const container = imageContainerRef.current
+        const containerW = container.clientWidth
+        const containerH = container.clientHeight
+
+        const renderScale = Math.min(containerW / natW, containerH / natH)
+
+        const xs = (segment.polygon as any[]).map((p) => Number(p.x))
+        const ys = (segment.polygon as any[]).map((p) => Number(p.y))
+        const polyCenterX = (Math.min(...xs) + Math.max(...xs)) / 2
+        const polyCenterY = (Math.min(...ys) + Math.max(...ys)) / 2
+        const polyHeight = (Math.max(...ys) - Math.min(...ys)) * renderScale
+
+        // Pan so polygon center = container center
+        const panX = (natW / 2 - polyCenterX) * renderScale
+        const panY = (natH / 2 - polyCenterY) * renderScale
+
+        // Zoom to show polygon with surrounding context
+        const targetZoom = Math.max(1.5, Math.min(containerH / (polyHeight * 3.5), 4))
+
+        setZoomScale(targetZoom)
+        setZoomPos({ x: panX, y: panY })
+    }
+
+    const handleSubmit = async () => {
+        if (!segment || !text.trim()) return
+        setSubmitting(true)
+
+        if (!navigator.onLine) {
+            const queue: any[] = await get('waraka_offline_queue') || []
+            queue.push({ id: segment.id, text })
+            await set('waraka_offline_queue', queue)
+            toast({ title: "Offline Mode 🔌", description: "Saved to device. Will sync when connection is restored." })
+            setText('')
+            setSessionCount(prev => prev + 1)
+            setSubmitting(false)
+            return
+        }
+
+        const result = isEditing
+            ? await updateTranscription(isEditing, text)
+            : await submitTranscription(segment.id, text)
+
+        if (result.error) {
+            toast({ title: "Error", description: result.error, variant: "destructive" })
+            setSubmitting(false)
+            return
+        }
+
+        toast({ title: isEditing ? "Updated! ✏️" : "Success! 🎉", description: isEditing ? "Transcription updated." : "Contribution saved." })
+        if (!isEditing) setSessionCount(prev => prev + 1)
+
+        setIsEditing(null)
+        await loadSegment()
+        fetchRecent()
+        setSubmitting(false)
+    }
+
+    const startEditing = (t: any) => {
+        setIsEditing(t.id)
+        setText(t.text)
+        // Optionally scroll to top or focus textarea
+        textareaRef.current?.focus()
+    }
+
+    const cancelEditing = () => {
+        setIsEditing(null)
+        setText('')
+    }
+
+    const handleSkip = async () => {
+        setSubmitting(true)
+        await loadSegment()
+        setSubmitting(false)
+    }
+
+    const handleFlag = async () => {
+        if (!segment) return
+        setSubmitting(true)
+        await flagSegment(segment.id)
+        toast({ title: "Segment flagged", description: "Admin will review this segment." })
+        await loadSegment()
+        setSubmitting(false)
+    }
+
+    const handleKeyPress = (char: string) => {
+        if (!textareaRef.current) {
+            setText(prev => prev + char)
+            return
+        }
+        const start = textareaRef.current.selectionStart
+        const end = textareaRef.current.selectionEnd
+        const newValue = text.substring(0, start) + char + text.substring(end)
+        setText(newValue)
+
+        setTimeout(() => {
+            if (textareaRef.current) {
+                textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + char.length
+                textareaRef.current.focus()
+            }
+        }, 0)
+    }
+
+    const handleBackspace = () => {
+        if (!textareaRef.current) return
+        const start = textareaRef.current.selectionStart
+        const end = textareaRef.current.selectionEnd
+
+        if (start === end && start > 0) {
+            const newValue = text.substring(0, start - 1) + text.substring(end)
+            setText(newValue)
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start - 1
+                    textareaRef.current.focus()
+                }
+            }, 0)
+        } else if (start !== end) {
+            const newValue = text.substring(0, start) + text.substring(end)
+            setText(newValue)
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start
+                    textareaRef.current.focus()
+                }
+            }, 0)
+        }
+    }
+
+    if (loading && !segment) {
+        return (
+            <div className="flex h-[calc(100vh-140px)] w-full items-center justify-center">
+                <div className="animate-spin text-primary">
+                    <Sparkles className="w-8 h-8" />
+                </div>
+            </div>
+        )
+    }
+
+    if (!segment && !loading) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-140px)] w-full text-center space-y-4 animate-in fade-in">
+                <div className="w-24 h-24 bg-success/10 text-success rounded-full flex items-center justify-center">
+                    <Sparkles className="w-12 h-12" />
+                </div>
+                <h2 className="text-4xl font-heading font-semibold text-foreground">You&apos;re all caught up!</h2>
+                <p className="text-muted-foreground font-sans max-w-md">
+                    There are currently no more segments to transcribe. Come back later when new manuscripts are uploaded.
+                </p>
+            </div>
+        )
+    }
+
+    const title = segment?.manuscript_title || 'Unknown Manuscript'
+    const hasNonArabic = text.trim() !== '' && /[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\s.,،؟!؛'"]/g.test(text);
+
+    // Highlight search term in reference text
+    const getHighlightedText = (text: string, highlight: string) => {
+        if (!highlight.trim()) return text;
+        const regex = new RegExp(`(${highlight})`, 'gi');
+        const parts = text.split(regex);
+        return (
+            <span id="reference-content">
+                {parts.map((part, i) => {
+                    const isMatch = part.toLowerCase() === highlight.toLowerCase();
+                    return isMatch ? (
+                        <mark
+                            key={i}
+                            id={`match-${i}`}
+                            className="bg-primary/30 text-foreground ring-1 ring-primary/20 rounded-sm px-0.5 scroll-mt-20 inline-block"
+                        >
+                            {part}
+                        </mark>
+                    ) : part;
+                })}
+            </span>
+        );
+    };
+
+    const getSearchResults = () => {
+        if (!searchTerm.trim() || !referenceText) return [];
+        const regex = new RegExp(`(${searchTerm})`, 'gi');
+        const matches = [];
+        let match;
+        let matchCounter = 0;
+
+        // We need to count exactly which part index this is to match getHighlightedText
+        // But getHighlightedText uses split which includes the delimiter.
+        // Let's adjust to find the exact DOM ID or a better way. 
+        // Actually, let's just use the index for finding the element.
+
+        while ((match = regex.exec(referenceText)) !== null) {
+            const start = Math.max(0, match.index - 60);
+            const end = Math.min(referenceText.length, match.index + match[0].length + 60);
+            matches.push({
+                index: match.index,
+                id: matchCounter, // This will correspond to the counter in highlighed text
+                snippet: referenceText.substring(start, end),
+                match: match[0]
+            });
+            matchCounter++;
+            if (matches.length > 100) break;
+        }
+        return matches;
+    }
+
+    const scrollToMatch = (id: number) => {
+        // Find the nth mark element
+        const marks = document.querySelectorAll('#reference-content mark');
+        if (marks[id]) {
+            marks[id].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            marks[id].classList.add('ring-4', 'ring-primary', 'transition-all', 'duration-500');
+            setTimeout(() => {
+                marks[id].classList.remove('ring-4', 'ring-primary');
+            }, 2000);
+        }
+    }
+
+    return (
+        <div className="flex flex-col w-full h-[calc(100vh-64px)] animate-in fade-in duration-500 overflow-hidden bg-background">
+            <OnboardingModal />
+
+            {/* Sub-header */}
+            <div className="w-full flex justify-between items-center px-4 py-2 border-b border-border/50 shrink-0 bg-background/50 backdrop-blur-sm z-30">
+                <div className="flex items-center gap-4">
+                    <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${isOffline ? 'bg-amber-500' : 'bg-primary animate-pulse'}`}></span>
+                        Session : {sessionCount} segments
+                    </p>
+                    {isOffline && (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                            Mode hors ligne
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant={showReference ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setShowReference(!showReference)}
+                        className="gap-2 rounded-full h-8 px-3"
+                    >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        {showReference ? "Fermer le panneau" : "Ouvrir le panneau"}
+                    </Button>
+                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/30 px-2 py-1 rounded-md border border-border/50">
+                        <kbd className="font-mono bg-background border border-border px-1 rounded">Ctrl</kbd> + <kbd className="font-mono bg-background border border-border px-1 rounded">Enter</kbd> pour valider
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex flex-1 gap-0 pt-0 min-h-0 relative">
+
+                {/* Collapsible/Resizable Left Panel */}
+                <div
+                    style={{ width: showReference ? `${panelWidth}px` : '0px' }}
+                    className={`relative z-40 h-full bg-card border-r border-border ${!isResizing ? 'transition-all duration-300 ease-in-out' : ''} flex flex-col overflow-hidden shadow-xl lg:shadow-none`}
+                >
+                    {showReference && (
+                        <div className="flex flex-col h-full min-w-[200px]">
+                            {/* Tabs Header */}
+                            <div className="flex border-b border-border shrink-0">
+                                <button
+                                    onClick={() => setActiveTab('reference')}
+                                    className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === 'reference' ? 'text-primary bg-primary/5 border-b-2 border-primary' : 'text-muted-foreground hover:bg-muted'}`}
+                                >
+                                    <BookOpen className="w-4 h-4" /> Référence
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('recent')}
+                                    className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === 'recent' ? 'text-primary bg-primary/5 border-b-2 border-primary' : 'text-muted-foreground hover:bg-muted'}`}
+                                >
+                                    <History className="w-4 h-4" /> Récent
+                                </button>
+                                <button onClick={() => setShowReference(false)} className="px-3 hover:bg-destructive/10 hover:text-destructive text-muted-foreground shrink-0 border-l border-border transition-colors">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-hidden flex flex-col">
+                                {activeTab === 'reference' && (
+                                    <>
+                                        <div className="p-4 border-b border-border flex flex-col gap-3 shrink-0">
+                                            <div className="relative">
+                                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                                <input
+                                                    value={searchTerm}
+                                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                                    placeholder="Search in reference..."
+                                                    className="w-full bg-muted/50 border border-border rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                                                />
+
+                                                {/* Floating Search Results */}
+                                                <AnimatePresence>
+                                                    {searchTerm.trim() && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 5 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0, y: 5 }}
+                                                            className="absolute left-0 right-0 top-full mt-2 bg-popover border border-border shadow-2xl rounded-lg z-[60] max-h-80 overflow-y-auto overflow-x-hidden flex flex-col p-1 gap-1 custom-scrollbar"
+                                                        >
+                                                            <div className="flex items-center justify-between px-3 py-2 border-b border-border/50 sticky top-0 bg-popover z-10">
+                                                                <span className="text-[10px] font-bold text-muted-foreground uppercase">{getSearchResults().length} matches found</span>
+                                                                <Button variant="ghost" size="sm" onClick={() => setSearchTerm('')} className="h-4 w-4 p-0"><X className="w-3 h-3" /></Button>
+                                                            </div>
+                                                            {getSearchResults().length === 0 ? (
+                                                                <div className="py-8 text-center text-xs text-muted-foreground italic">No matches found</div>
+                                                            ) : (
+                                                                getSearchResults().map((s, idx) => (
+                                                                    <button
+                                                                        key={idx}
+                                                                        onClick={() => {
+                                                                            scrollToMatch(s.id);
+                                                                            // Optionally close or keep open. User said "directement"
+                                                                        }}
+                                                                        className="w-full text-right p-3 rounded hover:bg-muted transition-colors border-b border-border/20 last:border-0"
+                                                                    >
+                                                                        <div className="flex justify-between items-center mb-1">
+                                                                            <span className="text-[9px] font-bold text-primary uppercase bg-primary/10 px-1.5 rounded">Res {idx + 1}</span>
+                                                                            <span className="text-[9px] text-muted-foreground opacity-50">Pos: {s.index}</span>
+                                                                        </div>
+                                                                        <span dir="rtl" className="font-arabic leading-relaxed block text-sm">
+                                                                            {s.snippet.split(new RegExp(`(${searchTerm})`, 'gi')).map((part, i) =>
+                                                                                part.toLowerCase() === searchTerm.toLowerCase()
+                                                                                    ? <mark key={i} className="bg-primary/20 rounded-sm px-0.5">{part}</mark>
+                                                                                    : part
+                                                                            )}
+                                                                        </span>
+                                                                    </button>
+                                                                ))
+                                                            )}
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1 overflow-y-auto p-4 scrollbar-hide text-right" dir="rtl">
+                                            {loadingRef ? (
+                                                <div className="flex items-center justify-center py-10">
+                                                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                                                </div>
+                                            ) : (
+                                                <div className="font-arabic text-lg leading-loose whitespace-pre-wrap selection:bg-primary/20 pb-20">
+                                                    {getHighlightedText(referenceText, searchTerm)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+                                {activeTab === 'recent' && (
+                                    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                                        {recentTranscriptions.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2 opacity-40">
+                                                <History className="w-10 h-10" />
+                                                <p className="text-xs">Aucune activité récente</p>
+                                            </div>
+                                        ) : (
+                                            recentTranscriptions.map((t) => (
+                                                <div key={t.id} className="p-3 rounded-lg border border-border bg-card shadow-sm hover:shadow-md transition-all group flex flex-col gap-2">
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-8 h-8 rounded shrink-0 overflow-hidden bg-muted border border-border">
+                                                                {t.segment_image && t.segment_image.trim() !== "" ? (
+                                                                    <img src={t.segment_image || undefined} className="w-full h-full object-cover" alt="Segment thumbnail" />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                                                                        <ImageIcon className="w-4 h-4 text-muted-foreground opacity-30" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[10px] font-bold text-muted-foreground">LINE #{t.segment_index}</p>
+                                                                <p className="text-[9px] text-muted-foreground opacity-70">
+                                                                    {new Date(t.submitted_at).toLocaleTimeString()}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 px-2 text-[10px] font-bold gap-1 text-primary hover:bg-primary/5"
+                                                            onClick={() => startEditing(t)}
+                                                        >
+                                                            <PenLine className="w-3 h-3" /> Modifier
+                                                        </Button>
+                                                    </div>
+                                                    <p className="text-xs font-arabic leading-relaxed line-clamp-2 text-right" dir="rtl">
+                                                        {t.text}
+                                                    </p>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Resizer Handle */}
+                    {showReference && (
+                        <div
+                            onMouseDown={() => {
+                                setIsResizing(true)
+                                document.body.style.cursor = 'col-resize'
+                                document.body.style.userSelect = 'none'
+                            }}
+                            className={`absolute -right-3 top-0 bottom-0 w-6 cursor-col-resize z-50 flex items-center justify-center group active:w-10 transition-all`}
+                        >
+                            <div className="w-[1px] h-20 bg-border group-hover:bg-primary group-hover:w-[2px] rounded-full transition-all" />
+                        </div>
+                    )}
+                </div>
+
+                {/* Toggle button for reference when panel is hidden */}
+                {!showReference && (
+                    <button
+                        onClick={() => setShowReference(true)}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-primary-foreground p-1 rounded-r-md shadow-lg hover:pr-2 transition-all group"
+                        title="Open Reference Panel"
+                    >
+                        <ChevronRight className="w-4 h-4" />
+                    </button>
+                )}
+
+                {/* Main Content: Image Top, Transcription Bottom */}
+                <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden">
+
+                    {/* Image Area — full page centered on highlighted segment */}
+                    <div
+                        ref={imageContainerRef}
+                        className="flex-[3] flex flex-col relative justify-center items-center bg-muted/5 border-b border-border/50 overflow-hidden cursor-crosshair"
+                        onWheel={handleSegmentWheel}
+                        onMouseDown={handleSegmentMouseDown}
+                    >
+                        <div
+                            className="w-full h-full flex items-center justify-center transition-transform duration-75 ease-out select-none"
+                            style={{
+                                transform: `scale(${zoomScale}) translate(${zoomPos.x / zoomScale}px, ${zoomPos.y / zoomScale}px)`,
+                                transformOrigin: 'center'
+                            }}
+                        >
+                            {segment?.page_image_url ? (
+                                <div className="relative">
+                                    <img
+                                        src={segment.page_image_url || undefined}
+                                        alt="Page du manuscrit"
+                                        className="max-h-full max-w-full object-contain drop-shadow-2xl rounded-sm"
+                                        draggable={false}
+                                        onLoad={handlePageImageLoad}
+                                    />
+                                    {segment?.polygon && Array.isArray(segment.polygon) && imgSize.width > 0 && (
+                                        <svg
+                                            viewBox={`0 0 ${imgSize.width} ${imgSize.height}`}
+                                            className="absolute inset-0 w-full h-full pointer-events-none z-10"
+                                            preserveAspectRatio="xMidYMid meet"
+                                        >
+                                            <defs>
+                                                <mask id="seg-mask">
+                                                    <rect width={imgSize.width} height={imgSize.height} fill="white" />
+                                                    <polygon
+                                                        points={segment.polygon.map((p: any) => `${p.x},${p.y}`).join(' ')}
+                                                        fill="black"
+                                                    />
+                                                </mask>
+                                            </defs>
+                                            {/* Darken everything outside the polygon */}
+                                            <rect width={imgSize.width} height={imgSize.height} fill="rgba(0,0,0,0.5)" mask="url(#seg-mask)" />
+                                            {/* Highlight the polygon */}
+                                            <polygon
+                                                points={segment.polygon.map((p: any) => `${p.x},${p.y}`).join(' ')}
+                                                fill="rgba(255,200,0,0.12)"
+                                                stroke="rgba(255,180,0,0.9)"
+                                                strokeWidth={Math.max(2, imgSize.width / 300)}
+                                            />
+                                        </svg>
+                                    )}
+                                </div>
+                            ) : segment?.image_url ? (
+                                <img
+                                    src={segment.image_url || undefined}
+                                    alt="Segment"
+                                    className="max-h-full max-w-full object-contain drop-shadow-2xl rounded-sm"
+                                    draggable={false}
+                                />
+                            ) : null}
+                        </div>
+
+                        {/* Instruction badge */}
+                        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 select-none">
+                            <div className="flex items-center gap-1.5 bg-amber-500/90 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md backdrop-blur-sm">
+                                <Highlighter className="w-3 h-3" />
+                                Transcrivez uniquement la ligne en surbrillance
+                            </div>
+                        </div>
+
+                        <div className="absolute top-3 left-3 flex gap-2 z-10 select-none">
+                            <div className="bg-background/90 backdrop-blur shadow-sm border border-border px-3 py-1 rounded-full text-[10px] font-bold tracking-tight flex items-center gap-2">
+                                <span className="text-primary/40">#{segment?.order_index}</span>
+                                <span className="w-[1px] h-3 bg-border" />
+                                <span className="max-w-[120px] truncate">{title}</span>
+                                {zoomScale !== 1 && (
+                                    <>
+                                        <span className="w-[1px] h-3 bg-border" />
+                                        <button onClick={resetZoom} className="text-primary hover:underline">
+                                            {Math.round(zoomScale * 100)}% (Reset)
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Zoom Hint */}
+                        <div className="absolute bottom-3 right-3 text-[9px] text-muted-foreground opacity-40 select-none flex items-center gap-2 pointer-events-none">
+                            <Search className="w-3 h-3" />
+                            Molette pour zoomer • Glisser pour déplacer
+                        </div>
+                    </div>
+
+                    {/* Transcription Area */}
+                    <div className="flex-[2] flex flex-col p-4 lg:px-8 lg:pb-8 lg:pt-4 gap-4 overflow-hidden">
+                        <div className="flex justify-between items-center shrink-0">
+                            <h2 className="text-xl font-heading font-semibold text-primary" dir="rtl">
+                                نص النسخ
+                            </h2>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant={showKeyboard ? "default" : "outline"}
+                                    size="sm"
+                                    className="gap-2 h-8 rounded-full text-xs"
+                                    onClick={() => setShowKeyboard(!showKeyboard)}
+                                >
+                                    <Keyboard className="w-3.5 h-3.5" />
+                                    {showKeyboard ? 'Masquer' : 'Clavier'}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleFlag}
+                                    disabled={submitting}
+                                    className="w-8 h-8 p-0 shrink-0 border-destructive/20 hover:bg-destructive/10 rounded-full"
+                                    title="Signaler comme illisible"
+                                >
+                                    <Flag className="w-3.5 h-3.5 text-destructive" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        {errorObj && (
+                            <div className="bg-destructive/10 text-destructive text-[10px] p-2 rounded flex items-center gap-2 shrink-0">
+                                <AlertCircle className="w-3 h-3" /> {errorObj}
+                            </div>
+                        )}
+
+                        {hasNonArabic && (
+                            <div className="bg-orange-500/10 text-orange-600 text-[10px] p-2 rounded flex items-center gap-2 border border-orange-500/20 shrink-0">
+                                <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                <span>Note: Caractères non-arabes détectés.</span>
+                            </div>
+                        )}
+
+                        <div className="flex-1 w-full relative min-h-0 flex flex-col gap-2">
+                            <Textarea
+                                ref={textareaRef}
+                                value={text}
+                                onChange={(e) => setText(e.target.value)}
+                                placeholder="اكتب النص هنا..."
+                                dir="rtl"
+                                lang="ar"
+                                disabled={submitting}
+                                className="resize-none flex-1 font-arabic text-2xl leading-[2] bg-[#FAF7F2] border-border shadow-inner focus-visible:ring-primary p-4 rounded-xl text-foreground !outline-none focus:border-primary/50"
+                            />
+
+                            <AnimatePresence>
+                                {showKeyboard && (
+                                    <DraggableKeyboard
+                                        onKeyPress={handleKeyPress}
+                                        onBackspace={handleBackspace}
+                                        onClose={() => setShowKeyboard(false)}
+                                    />
+                                )}
+                            </AnimatePresence>
+
+                            {/* Submit area */}
+                            <div className="flex gap-2 shrink-0">
+                                <Button
+                                    onClick={handleSubmit}
+                                    disabled={submitting || !text.trim()}
+                                    className={`flex-1 h-12 text-sm font-bold tracking-wide shadow-md ${isEditing ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
+                                >
+                                    {submitting ? 'Envoi...' : (
+                                        isEditing
+                                            ? <><CheckCircle2 className="w-4 h-4 mr-2" /> Sauvegarder</>
+                                            : <><Send className="w-4 h-4 mr-2" /> Valider la transcription</>
+                                    )}
+                                </Button>
+                                {isEditing && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={cancelEditing}
+                                        disabled={submitting}
+                                        className="h-12 px-4 font-medium border-amber-500/30 text-amber-700 hover:bg-amber-50"
+                                    >
+                                        Annuler
+                                    </Button>
+                                )}
+                                {!isEditing && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleSkip}
+                                        disabled={submitting}
+                                        className="h-12 px-4 font-medium"
+                                        title="Passer au suivant (Ctrl+Right)"
+                                    >
+                                        <SkipForward className="w-4 h-4" />
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    )
+}

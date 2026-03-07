@@ -1,0 +1,121 @@
+'use client'
+
+import { createContext, useContext, useState, useEffect } from 'react'
+
+export type Language = 'en' | 'fr'
+
+type LanguageContextType = {
+    lang: Language
+    setLang: (l: Language) => void
+    t: (key: string) => string
+}
+
+const translations: Record<string, Record<Language, string>> = {
+    // Nav
+    'nav.dashboard': { en: 'Dashboard', fr: 'Tableau de bord' },
+    'nav.browse': { en: 'Browse Dataset', fr: 'Parcourir' },
+    'nav.transcribe': { en: 'Transcribe', fr: 'Transcrire' },
+    'nav.learn': { en: 'Learn to Read', fr: 'Apprendre à lire' },
+    'nav.profile': { en: 'Profile', fr: 'Profil' },
+    'nav.admin': { en: 'Admin Panel', fr: 'Panneau Admin' },
+    'nav.signout': { en: 'Sign out', fr: 'Se déconnecter' },
+    'nav.lang_toggle': { en: 'FR', fr: 'EN' },
+
+    // Onboarding
+    'onboarding.title': { en: 'Welcome to Waraka', fr: 'Bienvenue sur Waraka' },
+    'onboarding.description': {
+        en: "You're about to help preserve Maghrebi history. Here's a quick guide on how to contribute and transcribe Arabic manuscripts effectively.",
+        fr: 'Vous allez aider à préserver l\'histoire maghrébine. Voici un guide rapide pour contribuer et transcrire des manuscrits arabes efficacement.'
+    },
+    'onboarding.step1.title': { en: '1. Read the Segment', fr: '1. Lire le segment' },
+    'onboarding.step1.desc': {
+        en: "You will be presented with an image containing one or a few lines of a historical handwritten manuscript. Use the zoom and pan tools to inspect the ink closely.",
+        fr: 'Vous verrez une image contenant une ou quelques lignes d\'un manuscrit historique. Utilisez le zoom et le déplacement pour examiner l\'encre de près.'
+    },
+    'onboarding.step2.title': { en: '2. Type Exactly What You See', fr: '2. Tapez exactement ce que vous voyez' },
+    'onboarding.step2.desc': {
+        en: "Transcribe the segment character-by-character. We've provided a specialized Arabic keyboard with diacritics and correct mapping to aid your work. Accuracy is more important than speed.",
+        fr: 'Transcrivez le segment caractère par caractère. Un clavier arabe spécialisé avec diacritiques est fourni pour vous aider. La précision est plus importante que la vitesse.'
+    },
+    'onboarding.step3.title': { en: '3. Use "Open Panel" to Help You', fr: '3. Utilisez "Ouvrir le panneau" pour vous aider' },
+    'onboarding.step3.desc': {
+        en: '"Open Panel" gives you two powerful tools: (1) See the full page image of the manuscript to understand the context, and (2) Access the printed book text where you can search for the phrase — keep in mind that the manuscript may differ slightly from the printed version due to scribal variations.',
+        fr: '"Ouvrir le panneau" vous donne deux outils : (1) Voir l\'image complète de la page du manuscrit pour comprendre le contexte, et (2) Accéder au texte du livre imprimé où vous pouvez rechercher la phrase — notez que le manuscrit peut différer légèrement de la version imprimée en raison des variations des copistes.'
+    },
+    'onboarding.step4.title': { en: '4. Level Up and Reach Consensus', fr: '4. Progressez et atteignez un consensus' },
+    'onboarding.step4.desc': {
+        en: "Submit your transcription to earn points and achievements. Your work will be anonymously compared with other scholars to reach a consensus, building a verifiable scholarly dataset.",
+        fr: 'Soumettez votre transcription pour gagner des points. Votre travail sera comparé anonymement avec d\'autres chercheurs pour atteindre un consensus, constituant un dataset savant vérifiable.'
+    },
+    'onboarding.start': { en: 'Start Transcribing', fr: 'Commencer la transcription' },
+
+    // Transcribe page
+    'transcribe.session': { en: 'Session', fr: 'Session' },
+    'transcribe.segments': { en: 'segments', fr: 'segments' },
+    'transcribe.offline': { en: 'Offline Mode', fr: 'Mode hors ligne' },
+    'transcribe.open_panel': { en: 'Open Panel', fr: 'Ouvrir le panneau' },
+    'transcribe.close_panel': { en: 'Close Panel', fr: 'Fermer le panneau' },
+    'transcribe.submit': { en: 'Submit Transcription', fr: 'Valider la transcription' },
+    'transcribe.submitting': { en: 'Sending...', fr: 'Envoi...' },
+    'transcribe.save_edit': { en: 'Save Edit', fr: 'Sauvegarder' },
+    'transcribe.cancel': { en: 'Cancel', fr: 'Annuler' },
+    'transcribe.skip': { en: 'Skip', fr: 'Passer' },
+    'transcribe.keyboard': { en: 'Keyboard', fr: 'Clavier' },
+    'transcribe.hide': { en: 'Hide', fr: 'Masquer' },
+    'transcribe.flag': { en: 'Flag as unreadable', fr: 'Signaler comme illisible' },
+    'transcribe.non_arabic': { en: 'Note: Non-Arabic characters detected.', fr: 'Note : Caractères non arabes détectés.' },
+    'transcribe.all_caught_up': { en: "You're all caught up!", fr: 'Vous avez tout transcrit !' },
+    'transcribe.no_segments': { en: 'There are currently no more segments to transcribe. Come back later when new manuscripts are uploaded.', fr: 'Il n\'y a plus de segments à transcrire. Revenez plus tard lorsque de nouveaux manuscrits seront ajoutés.' },
+    'transcribe.zoom_hint': { en: 'Scroll to zoom • Drag to pan', fr: 'Molette pour zoomer • Glisser pour déplacer' },
+    'transcribe.reset_zoom': { en: 'Reset', fr: 'Réinitialiser' },
+
+    // Browse page
+    'browse.title': { en: 'Segment Browser', fr: 'Explorateur de segments' },
+    'browse.desc': { en: 'Explore the growing dataset of validated manuscript segments. These transcriptions have reached consensus and are considered definitive.', fr: 'Explorez le dataset croissant de segments de manuscrits validés. Ces transcriptions ont atteint un consensus et sont considérées comme définitives.' },
+    'browse.search': { en: 'Search transcriptions...', fr: 'Rechercher des transcriptions...' },
+    'browse.no_segments': { en: 'No segments found', fr: 'Aucun segment trouvé' },
+    'browse.no_segments_desc': { en: 'There are no validated segments yet. Start transcribing to build the dataset!', fr: 'Aucun segment validé pour le moment. Commencez à transcrire !' },
+    'browse.go_transcribe': { en: 'Go to Transcription', fr: 'Aller à la transcription' },
+    'browse.contribute': { en: 'Contribute more', fr: 'Contribuer davantage' },
+
+    // Learn page
+    'learn.title': { en: 'Learn to Read Manuscripts', fr: 'Apprendre à lire les manuscrits' },
+    'learn.desc': { en: 'Browse transcribed lines to train your eye. Each line shows the manuscript image alongside its transcription.', fr: 'Parcourez les lignes transcrites pour entraîner votre regard. Chaque ligne montre l\'image du manuscrit avec sa transcription.' },
+    'learn.validated': { en: 'Validated by admin', fr: 'Validé par un admin' },
+    'learn.unvalidated': { en: 'Attention: this line may contain errors — it has not been validated by an admin.', fr: 'Attention : cette ligne peut contenir des erreurs — elle n\'a pas été validée par un admin.' },
+    'learn.no_segments': { en: 'No transcribed segments available yet.', fr: 'Aucun segment transcrit disponible pour le moment.' },
+    'learn.search': { en: 'Search...', fr: 'Rechercher...' },
+    'learn.source': { en: 'Source', fr: 'Source' },
+}
+
+const LanguageContext = createContext<LanguageContextType>({
+    lang: 'fr',
+    setLang: () => {},
+    t: (key) => translations[key]?.fr ?? translations[key]?.en ?? key,
+})
+
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
+    const [lang, setLangState] = useState<Language>('fr')
+
+    useEffect(() => {
+        const saved = localStorage.getItem('waraka_lang') as Language | null
+        if (saved === 'en' || saved === 'fr') setLangState(saved)
+    }, [])
+
+    const setLang = (l: Language) => {
+        setLangState(l)
+        localStorage.setItem('waraka_lang', l)
+    }
+
+    const t = (key: string): string => {
+        return translations[key]?.[lang] ?? translations[key]?.en ?? key
+    }
+
+    return (
+        <LanguageContext.Provider value={{ lang, setLang, t }}>
+            {children}
+        </LanguageContext.Provider>
+    )
+}
+
+export const useLanguage = () => useContext(LanguageContext)

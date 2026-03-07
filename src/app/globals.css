@@ -2,20 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* Waraka Palette */
+    /* Background: warm off-white #FAF7F2 */
+    --background: 38 41% 96%;
+    --foreground: 30 11% 10%;
+
+    --card: 38 41% 96%;
+    --card-foreground: 30 11% 10%;
+
+    --popover: 38 41% 96%;
+    --popover-foreground: 30 11% 10%;
+
+    /* Primary accent: deep terracotta #C4622D */
+    --primary: 21 63% 47%;
+    --primary-foreground: 38 41% 96%;
+
+    /* Secondary: deep teal #1B4E52 */
+    --secondary: 184 50% 21%;
+    --secondary-foreground: 38 41% 96%;
+
+    --muted: 38 20% 90%;
+    --muted-foreground: 30 5% 40%;
+
+    --accent: 38 30% 92%;
+    --accent-foreground: 30 11% 10%;
+
+    /* Success: muted sage green */
+    --success: 120 20% 45%;
+    --success-foreground: 38 41% 96%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 38 41% 96%;
+
+    /* Borders: #E8DFD0 */
+    --border: 37 36% 86%;
+    --input: 37 36% 86%;
+    --ring: 21 63% 47%;
+
+    --radius: 0.5rem;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    /* subtle paper texture overlay */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+    background-color: hsl(var(--background));
+  }
+}
+
+.font-heading {
+  font-family: 'Cormorant Garamond', serif;
+}
+
+.font-sans {
+  font-family: 'DM Sans', sans-serif;
+}
+
+.font-arabic {
+  font-family: 'Amiri', serif;
 }
