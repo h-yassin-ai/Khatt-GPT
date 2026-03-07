@@ -51,7 +51,11 @@ export async function signup(formData: FormData) {
     })
 
     if (error) {
-        redirect(`/auth/register?error=${encodeURIComponent(error.message)}`)
+        let errorMessage = error.message
+        if (errorMessage.toLowerCase().includes('database error') || errorMessage.toLowerCase().includes('plugin')) {
+            errorMessage = "Database configuration error. Please ensure Supabase triggers are set up (see docs/supabase_setup.sql)."
+        }
+        redirect(`/auth/register?error=${encodeURIComponent(errorMessage)}`)
     }
 
     revalidatePath('/', 'layout')

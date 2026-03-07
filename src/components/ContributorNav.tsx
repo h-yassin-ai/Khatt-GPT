@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { LayoutDashboard, PenLine, User, LogOut, BookOpen, ShieldCheck, GraduationCap, Languages } from 'lucide-react'
+import { LayoutDashboard, PenLine, User, LogOut, BookOpen, ShieldCheck, GraduationCap, Languages, History } from 'lucide-react'
 import { useLanguage } from '@/lib/language-context'
 
 export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boolean }) {
