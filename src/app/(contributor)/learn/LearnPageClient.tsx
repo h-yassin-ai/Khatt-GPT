@@ -114,7 +114,7 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
                                             ) : (
                                                 <span className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-600 border border-orange-500/20 shrink-0">
                                                     <AlertTriangle className="w-3.5 h-3.5" />
-                                                    Non validé
+                                                    {t('learn.in_progress')}
                                                 </span>
                                             )}
                                         </div>

@@ -55,5 +55,34 @@ export async function deleteTranscription(transcriptionId: string) {
 
     revalidatePath('/profile')
     revalidatePath('/dashboard')
+    revalidatePath('/contributions')
+    return { success: true }
+}
+
+export async function updateTranscription(transcriptionId: string, newText: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: "Unauthenticated" }
+
+    if (!newText || newText.trim().length === 0) {
+        return { error: "Text cannot be empty." }
+    }
+
+    // Verify ownership
+    const { data: t } = await supabase.from('transcriptions').select('contributor_id').eq('id', transcriptionId).single()
+    if (!t || t.contributor_id !== user.id) {
+        return { error: "Unauthorized" }
+    }
+
+    const { error } = await supabase
+        .from('transcriptions')
+        .update({ text: newText.trim() })
+        .eq('id', transcriptionId)
+
+    if (error) return { error: error.message }
+
+    revalidatePath('/profile')
+    revalidatePath('/dashboard')
+    revalidatePath('/contributions')
     return { success: true }
 }

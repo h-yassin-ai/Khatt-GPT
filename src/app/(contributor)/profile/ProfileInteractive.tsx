@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
-import { updateDisplayName, deleteTranscription } from './actions'
-import { Trash2, Edit3, Check, ImageIcon } from 'lucide-react'
+import { updateDisplayName, deleteTranscription, updateTranscription } from './actions'
+import { Trash2, Edit3, Check, ImageIcon, X, Save } from 'lucide-react'
 
 // Wrapping in a client component to handle the form and delete logic
 // Normally this would be split: Server Component fetches data, passes to Client Component
@@ -23,6 +23,8 @@ export default function ProfileInteractive({
     achievements: any[]
 }) {
     const [isEditing, setIsEditing] = useState(false)
+    const [editingTId, setEditingTId] = useState<string | null>(null)
+    const [editingText, setEditingText] = useState('')
     const [isPending, startTransition] = useTransition()
 
     // Minimal optimistic UI / client state
@@ -51,6 +53,20 @@ export default function ProfileInteractive({
             // revert on error -> reload page
             window.location.reload()
         }
+    }
+
+    const handleSaveEdit = async () => {
+        if (!editingTId) return
+
+        startTransition(async () => {
+            const res = await updateTranscription(editingTId, editingText)
+            if (res.success) {
+                setTList(prev => prev.map(t => t.id === editingTId ? { ...t, text: editingText } : t))
+                setEditingTId(null)
+            } else {
+                alert(res.error)
+            }
+        })
     }
 
     return (
@@ -176,7 +192,26 @@ export default function ProfileInteractive({
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 align-top w-full max-w-[300px]">
-                                            <p className="font-arabic text-lg truncate" dir="rtl">{t.text}</p>
+                                            {editingTId === t.id ? (
+                                                <div className="flex flex-col gap-2">
+                                                    <textarea
+                                                        value={editingText}
+                                                        onChange={(e) => setEditingText(e.target.value)}
+                                                        className="w-full font-arabic text-lg p-2 border border-primary rounded bg-primary/5 min-h-[80px] focus:ring-1 focus:ring-primary outline-none"
+                                                        dir="rtl"
+                                                    />
+                                                    <div className="flex gap-2 justify-end">
+                                                        <Button size="sm" onClick={handleSaveEdit} disabled={isPending}>
+                                                            <Save className="w-3.5 h-3.5 mr-1" /> Enregistrer
+                                                        </Button>
+                                                        <Button size="sm" variant="ghost" onClick={() => setEditingTId(null)}>
+                                                            <X className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="font-arabic text-lg" dir="rtl">{t.text}</p>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 align-top text-muted-foreground whitespace-nowrap">
                                             {new Date(t.submitted_at).toLocaleDateString()}
@@ -192,16 +227,29 @@ export default function ProfileInteractive({
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 align-top text-right">
-                                            {!t.is_validated && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-destructive hover:bg-destructive/10"
-                                                    onClick={() => handleDelete(t.id)}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
+                                        <td className="px-4 py-3 align-top text-right whitespace-nowrap">
+                                            {!t.is_validated && editingTId !== t.id && (
+                                                <div className="flex justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-primary hover:bg-primary/10"
+                                                        onClick={() => {
+                                                            setEditingTId(t.id)
+                                                            setEditingText(t.text)
+                                                        }}
+                                                    >
+                                                        <Edit3 className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-destructive hover:bg-destructive/10"
+                                                        onClick={() => handleDelete(t.id)}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
                                             )}
                                         </td>
                                     </tr>

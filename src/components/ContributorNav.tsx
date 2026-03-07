@@ -30,6 +30,9 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
                     <Link href="/profile" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
                         <User className="w-4 h-4" /> {t('nav.profile')}
                     </Link>
+                    <Link href="/contributions" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
+                        <History className="w-4 h-4" /> {t('nav.contributions') || 'Contributions'}
+                    </Link>
                     {isAdmin && (
                         <Link href="/admin" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-primary hover:text-primary/80 font-bold">
                             <ShieldCheck className="w-4 h-4" /> {t('nav.admin')}

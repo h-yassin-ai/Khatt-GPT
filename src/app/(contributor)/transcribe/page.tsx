@@ -211,7 +211,6 @@ export default function TranscribePage() {
     const resetZoom = () => {
         setZoomScale(1)
         setZoomPos({ x: 0, y: 0 })
-        setImgSize({ width: 0, height: 0 })
     }
 
     // Reset zoom when segment changes
@@ -219,19 +218,14 @@ export default function TranscribePage() {
         resetZoom()
     }, [segment?.id])
 
-    const handlePageImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-        const img = e.currentTarget
-        const natW = img.naturalWidth
-        const natH = img.naturalHeight
-        setImgSize({ width: natW, height: natH })
-
-        if (!imageContainerRef.current || !segment?.polygon || !Array.isArray(segment.polygon) || segment.polygon.length === 0) return
+    const centerOnSegment = useCallback(() => {
+        if (!imageContainerRef.current || !segment?.polygon || !Array.isArray(segment.polygon) || segment.polygon.length === 0 || imgSize.width === 0) return
 
         const container = imageContainerRef.current
         const containerW = container.clientWidth
         const containerH = container.clientHeight
 
-        const renderScale = Math.min(containerW / natW, containerH / natH)
+        const renderScale = Math.min(containerW / imgSize.width, containerH / imgSize.height)
 
         const xs = (segment.polygon as any[]).map((p) => Number(p.x))
         const ys = (segment.polygon as any[]).map((p) => Number(p.y))
@@ -240,15 +234,34 @@ export default function TranscribePage() {
         const polyHeight = (Math.max(...ys) - Math.min(...ys)) * renderScale
 
         // Pan so polygon center = container center
-        const panX = (natW / 2 - polyCenterX) * renderScale
-        const panY = (natH / 2 - polyCenterY) * renderScale
+        const panX = (imgSize.width / 2 - polyCenterX) * renderScale
+        const panY = (imgSize.height / 2 - polyCenterY) * renderScale
 
         // Zoom to show polygon with surrounding context
         const targetZoom = Math.max(1.5, Math.min(containerH / (polyHeight * 3.5), 4))
 
         setZoomScale(targetZoom)
         setZoomPos({ x: panX, y: panY })
+    }, [segment, imgSize])
+
+    const handlePageImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        const img = e.currentTarget
+        const natW = img.naturalWidth
+        const natH = img.naturalHeight
+        setImgSize({ width: natW, height: natH })
+        // Initial zoom should be 100% as requested by user
+        resetZoom()
     }
+
+    // Auto-center when segment changes if image is already loaded
+    useEffect(() => {
+        if (imgSize.width > 0) {
+            // We could auto-center here, but user asked for 100% zoom initially.
+            // However, they also mentioned "it doesn't highlight". 
+            // Let's ensure resetZoom is called to reset pos/scale but keep imgSize for SVG.
+            resetZoom()
+        }
+    }, [segment?.id, imgSize.width])
 
     const handleSubmit = async () => {
         if (!segment || !text.trim()) return
@@ -462,6 +475,16 @@ export default function TranscribePage() {
                     )}
                 </div>
                 <div className="flex items-center gap-3">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={centerOnSegment}
+                        className="gap-2 rounded-full h-8 px-3 border-primary/30 text-primary hover:bg-primary/5"
+                        title={t('transcribe.center_line')}
+                    >
+                        <Highlighter className="w-3.5 h-3.5" />
+                        {t('transcribe.center_line')}
+                    </Button>
                     <Button
                         variant={showReference ? "default" : "outline"}
                         size="sm"

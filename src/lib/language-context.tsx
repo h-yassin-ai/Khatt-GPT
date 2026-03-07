@@ -17,6 +17,7 @@ const translations: Record<string, Record<Language, string>> = {
     'nav.transcribe': { en: 'Transcribe', fr: 'Transcrire' },
     'nav.learn': { en: 'Learn to Read', fr: 'Apprendre à lire' },
     'nav.profile': { en: 'Profile', fr: 'Profil' },
+    'nav.contributions': { en: 'My Contributions', fr: 'Mes contributions' },
     'nav.admin': { en: 'Admin Panel', fr: 'Panneau Admin' },
     'nav.signout': { en: 'Sign out', fr: 'Se déconnecter' },
     'nav.lang_toggle': { en: 'FR', fr: 'EN' },
@@ -68,6 +69,7 @@ const translations: Record<string, Record<Language, string>> = {
     'transcribe.no_segments': { en: 'There are currently no more segments to transcribe. Come back later when new manuscripts are uploaded.', fr: 'Il n\'y a plus de segments à transcrire. Revenez plus tard lorsque de nouveaux manuscrits seront ajoutés.' },
     'transcribe.zoom_hint': { en: 'Scroll to zoom • Drag to pan', fr: 'Molette pour zoomer • Glisser pour déplacer' },
     'transcribe.reset_zoom': { en: 'Reset', fr: 'Réinitialiser' },
+    'transcribe.center_line': { en: 'Center on Line', fr: 'Centrer la ligne' },
 
     // Browse page
     'browse.title': { en: 'Segment Browser', fr: 'Explorateur de segments' },
@@ -82,7 +84,8 @@ const translations: Record<string, Record<Language, string>> = {
     'learn.title': { en: 'Learn to Read Manuscripts', fr: 'Apprendre à lire les manuscrits' },
     'learn.desc': { en: 'Browse transcribed lines to train your eye. Each line shows the manuscript image alongside its transcription.', fr: 'Parcourez les lignes transcrites pour entraîner votre regard. Chaque ligne montre l\'image du manuscrit avec sa transcription.' },
     'learn.validated': { en: 'Validated by admin', fr: 'Validé par un admin' },
-    'learn.unvalidated': { en: 'Attention: this line may contain errors — it has not been validated by an admin.', fr: 'Attention : cette ligne peut contenir des erreurs — elle n\'a pas été validée par un admin.' },
+    'learn.in_progress': { en: 'In progress', fr: 'En cours' },
+    'learn.unvalidated': { en: 'The text below is preliminary and has not yet been formally validated by an expert.', fr: 'Le texte ci-dessous est préliminaire et n\'a pas encore été formellement validé par un expert.' },
     'learn.no_segments': { en: 'No transcribed segments available yet.', fr: 'Aucun segment transcrit disponible pour le moment.' },
     'learn.search': { en: 'Search...', fr: 'Rechercher...' },
     'learn.source': { en: 'Source', fr: 'Source' },
@@ -90,7 +93,7 @@ const translations: Record<string, Record<Language, string>> = {
 
 const LanguageContext = createContext<LanguageContextType>({
     lang: 'fr',
-    setLang: () => {},
+    setLang: () => { },
     t: (key) => translations[key]?.fr ?? translations[key]?.en ?? key,
 })
 
