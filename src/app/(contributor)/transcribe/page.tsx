@@ -13,6 +13,7 @@ import DraggableKeyboard from '@/components/DraggableKeyboard'
 import { useRef } from 'react'
 import { get, set } from 'idb-keyval'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useLanguage } from '@/lib/language-context'
 
 type SegmentData = {
     id: string;
@@ -52,6 +53,7 @@ export default function TranscribePage() {
     const zoomContainerRef = useRef<HTMLDivElement>(null)
     const imageContainerRef = useRef<HTMLDivElement>(null)
 
+    const { t } = useLanguage()
     const { toast } = useToast()
 
     const loadSegment = useCallback(async () => {
@@ -384,9 +386,9 @@ export default function TranscribePage() {
                 <div className="w-24 h-24 bg-success/10 text-success rounded-full flex items-center justify-center">
                     <Sparkles className="w-12 h-12" />
                 </div>
-                <h2 className="text-4xl font-heading font-semibold text-foreground">You&apos;re all caught up!</h2>
+                <h2 className="text-4xl font-heading font-semibold text-foreground">{t('transcribe.all_caught_up')}</h2>
                 <p className="text-muted-foreground font-sans max-w-md">
-                    There are currently no more segments to transcribe. Come back later when new manuscripts are uploaded.
+                    {t('transcribe.no_segments')}
                 </p>
             </div>
         )
@@ -425,11 +427,6 @@ export default function TranscribePage() {
         let match;
         let matchCounter = 0;
 
-        // We need to count exactly which part index this is to match getHighlightedText
-        // But getHighlightedText uses split which includes the delimiter.
-        // Let's adjust to find the exact DOM ID or a better way. 
-        // Actually, let's just use the index for finding the element.
-
         while ((match = regex.exec(referenceText)) !== null) {
             const start = Math.max(0, match.index - 60);
             const end = Math.min(referenceText.length, match.index + match[0].length + 60);
@@ -466,11 +463,11 @@ export default function TranscribePage() {
                 <div className="flex items-center gap-4">
                     <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <span className={`w-2 h-2 rounded-full ${isOffline ? 'bg-amber-500' : 'bg-primary animate-pulse'}`}></span>
-                        Session : {sessionCount} segments
+                        {t('transcribe.session')} : {sessionCount} {t('transcribe.segments')}
                     </p>
                     {isOffline && (
                         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                            Mode hors ligne
+                            {t('transcribe.offline')}
                         </span>
                     )}
                 </div>
@@ -492,10 +489,10 @@ export default function TranscribePage() {
                         className="gap-2 rounded-full h-8 px-3"
                     >
                         <BookOpen className="w-3.5 h-3.5" />
-                        {showReference ? "Fermer le panneau" : "Ouvrir le panneau"}
+                        {showReference ? t('transcribe.close_panel') : t('transcribe.open_panel')}
                     </Button>
                     <div className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/30 px-2 py-1 rounded-md border border-border/50">
-                        <kbd className="font-mono bg-background border border-border px-1 rounded">Ctrl</kbd> + <kbd className="font-mono bg-background border border-border px-1 rounded">Enter</kbd> pour valider
+                        <kbd className="font-mono bg-background border border-border px-1 rounded">Ctrl</kbd> + <kbd className="font-mono bg-background border border-border px-1 rounded">Enter</kbd> {t('transcribe.submit_hint') || 'pour valider'}
                     </div>
                 </div>
             </div>
@@ -562,7 +559,6 @@ export default function TranscribePage() {
                                                                         key={idx}
                                                                         onClick={() => {
                                                                             scrollToMatch(s.id);
-                                                                            // Optionally close or keep open. User said "directement"
                                                                         }}
                                                                         className="w-full text-right p-3 rounded hover:bg-muted transition-colors border-b border-border/20 last:border-0"
                                                                     >
@@ -741,7 +737,7 @@ export default function TranscribePage() {
                         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 select-none">
                             <div className="flex items-center gap-1.5 bg-amber-500/90 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md backdrop-blur-sm">
                                 <Highlighter className="w-3 h-3" />
-                                Transcrivez uniquement la ligne en surbrillance
+                                {t('transcribe.instruction')}
                             </div>
                         </div>
 
@@ -754,7 +750,7 @@ export default function TranscribePage() {
                                     <>
                                         <span className="w-[1px] h-3 bg-border" />
                                         <button onClick={resetZoom} className="text-primary hover:underline">
-                                            {Math.round(zoomScale * 100)}% (Reset)
+                                            {Math.round(zoomScale * 100)}% ({t('transcribe.reset_zoom')})
                                         </button>
                                     </>
                                 )}
@@ -764,7 +760,7 @@ export default function TranscribePage() {
                         {/* Zoom Hint */}
                         <div className="absolute bottom-3 right-3 text-[9px] text-muted-foreground opacity-40 select-none flex items-center gap-2 pointer-events-none">
                             <Search className="w-3 h-3" />
-                            Molette pour zoomer • Glisser pour déplacer
+                            {t('transcribe.zoom_hint')}
                         </div>
                     </div>
 
@@ -772,7 +768,7 @@ export default function TranscribePage() {
                     <div className="flex-[2] flex flex-col p-4 lg:px-8 lg:pb-8 lg:pt-4 gap-4 overflow-hidden">
                         <div className="flex justify-between items-center shrink-0">
                             <h2 className="text-xl font-heading font-semibold text-primary" dir="rtl">
-                                نص النسخ
+                                {t('transcribe.transcription_header')}
                             </h2>
                             <div className="flex gap-2">
                                 <Button
@@ -782,7 +778,7 @@ export default function TranscribePage() {
                                     onClick={() => setShowKeyboard(!showKeyboard)}
                                 >
                                     <Keyboard className="w-3.5 h-3.5" />
-                                    {showKeyboard ? 'Masquer' : 'Clavier'}
+                                    {showKeyboard ? t('transcribe.hide') : t('transcribe.keyboard')}
                                 </Button>
                                 <Button
                                     variant="outline"
@@ -790,7 +786,7 @@ export default function TranscribePage() {
                                     onClick={handleFlag}
                                     disabled={submitting}
                                     className="w-8 h-8 p-0 shrink-0 border-destructive/20 hover:bg-destructive/10 rounded-full"
-                                    title="Signaler comme illisible"
+                                    title={t('transcribe.flag')}
                                 >
                                     <Flag className="w-3.5 h-3.5 text-destructive" />
                                 </Button>
@@ -806,7 +802,7 @@ export default function TranscribePage() {
                         {hasNonArabic && (
                             <div className="bg-orange-500/10 text-orange-600 text-[10px] p-2 rounded flex items-center gap-2 border border-orange-500/20 shrink-0">
                                 <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                                <span>Note: Caractères non-arabes détectés.</span>
+                                <span>{t('transcribe.non_arabic')}</span>
                             </div>
                         )}
 
@@ -815,7 +811,7 @@ export default function TranscribePage() {
                                 ref={textareaRef}
                                 value={text}
                                 onChange={(e) => setText(e.target.value)}
-                                placeholder="اكتب النص هنا..."
+                                placeholder={t('transcribe.placeholder')}
                                 dir="rtl"
                                 lang="ar"
                                 disabled={submitting}
@@ -839,10 +835,10 @@ export default function TranscribePage() {
                                     disabled={submitting || !text.trim()}
                                     className={`flex-1 h-12 text-sm font-bold tracking-wide shadow-md ${isEditing ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
                                 >
-                                    {submitting ? 'Envoi...' : (
+                                    {submitting ? t('transcribe.submitting') : (
                                         isEditing
-                                            ? <><CheckCircle2 className="w-4 h-4 mr-2" /> Sauvegarder</>
-                                            : <><Send className="w-4 h-4 mr-2" /> Valider la transcription</>
+                                            ? <><CheckCircle2 className="w-4 h-4 mr-2" /> {t('transcribe.save_edit')}</>
+                                            : <><Send className="w-4 h-4 mr-2" /> {t('transcribe.submit')}</>
                                     )}
                                 </Button>
                                 {isEditing && (
@@ -852,7 +848,7 @@ export default function TranscribePage() {
                                         disabled={submitting}
                                         className="h-12 px-4 font-medium border-amber-500/30 text-amber-700 hover:bg-amber-50"
                                     >
-                                        Annuler
+                                        {t('transcribe.cancel')}
                                     </Button>
                                 )}
                                 {!isEditing && (
@@ -861,7 +857,7 @@ export default function TranscribePage() {
                                         onClick={handleSkip}
                                         disabled={submitting}
                                         className="h-12 px-4 font-medium"
-                                        title="Passer au suivant (Ctrl+Right)"
+                                        title={t('transcribe.skip_title')}
                                     >
                                         <SkipForward className="w-4 h-4" />
                                     </Button>
@@ -870,9 +866,7 @@ export default function TranscribePage() {
                         </div>
                     </div>
                 </div>
-
             </div>
-
         </div>
     )
 }

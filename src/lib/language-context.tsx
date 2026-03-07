@@ -70,6 +70,11 @@ const translations: Record<string, Record<Language, string>> = {
     'transcribe.zoom_hint': { en: 'Scroll to zoom • Drag to pan', fr: 'Molette pour zoomer • Glisser pour déplacer' },
     'transcribe.reset_zoom': { en: 'Reset', fr: 'Réinitialiser' },
     'transcribe.center_line': { en: 'Center on Line', fr: 'Centrer la ligne' },
+    'transcribe.instruction': { en: 'Transcribe only the highlighted line', fr: 'Transcrivez uniquement la ligne en surbrillance' },
+    'transcribe.submit_hint': { en: 'to validate', fr: 'pour valider' },
+    'transcribe.placeholder': { en: 'Type text here...', fr: 'اكتب النص هنا...' },
+    'transcribe.skip_title': { en: 'Skip to next (Ctrl+Right)', fr: 'Passer au suivant (Ctrl+Right)' },
+    'transcribe.transcription_header': { en: 'Transcription', fr: 'نص النسخ' },
 
     // Browse page
     'browse.title': { en: 'Segment Browser', fr: 'Explorateur de segments' },
