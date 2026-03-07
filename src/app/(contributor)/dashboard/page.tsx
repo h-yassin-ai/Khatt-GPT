@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { Hexagon, BookOpen, Flame, PenTool } from 'lucide-react'
+import { Hexagon, BookOpen, Flame, PenTool, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 // Simple hash utility to generate consistent colors for avatars based on username
 function getAvatarColor(str: string) {
@@ -22,7 +23,7 @@ export default async function DashboardPage() {
     }
 
     // Fetch user profile stats
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('username, display_name, total_contributions, current_streak, points')
         .eq('id', user.id)
@@ -58,8 +59,14 @@ export default async function DashboardPage() {
         .limit(10)
 
     if (!profile) {
-        // If profile trigger failed or user lacks it
-        return <div>Profile loading...</div>
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center gap-4">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <h2 className="text-xl font-semibold">Setting up your profile...</h2>
+                <p className="text-muted-foreground">This usually takes a few seconds after signing up.</p>
+                <Button onClick={() => window.location.reload()} variant="outline">Refresh Page</Button>
+            </div>
+        )
     }
 
     const avatarColor = getAvatarColor(profile.username)
