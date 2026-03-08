@@ -4,7 +4,9 @@ import ProfileInteractive from './ProfileInteractive'
 
 export default async function ProfilePage() {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) {
         redirect('/auth/login')
@@ -16,7 +18,6 @@ export default async function ProfilePage() {
         .eq('id', user.id)
         .single()
 
-    // Fetch all user transcriptions
     const { data: transcriptions } = await supabase
         .from('transcriptions')
         .select(`
@@ -34,32 +35,37 @@ export default async function ProfilePage() {
         .eq('contributor_id', user.id)
         .order('submitted_at', { ascending: false })
 
-    // Phase 2: Calculate generic accuracy
     const { data: accuracyQuery } = await supabase
         .from('transcriptions')
-        .select(`is_validated, segments!inner(status)`)
+        .select('is_validated, segments!inner(status)')
         .eq('contributor_id', user.id)
         .eq('segments.status', 'validated')
 
-    let accurateCount = 0
-    let totalConsensus = accuracyQuery?.length || 0
-    accuracyQuery?.forEach((t: any) => { if (t.is_validated) accurateCount++ })
+    const totalConsensus = accuracyQuery?.length || 0
+    const accurateCount = (accuracyQuery || []).filter((t: any) => t.is_validated).length
     const accuracyRate = totalConsensus > 0 ? Math.round((accurateCount / totalConsensus) * 100) : null
 
-    // Phase 2: Fetch achievements
     const { data: achievementsData } = await supabase
         .from('contributor_achievements')
         .select(`
+            achievement_slug,
             unlocked_at,
-            achievements ( name_fr, description_fr, icon, points )
+            achievements (*)
         `)
         .eq('contributor_id', user.id)
         .order('unlocked_at', { ascending: false })
 
-    const achievements = achievementsData?.map((a: any) => ({
-        ...a.achievements,
-        unlocked_at: a.unlocked_at
-    })) || []
+    const achievements = (achievementsData || []).map((row: any) => {
+        const details = row.achievements || {}
+        return {
+            slug: row.achievement_slug,
+            unlocked_at: row.unlocked_at,
+            name: details.name_fr || details.title || details.slug || row.achievement_slug,
+            description: details.description_fr || details.description || '',
+            points: details.points || 0,
+            icon: details.icon || details.icon_name || null,
+        }
+    })
 
     if (!profile) return <div>Loading...</div>
 
@@ -72,3 +78,4 @@ export default async function ProfilePage() {
         />
     )
 }
+

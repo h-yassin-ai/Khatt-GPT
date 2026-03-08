@@ -4,36 +4,89 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { computeConsensus } from '@/lib/consensus'
 import { checkAndGrantAchievements } from '@/lib/achievements'
+import { buildBadgeProgress, computeTranscriptionReward, getActiveBoosts, getLevelProgress } from '@/lib/gamification'
+
+async function getUnlockedAchievementSlugs(supabase: any, userId: string): Promise<string[]> {
+    const { data } = await supabase
+        .from('contributor_achievements')
+        .select('achievement_slug')
+        .eq('contributor_id', userId)
+
+    return (data || []).map((item: any) => item.achievement_slug)
+}
+
+async function getAccuracyRate(supabase: any, userId: string): Promise<number | null> {
+    const { data } = await supabase
+        .from('transcriptions')
+        .select('is_validated, segments!inner(status)')
+        .eq('contributor_id', userId)
+        .eq('segments.status', 'validated')
+
+    const totalConsensus = data?.length || 0
+    if (totalConsensus === 0) return null
+
+    const accurateCount = (data || []).filter((t: any) => t.is_validated).length
+    return Math.round((accurateCount / totalConsensus) * 100)
+}
+
+function buildSnapshot(profile: any, unlockedSlugs: string[], accuracyRate: number | null = null) {
+    const level = getLevelProgress(profile?.points || 0)
+    const boosts = getActiveBoosts(profile?.current_streak || 0)
+    const badges = buildBadgeProgress(profile || {}, unlockedSlugs, accuracyRate)
+
+    return {
+        level,
+        boosts,
+        badges,
+        points: profile?.points || 0,
+        totalContributions: profile?.total_contributions || 0,
+        streak: profile?.current_streak || 0,
+        nextBadge: badges.find((b) => !b.unlocked) || null,
+    }
+}
+
+export async function getGamificationSnapshot() {
+    const supabase = await createClient()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return null
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('total_contributions, current_streak, points, last_contribution_date')
+        .eq('id', user.id)
+        .single()
+
+    if (!profile) return null
+
+    const [unlockedSlugs, accuracyRate] = await Promise.all([
+        getUnlockedAchievementSlugs(supabase, user.id),
+        getAccuracyRate(supabase, user.id),
+    ])
+
+    return buildSnapshot(profile, unlockedSlugs, accuracyRate)
+}
 
 export async function getNextSegment() {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) return null
 
     const { data: p } = await supabase.from('profiles').select('is_suspended').eq('id', user.id).single()
-    if (p?.is_suspended) throw new Error("Your account has been suspended by an administrator.")
+    if (p?.is_suspended) throw new Error('Your account has been suspended by an administrator.')
 
-    // We need an untranscribed segment. Using raw SQL with Supabase requires an RPC or a clever query.
-    // Since we don't have a direct RPC set up, we can fetch a pool of pending segments and filter out those the user already transcribed.
-    // A simple approach: grab 50 pending segments randomly, filter locally based on user transcriptions.
-    // For production scale, an RPC procedure is better.
-
-    // Here we use PostgREST features: return a segment that has status 'pending' or 'in_progress', and not already transcribed by user.
-    // But doing a direct LEFT JOIN isn't supported without foreign tables trick or RPC.
-    // So instead:
-
-    // 1. Get recent segments the user has transcribed to exclude them
     const { data: userTranscriptions } = await supabase
         .from('transcriptions')
         .select('segment_id')
         .eq('contributor_id', user.id)
 
-    const transcribedSegmentIds = new Set(userTranscriptions?.map(t => t.segment_id) || [])
+    const transcribedSegmentIds = new Set(userTranscriptions?.map((t: any) => t.segment_id) || [])
 
-    // 2. Query a pool of segments that are not validated or archived
-    // To handle heavy users who might have transcribed many segments, 
-    // we use a random offset to pull a diverse sample from the DB.
     const { count: totalActive } = await supabase
         .from('segments')
         .select('*', { count: 'exact', head: true })
@@ -47,9 +100,9 @@ export async function getNextSegment() {
     const { data: segments, error: segmentsError } = await supabase
         .from('segments')
         .select(`
-            id, 
-            image_url, 
-            order_index, 
+            id,
+            image_url,
+            order_index,
             polygon,
             manuscripts(title, description, reference_text_url),
             pages(image_url, label)
@@ -59,23 +112,21 @@ export async function getNextSegment() {
         .range(randomOffset, randomOffset + poolSize - 1)
 
     if (segmentsError) {
-        console.error("Error fetching segments pool:", segmentsError)
+        console.error('Error fetching segments pool:', segmentsError)
         throw new Error(`Database error: ${segmentsError.message}`)
     }
 
     if (!segments || segments.length === 0) {
-        console.warn("No pending segments found in DB for user", user.id)
+        console.warn('No pending segments found in DB for user', user.id)
         return null
     }
 
-    // 3. Filter locally
-    const availableSegments = segments.filter(seg => !transcribedSegmentIds.has(seg.id))
+    const availableSegments = segments.filter((seg: any) => !transcribedSegmentIds.has(seg.id))
 
     if (availableSegments.length === 0) {
-        console.warn(`User ${user.id} has already transcribed all ${segments.length} segments in the chosen pool (offset ${randomOffset}). Total transcribed by user: ${transcribedSegmentIds.size}`)
-        
-        // Final fallback: if the random pool was exhausted, try one more time with a different random offset
-        // or just return null if we've truly exhausted everything (though unlikely with random sampling)
+        console.warn(
+            `User ${user.id} has already transcribed all ${segments.length} segments in pool offset ${randomOffset}.`
+        )
         return null
     }
 
@@ -91,13 +142,15 @@ export async function getNextSegment() {
         manuscript_description: segment.manuscripts?.description || '',
         manuscript_reference_text_url: segment.manuscripts?.reference_text_url || '',
         page_image_url: segment.pages?.image_url || '',
-        page_label: segment.pages?.label || 'Unknown Page'
+        page_label: segment.pages?.label || 'Unknown Page',
     }
 }
 
 export async function getPendingSegmentCount() {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) return 0
 
@@ -110,82 +163,111 @@ export async function getPendingSegmentCount() {
     return count || 0
 }
 
-
 export async function submitTranscription(segmentId: string, text: string) {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
 
-    if (!user) return { error: "Unauthenticated" }
-    if (!text || text.trim() === '') return { error: "Text cannot be empty" }
+    if (!user) return { error: 'Unauthenticated' }
+    if (!text || text.trim() === '') return { error: 'Text cannot be empty' }
 
     const { data: p } = await supabase.from('profiles').select('is_suspended').eq('id', user.id).single()
-    if (p?.is_suspended) return { error: "Your account is suspended." }
+    if (p?.is_suspended) return { error: 'Your account is suspended.' }
 
-    // Spam detection
     if (/(.)\1{4,}/.test(text.trim())) {
-        return { error: "Submission rejected: Repeated characters pattern detected." }
+        return { error: 'Submission rejected: Repeated characters pattern detected.' }
     }
     if (text.length > 500) {
-        return { error: "Submission rejected: Text exceeds maximum length for a given segment." }
+        return { error: 'Submission rejected: Text exceeds maximum length for a given segment.' }
     }
 
-    // 1. Insert Transcription
     const { error: insertError } = await supabase
         .from('transcriptions')
         .insert({
             segment_id: segmentId,
             contributor_id: user.id,
-            text: text.trim()
+            text: text.trim(),
         })
 
     if (insertError) return { error: insertError.message }
 
-    // 2. Increment transcription_count on segment
-    // Using RPC is ideal, but for now we query first
     const { data: seg } = await supabase.from('segments').select('transcription_count').eq('id', segmentId).single()
     if (seg) {
-        await supabase.from('segments').update({ transcription_count: seg.transcription_count + 1 }).eq('id', segmentId)
+        await supabase
+            .from('segments')
+            .update({ transcription_count: (seg.transcription_count || 0) + 1 })
+            .eq('id', segmentId)
 
-        // Phase 2: Compute consensus on submission
         await computeConsensus(segmentId)
     }
 
-    // 3. Update Profiles contributions
-    const { data: profile } = await supabase.from('profiles').select('total_contributions, current_streak, last_contribution_date, points').eq('id', user.id).single()
-    if (profile) {
-        // rudimentary streak logic:
-        const today = new Date().toISOString().split('T')[0]
-        let newStreak = profile.current_streak
-        if (profile.last_contribution_date !== today) {
-            newStreak += 1
-        }
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('total_contributions, current_streak, last_contribution_date, points')
+        .eq('id', user.id)
+        .single()
 
-        let earnedPoints = 1
-        if (newStreak >= 7) earnedPoints = 2 // 1.5x rounded
-
-        await supabase.from('profiles').update({
-            total_contributions: profile.total_contributions + 1,
-            current_streak: newStreak,
-            last_contribution_date: today,
-            points: (profile.points || 0) + earnedPoints
-        }).eq('id', user.id)
+    let reward: any = {
+        baseXp: 10,
+        bonusXp: 0,
+        finalXp: 10,
+        multiplier: 1,
+        newStreak: 1,
+        boosts: [],
     }
 
-    // Check achievements
+    if (profile) {
+        reward = computeTranscriptionReward(profile)
+        const today = new Date().toISOString().slice(0, 10)
+
+        await supabase
+            .from('profiles')
+            .update({
+                total_contributions: (profile.total_contributions || 0) + 1,
+                current_streak: reward.newStreak,
+                last_contribution_date: today,
+                points: (profile.points || 0) + reward.finalXp,
+            })
+            .eq('id', user.id)
+    }
+
     const unlockedAchievements = await checkAndGrantAchievements(user.id)
+
+    const [{ data: refreshedProfile }, unlockedSlugs, accuracyRate] = await Promise.all([
+        supabase
+            .from('profiles')
+            .select('total_contributions, current_streak, points, last_contribution_date')
+            .eq('id', user.id)
+            .single(),
+        getUnlockedAchievementSlugs(supabase, user.id),
+        getAccuracyRate(supabase, user.id),
+    ])
+
+    const gamification = refreshedProfile
+        ? buildSnapshot(refreshedProfile, unlockedSlugs, accuracyRate)
+        : null
 
     revalidatePath('/dashboard')
     revalidatePath('/profile')
-    return { success: true, achievements: unlockedAchievements }
+    revalidatePath('/transcribe')
+
+    return {
+        success: true,
+        achievements: unlockedAchievements,
+        reward,
+        gamification,
+    }
 }
 
 export async function flagSegment(segmentId: string) {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
 
-    if (!user) return { error: "Unauthenticated" }
+    if (!user) return { error: 'Unauthenticated' }
 
-    // We could add a flag_count or status update to 'flagged'
     await supabase.from('segments').update({ status: 'flagged' }).eq('id', segmentId)
 
     return { success: true }
@@ -193,7 +275,9 @@ export async function flagSegment(segmentId: string) {
 
 export async function getRecentTranscriptions() {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) return []
 
@@ -210,39 +294,39 @@ export async function getRecentTranscriptions() {
         .limit(10)
 
     if (error) {
-        console.error("Error fetching recent transcriptions:", error)
+        console.error('Error fetching recent transcriptions:', error)
         return []
     }
 
-    return data.map((t: any) => ({
+    return (data || []).map((t: any) => ({
         id: t.id,
         text: t.text,
         submitted_at: t.submitted_at,
         segment_id: t.segments.id,
         segment_image: t.segments.image_url,
         segment_index: t.segments.order_index,
-        segment_polygon: t.segments.polygon
+        segment_polygon: t.segments.polygon,
     }))
 }
 
 export async function updateTranscription(transcriptionId: string, newText: string) {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
 
-    if (!user) return { error: "Unauthenticated" }
-    if (!newText || newText.trim() === '') return { error: "Text cannot be empty" }
+    if (!user) return { error: 'Unauthenticated' }
+    if (!newText || newText.trim() === '') return { error: 'Text cannot be empty' }
 
-    // 1. Verify ownership and get segment_id
     const { data: existing, error: fetchError } = await supabase
         .from('transcriptions')
         .select('contributor_id, segment_id')
         .eq('id', transcriptionId)
         .single()
 
-    if (fetchError || !existing) return { error: "Transcription not found" }
-    if (existing.contributor_id !== user.id) return { error: "Unauthorized" }
+    if (fetchError || !existing) return { error: 'Transcription not found' }
+    if (existing.contributor_id !== user.id) return { error: 'Unauthorized' }
 
-    // 2. Update text
     const { error: updateError } = await supabase
         .from('transcriptions')
         .update({ text: newText.trim() })
@@ -250,7 +334,6 @@ export async function updateTranscription(transcriptionId: string, newText: stri
 
     if (updateError) return { error: updateError.message }
 
-    // 3. Re-compute consensus for the segment
     await computeConsensus(existing.segment_id)
 
     revalidatePath('/dashboard')

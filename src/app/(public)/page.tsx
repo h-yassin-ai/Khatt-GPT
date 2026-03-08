@@ -17,12 +17,19 @@ type PendingSegment = {
     id: string;
     image_url: string | null;
 }
+type LeaderboardUser = {
+    username: string;
+    display_name: string | null;
+    points: number | null;
+    total_contributions: number | null;
+}
 
 export default function LandingPage() {
     const supabase = createClient();
     const [counts, setCounts] = useState({ manuscripts: 0, segments: 0, contributors: 0 });
     const [transcribed, setTranscribed] = useState<TranscribedSegment[]>([]);
     const [pending, setPending] = useState<PendingSegment[]>([]);
+    const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
     const [carouselIdx, setCarouselIdx] = useState(0);
     const [selectedLine, setSelectedLine] = useState<TranscribedSegment | null>(null);
     const targetCounts = useRef({ manuscripts: 0, segments: 0, contributors: 0 });
@@ -53,7 +60,8 @@ export default function LandingPage() {
                 { count: sCount },
                 { count: pCount },
                 { data: transcribedData },
-                { data: pendingData }
+                { data: pendingData },
+                { data: topProfiles }
             ] = await Promise.all([
                 supabase.from('manuscripts').select('*', { count: 'exact', head: true }),
                 supabase.from('transcriptions').select('*', { count: 'exact', head: true }),
@@ -69,12 +77,19 @@ export default function LandingPage() {
                     .eq('status', 'pending')
                     .not('image_url', 'is', null)
                     .limit(6),
+                supabase
+                    .from('profiles')
+                    .select('username, display_name, points, total_contributions')
+                    .order('points', { ascending: false })
+                    .order('total_contributions', { ascending: false })
+                    .limit(10),
             ]);
 
             if (!isMounted) return;
 
             if (transcribedData) setTranscribed(transcribedData as any);
             if (pendingData) setPending(pendingData as any);
+            if (topProfiles) setLeaderboard(topProfiles as LeaderboardUser[]);
 
             const targets = {
                 manuscripts: mCount || 0,
@@ -267,6 +282,45 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {leaderboard.length > 0 && (
+                <section className="w-full py-16 px-6 border-t border-border bg-card/20">
+                    <div className="max-w-5xl mx-auto">
+                        <div className="flex items-end justify-between mb-8">
+                            <div>
+                                <h2 className="font-heading text-3xl font-semibold mb-2">Classement des meilleurs contributeurs</h2>
+                                <p className="text-sm text-muted-foreground">Plus vous transcrivez, plus vous montez dans le ranking.</p>
+                            </div>
+                            <Link href="/auth/register" className="text-sm font-semibold text-primary hover:underline">
+                                Entrer dans le top
+                            </Link>
+                        </div>
+
+                        <div className="rounded-2xl border border-border bg-background/80 overflow-hidden">
+                            {leaderboard.slice(0, 10).map((user, index) => (
+                                <div key={`${user.username}-${index}`} className="flex items-center justify-between px-4 py-3 border-b border-border/50 last:border-b-0 hover:bg-muted/30 transition-colors">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${index < 3 ? 'bg-amber-500/20 text-amber-700 border border-amber-500/30' : 'bg-muted text-muted-foreground'}`}>
+                                            {index + 1}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="font-semibold truncate">{user.display_name || user.username}</p>
+                                            <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs px-2 py-1 rounded border border-primary/20 bg-primary/10 text-primary font-semibold">
+                                            {(user.points || 0).toLocaleString('fr-FR')} XP
+                                        </span>
+                                        <span className="text-xs px-2 py-1 rounded border border-border bg-muted/30 text-muted-foreground font-medium hidden sm:inline">
+                                            {(user.total_contributions || 0).toLocaleString('fr-FR')} lignes
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
             {/* ═══ CAROUSEL — Transcribed lines ═══ */}
             {transcribed.length > 0 && (
                 <section className="w-full py-20 bg-card/40 border-t border-border overflow-hidden">
@@ -440,3 +494,4 @@ export default function LandingPage() {
         </div>
     );
 }
+

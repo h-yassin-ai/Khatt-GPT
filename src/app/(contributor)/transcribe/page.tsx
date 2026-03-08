@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { getNextSegment, submitTranscription, flagSegment, getRecentTranscriptions, updateTranscription, getPendingSegmentCount } from './actions'
+import { getNextSegment, submitTranscription, flagSegment, getRecentTranscriptions, updateTranscription, getPendingSegmentCount, getGamificationSnapshot } from './actions'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import Zoom from 'react-medium-image-zoom'
 import 'react-medium-image-zoom/dist/styles.css'
-import { Flag, SkipForward, Send, AlertCircle, Sparkles, Keyboard, BookOpen, Search, X, ChevronRight, Loader2, History, ImageIcon, CheckCircle2, PenLine, Highlighter } from 'lucide-react'
+import { Flag, SkipForward, Send, AlertCircle, Sparkles, Keyboard, BookOpen, Search, X, ChevronRight, Loader2, History, ImageIcon, CheckCircle2, PenLine, Highlighter, FileImage, Trophy, Zap, Flame, Star } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { OnboardingModal } from '@/components/OnboardingModal'
 import DraggableKeyboard from '@/components/DraggableKeyboard'
@@ -28,6 +28,22 @@ type SegmentData = {
     page_label?: string;
 }
 
+type GamificationSnapshot = {
+    level: {
+        level: number;
+        levelName: string;
+        nextLevelXp: number | null;
+        xpIntoLevel: number;
+        xpForNextLevel: number;
+        progressPct: number;
+    };
+    points: number;
+    streak: number;
+    totalContributions: number;
+    boosts: Array<{ slug: string; label: string; isDoubleXp?: boolean }>;
+    badges: Array<{ slug: string; name: string; description: string; unlocked: boolean; progressPct: number; currentValue: number; target: number; xpReward: number }>;
+    nextBadge: { slug: string; name: string; description: string; progressPct: number; currentValue: number; target: number; xpReward: number } | null;
+}
 export default function TranscribePage() {
     const [segment, setSegment] = useState<SegmentData | null>(null)
     const [text, setText] = useState('')
@@ -52,9 +68,14 @@ export default function TranscribePage() {
     const [zoomScale, setZoomScale] = useState(1)
     const [zoomPos, setZoomPos] = useState({ x: 0, y: 0 })
     const [isDraggingZoom, setIsDraggingZoom] = useState(false)
+    const [gamification, setGamification] = useState<GamificationSnapshot | null>(null)
+    const [rewardBurst, setRewardBurst] = useState<{ xp: number; combo: number; streak: number; id: number } | null>(null)
+    const [badgeReveal, setBadgeReveal] = useState<Array<{ name: string; description: string; points: number }>>([])
+    const [showBadgeReveal, setShowBadgeReveal] = useState(false)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const zoomContainerRef = useRef<HTMLDivElement>(null)
     const imageContainerRef = useRef<HTMLDivElement>(null)
+    const rewardTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     const { t } = useLanguage()
     const { toast } = useToast()
@@ -77,6 +98,7 @@ export default function TranscribePage() {
         loadSegment()
         fetchRecent()
         fetchPendingCount()
+        fetchGamification()
     }, [loadSegment])
 
     const fetchPendingCount = async () => {
@@ -87,6 +109,13 @@ export default function TranscribePage() {
     const fetchRecent = async () => {
         const recent = await getRecentTranscriptions()
         setRecentTranscriptions(recent)
+    }
+
+    const fetchGamification = async () => {
+        const snapshot = await getGamificationSnapshot()
+        if (snapshot) {
+            setGamification(snapshot as GamificationSnapshot)
+        }
     }
 
     // Fetch reference text when segment changes
@@ -281,7 +310,7 @@ export default function TranscribePage() {
             return
         }
 
-        const result = isEditing
+        const result: any = isEditing
             ? await updateTranscription(isEditing, text)
             : await submitTranscription(segment.id, text)
 
@@ -291,8 +320,52 @@ export default function TranscribePage() {
             return
         }
 
-        toast({ title: isEditing ? "Updated! ✏️" : "Success! 🎉", description: isEditing ? "Transcription updated." : "Contribution saved." })
-        if (!isEditing) setSessionCount(prev => prev + 1)
+        if (isEditing) {
+            toast({ title: "Updated", description: "Transcription updated." })
+        } else {
+            const gain = result.reward?.finalXp || 0
+            const combo = Number(result.reward?.multiplier || 1)
+            const streakNow = Number(result.reward?.newStreak || 0)
+            const boostLabel = result.reward?.boosts?.length
+                ? 'Boosts: ' + result.reward.boosts.map((b: any) => b.label).join(', ')
+                : 'Keep your streak active to unlock XP multipliers.'
+
+            toast({
+                title: '+' + gain + ' XP',
+                description: boostLabel,
+            })
+            setSessionCount(prev => prev + 1)
+
+            setRewardBurst({
+                xp: gain,
+                combo,
+                streak: streakNow,
+                id: Date.now(),
+            })
+
+            if (rewardTimeoutRef.current) {
+                clearTimeout(rewardTimeoutRef.current)
+            }
+            rewardTimeoutRef.current = setTimeout(() => {
+                setRewardBurst(null)
+            }, 2200)
+
+            if (Array.isArray(result.achievements) && result.achievements.length > 0) {
+                const normalized = result.achievements.map((item: any) => ({
+                    name: item.name_fr || item.title || item.slug || 'Badge unlocked',
+                    description: item.description_fr || item.description || 'Nouveau badge debloque.',
+                    points: Number(item.points || 0),
+                }))
+                setBadgeReveal(normalized)
+                setShowBadgeReveal(true)
+            }
+        }
+
+        if (result.gamification) {
+            setGamification(result.gamification as GamificationSnapshot)
+        } else if (!isEditing) {
+            fetchGamification()
+        }
 
         setIsEditing(null)
         await loadSegment()
@@ -458,10 +531,85 @@ export default function TranscribePage() {
         }
     }
 
+    const topBadges = gamification?.badges?.slice(0, 6) || []
+
     return (
         <div className="flex flex-col w-full h-[calc(100vh-64px)] animate-in fade-in duration-500 overflow-hidden bg-background">
             <OnboardingModal />
 
+            <AnimatePresence>
+                {rewardBurst && (
+                    <motion.div
+                        key={rewardBurst.id}
+                        initial={{ opacity: 0, y: 24, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -16, scale: 0.9 }}
+                        transition={{ duration: 0.35 }}
+                        className="fixed right-4 top-20 z-[85]"
+                    >
+                        <div className="relative overflow-hidden rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-500/20 via-primary/20 to-secondary/20 px-4 py-3 shadow-2xl backdrop-blur">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
+                                    <Zap className="w-5 h-5 text-amber-700" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-foreground">+{rewardBurst.xp} XP</p>
+                                    <p className="text-[11px] text-muted-foreground">Combo x{rewardBurst.combo.toFixed(2)} | Streak {rewardBurst.streak}j</p>
+                                </div>
+                            </div>
+                            <div className="absolute -bottom-2 -right-2 flex gap-1">
+                                {[0, 1, 2, 3, 4].map((i) => (
+                                    <motion.span
+                                        key={i}
+                                        initial={{ y: 0, opacity: 0.7, scale: 1 }}
+                                        animate={{ y: -18 - i * 2, opacity: 0, scale: 0.5 }}
+                                        transition={{ duration: 0.9, delay: i * 0.06 }}
+                                        className="h-2 w-2 rounded-full bg-amber-500"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showBadgeReveal && badgeReveal.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[95] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 20, scale: 0.96 }}
+                            className="w-full max-w-lg rounded-2xl border border-amber-500/30 bg-background/95 shadow-2xl p-5"
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Trophy className="w-5 h-5 text-amber-600" />
+                                    <h3 className="font-heading text-xl font-semibold">Badge Unlock</h3>
+                                </div>
+                                <Button size="sm" variant="outline" onClick={() => setShowBadgeReveal(false)}>Fermer</Button>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-4">Nouveau palier atteint. Continue pour maintenir le momentum.</p>
+                            <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+                                {badgeReveal.map((badge, idx) => (
+                                    <div key={idx} className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-bold text-foreground">{badge.name}</p>
+                                            <span className="text-[11px] font-semibold text-emerald-700">+{badge.points} XP</span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1">{badge.description}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             {/* Sub-header */}
             <div className="w-full flex justify-between items-center px-4 py-2 border-b border-border/50 shrink-0 bg-background/50 backdrop-blur-sm z-30">
                 <div className="flex items-center gap-4">
@@ -521,6 +669,82 @@ export default function TranscribePage() {
                 </div>
             </div>
 
+            {gamification && (
+                <div className="w-full border-b border-border/50 bg-gradient-to-r from-primary/5 via-amber-500/5 to-secondary/5 px-4 py-3 shrink-0">
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+                        <div className="rounded-xl border border-primary/20 bg-background/80 p-3">
+                            <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                <span className="flex items-center gap-2"><Trophy className="w-3.5 h-3.5 text-primary" /> Niveau {gamification.level.level}</span>
+                                <span className="text-primary">{gamification.level.levelName}</span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-muted overflow-hidden mb-2">
+                                <div className="h-full bg-primary transition-all" style={{ width: `${gamification.level.progressPct}%` }} />
+                            </div>
+                            <div className="text-xs text-muted-foreground flex items-center justify-between">
+                                <span>{gamification.points} XP</span>
+                                <span>
+                                    {gamification.level.nextLevelXp
+                                        ? `${gamification.level.xpIntoLevel}/${gamification.level.xpForNextLevel} vers le prochain palier`
+                                        : 'Niveau max atteint'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="rounded-xl border border-amber-500/20 bg-background/80 p-3">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                <Zap className="w-3.5 h-3.5 text-amber-600" /> Boosts actifs
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {gamification.boosts.length > 0 ? gamification.boosts.map((boost) => (
+                                    <span key={boost.slug} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold ${boost.isDoubleXp ? 'border-amber-500/40 bg-amber-500/10 text-amber-700' : 'border-primary/30 bg-primary/10 text-primary'}`}>
+                                        <Flame className="w-3 h-3" /> {boost.label}
+                                    </span>
+                                )) : (
+                                    <span className="text-xs text-muted-foreground">Aucun boost actif. Serie de 3 jours = premier multiplicateur.</span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="rounded-xl border border-secondary/20 bg-background/80 p-3">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                <Star className="w-3.5 h-3.5 text-secondary" /> Prochain badge
+                            </div>
+                            {gamification.nextBadge ? (
+                                <>
+                                    <div className="text-sm font-semibold text-foreground mb-1">{gamification.nextBadge.name}</div>
+                                    <div className="text-xs text-muted-foreground mb-2">{gamification.nextBadge.description}</div>
+                                    <div className="w-full h-2 rounded-full bg-muted overflow-hidden mb-2">
+                                        <div className="h-full bg-secondary transition-all" style={{ width: `${gamification.nextBadge.progressPct}%` }} />
+                                    </div>
+                                    <div className="text-xs text-muted-foreground flex justify-between">
+                                        <span>{gamification.nextBadge.currentValue}/{gamification.nextBadge.target}</span>
+                                        <span>+{gamification.nextBadge.xpReward} XP</span>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="text-xs text-muted-foreground">Tous les badges disponibles sont debloques.</div>
+                            )}
+                        </div>
+                    </div>
+
+                    {topBadges.length > 0 && (
+                        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                            {topBadges.map((badge) => (
+                                <div key={badge.slug} className={`min-w-[180px] rounded-lg border px-3 py-2 ${badge.unlocked ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-border bg-background/70'}`}>
+                                    <div className="text-xs font-bold truncate flex items-center justify-between gap-2">
+                                        <span>{badge.name}</span>
+                                        <span className="text-[10px] text-muted-foreground">+{badge.xpReward} XP</span>
+                                    </div>
+                                    <div className="mt-1 text-[11px] text-muted-foreground">{badge.currentValue}/{badge.target}</div>
+                                    <div className="mt-1 w-full h-1.5 rounded bg-muted overflow-hidden">
+                                        <div className={`h-full ${badge.unlocked ? 'bg-emerald-500' : 'bg-primary'}`} style={{ width: `${badge.progressPct}%` }} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
             <div className="flex flex-1 gap-0 pt-0 min-h-0 relative">
 
                 {/* Collapsible/Resizable Left Panel */}
@@ -917,3 +1141,19 @@ export default function TranscribePage() {
         </div>
     )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
