@@ -29,6 +29,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                     <Link href="/admin/manuscripts" className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
                         <Library className="w-4 h-4" /> Manuscripts
                     </Link>
+                    <Link href="/admin/verify" className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
+                        <CheckCircle className="w-4 h-4" /> Verification
+                    </Link>
                     <Link href="/admin/search" className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
                         <Search className="w-4 h-4" /> Search
                     </Link>
