@@ -22,8 +22,7 @@ export async function createManuscriptRecord({
         source,
         uploaded_by: user.id,
         total_segments: segmentsCount,
-        cover_image_url: coverUrl,
-        pdf_url: pdfUrl
+        cover_image_url: coverUrl
     }).select('id').single()
 
     if (error) return { error: error.message }

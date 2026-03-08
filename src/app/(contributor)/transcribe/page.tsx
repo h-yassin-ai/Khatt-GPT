@@ -224,10 +224,6 @@ export default function TranscribePage() {
         setZoomPos({ x: 0, y: 0 })
     }
 
-    // Reset zoom when segment changes
-    useEffect(() => {
-        resetZoom()
-    }, [segment?.id])
 
     const centerOnSegment = useCallback(() => {
         if (!imageContainerRef.current || !segment?.polygon || !Array.isArray(segment.polygon) || segment.polygon.length === 0 || imgSize.width === 0) return
@@ -248,20 +244,18 @@ export default function TranscribePage() {
         const panX = (imgSize.width / 2 - polyCenterX) * renderScale
         const panY = (imgSize.height / 2 - polyCenterY) * renderScale
 
-        // Zoom to show polygon with surrounding context
-        const targetZoom = Math.max(1.5, Math.min(containerH / (polyHeight * 3.5), 4))
+        // Zoom to 100% as requested by user (1.0 scale relative to fit-to-screen)
+        const targetZoom = 1.0
 
         setZoomScale(targetZoom)
         setZoomPos({ x: panX, y: panY })
-    }, [segment, imgSize])
+    }, [segment, imgSize.width, imgSize.height])
 
     const handlePageImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
         const img = e.currentTarget
         const natW = img.naturalWidth
         const natH = img.naturalHeight
         setImgSize({ width: natW, height: natH })
-        // Initial zoom should be 100% as requested by user
-        resetZoom()
     }
 
     // Auto-center when segment changes if image is already loaded

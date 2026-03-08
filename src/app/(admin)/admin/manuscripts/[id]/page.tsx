@@ -4,7 +4,6 @@ import { ChevronLeft, Check, X, FileImage, ShieldCheck } from 'lucide-react'
 import ValidationButtons from './ValidationButtons'
 import BulkUploadPagesModal from './BulkUploadPagesModal'
 import ReferenceTextUpload from './ReferenceTextUpload'
-import PdfUrlUpdate from './PdfUrlUpdate'
 
 export default async function ManuscriptDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
@@ -52,7 +51,6 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
                     <p className="text-muted-foreground">{manuscript.description}</p>
                     <div className="mt-4 max-w-sm flex flex-col gap-3">
                         <ReferenceTextUpload manuscriptId={manuscript.id} currentUrl={manuscript.reference_text_url} />
-                        <PdfUrlUpdate manuscriptId={manuscript.id} currentUrl={manuscript.pdf_url} />
                     </div>
                 </div>
                 <div className="flex gap-3">

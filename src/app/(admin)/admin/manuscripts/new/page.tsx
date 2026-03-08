@@ -107,16 +107,6 @@ export default function NewManuscriptPage() {
                     />
                 </div>
 
-                <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium">PDF URL (Storage or External)</label>
-                    <input
-                        value={pdfUrl}
-                        onChange={e => setPdfUrl(e.target.value)}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
-                        placeholder="https://.../manuscript.pdf"
-                    />
-                    <p className="text-[10px] text-muted-foreground italic">If provided, contributors will see a PDF panel during transcription.</p>
-                </div>
 
                 <Button type="submit" disabled={submitting || !title.trim()} className="w-full h-12 text-base">
                     {submitting ? 'Creating...' : 'Create Project & Add Pages →'}

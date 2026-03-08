@@ -29,9 +29,21 @@ export async function getNextSegment() {
         .select('segment_id')
         .eq('contributor_id', user.id)
 
-    const transcribedSegmentIds = userTranscriptions?.map(t => t.segment_id) || []
+    const transcribedSegmentIds = new Set(userTranscriptions?.map(t => t.segment_id) || [])
 
     // 2. Query a pool of segments that are not validated or archived
+    // To handle heavy users who might have transcribed many segments, 
+    // we use a random offset to pull a diverse sample from the DB.
+    const { count: totalActive } = await supabase
+        .from('segments')
+        .select('*', { count: 'exact', head: true })
+        .neq('status', 'validated')
+        .neq('status', 'archived')
+
+    const poolSize = 300
+    const maxOffset = totalActive ? Math.max(0, totalActive - poolSize) : 0
+    const randomOffset = Math.floor(Math.random() * (maxOffset + 1))
+
     const { data: segments, error: segmentsError } = await supabase
         .from('segments')
         .select(`
@@ -39,12 +51,12 @@ export async function getNextSegment() {
             image_url, 
             order_index, 
             polygon,
-            manuscripts(title, description, reference_text_url, pdf_url),
+            manuscripts(title, description, reference_text_url),
             pages(image_url, label)
         `)
         .neq('status', 'validated')
         .neq('status', 'archived')
-        .limit(200)
+        .range(randomOffset, randomOffset + poolSize - 1)
 
     if (segmentsError) {
         console.error("Error fetching segments pool:", segmentsError)
@@ -56,14 +68,14 @@ export async function getNextSegment() {
         return null
     }
 
-    // 3. Filter locally (since user might have transcribed many segments)
-    const availableSegments = segments.filter(seg => !transcribedSegmentIds.includes(seg.id))
+    // 3. Filter locally
+    const availableSegments = segments.filter(seg => !transcribedSegmentIds.has(seg.id))
 
     if (availableSegments.length === 0) {
-        console.warn(`User ${user.id} has already transcribed all ${segments.length} segments in the current pool. Total transcribed: ${transcribedSegmentIds.length}`)
-        // If we still have more segments in the DB but they weren't in the pool, 
-        // a production app would need a more sophisticated pagination or RPC.
-        // For now, let's inform the user.
+        console.warn(`User ${user.id} has already transcribed all ${segments.length} segments in the chosen pool (offset ${randomOffset}). Total transcribed by user: ${transcribedSegmentIds.size}`)
+        
+        // Final fallback: if the random pool was exhausted, try one more time with a different random offset
+        // or just return null if we've truly exhausted everything (though unlikely with random sampling)
         return null
     }
 
@@ -78,7 +90,6 @@ export async function getNextSegment() {
         manuscript_title: segment.manuscripts?.title || 'Unknown Manuscript',
         manuscript_description: segment.manuscripts?.description || '',
         manuscript_reference_text_url: segment.manuscripts?.reference_text_url || '',
-        manuscript_pdf_url: segment.manuscripts?.pdf_url || '',
         page_image_url: segment.pages?.image_url || '',
         page_label: segment.pages?.label || 'Unknown Page'
     }
