@@ -38,6 +38,7 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
     )
 
     return (
+        <div className="container flex h-16 items-center justify-between px-6 max-w-7xl mx-auto">
             <div className="flex items-center gap-2 lg:gap-6">
                 <Link href="/dashboard" className="flex items-center gap-1.5 shrink-0">
                     <span className="font-heading text-2xl font-bold text-primary">وراقة</span>
