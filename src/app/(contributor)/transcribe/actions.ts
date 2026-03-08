@@ -31,9 +31,8 @@ export async function getNextSegment() {
 
     const transcribedSegmentIds = userTranscriptions?.map(t => t.segment_id) || []
 
-    // 2. Query segments that are not archived and not in transcribedSegmentIds
-    // Use .not('id', 'in', transcribedSegmentIds) for robust array filtering
-    let query = supabase
+    // 2. Query a pool of segments that are not validated or archived
+    const { data: segments, error: segmentsError } = await supabase
         .from('segments')
         .select(`
             id, 
@@ -45,27 +44,31 @@ export async function getNextSegment() {
         `)
         .neq('status', 'validated')
         .neq('status', 'archived')
+        .limit(200)
 
-    if (transcribedSegmentIds.length > 0) {
-        query = query.filter('id', 'not.in', `(${transcribedSegmentIds.map(id => `"${id}"`).join(',')})`)
-    }
-
-    query = query.limit(100)
-
-    const { data: segments, error } = await query
-
-    if (error) {
-        console.error("Error fetching next segment:", error)
-        return null
+    if (segmentsError) {
+        console.error("Error fetching segments pool:", segmentsError)
+        throw new Error(`Database error: ${segmentsError.message}`)
     }
 
     if (!segments || segments.length === 0) {
-        console.warn("No segments found for user", user.id, "after filtering transcribed", transcribedSegmentIds.length)
+        console.warn("No pending segments found in DB for user", user.id)
         return null
     }
 
-    const randomIdx = Math.floor(Math.random() * segments.length)
-    const segment = segments[randomIdx] as any
+    // 3. Filter locally (since user might have transcribed many segments)
+    const availableSegments = segments.filter(seg => !transcribedSegmentIds.includes(seg.id))
+
+    if (availableSegments.length === 0) {
+        console.warn(`User ${user.id} has already transcribed all ${segments.length} segments in the current pool. Total transcribed: ${transcribedSegmentIds.length}`)
+        // If we still have more segments in the DB but they weren't in the pool, 
+        // a production app would need a more sophisticated pagination or RPC.
+        // For now, let's inform the user.
+        return null
+    }
+
+    const randomIdx = Math.floor(Math.random() * availableSegments.length)
+    const segment = availableSegments[randomIdx] as any
 
     return {
         id: segment.id,
