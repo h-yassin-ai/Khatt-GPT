@@ -93,7 +93,48 @@ const translations: Record<string, Record<Language, string>> = {
     'learn.unvalidated': { en: 'The text below is preliminary and has not yet been formally validated. CLIQUER to reveal!', fr: 'Le texte ci-dessous est préliminaire et n\'a pas encore été formellement validé. CLIQUER pour révéler !' },
     'learn.no_segments': { en: 'No transcribed segments available yet.', fr: 'Aucun segment transcrit disponible pour le moment.' },
     'learn.search': { en: 'Search...', fr: 'Rechercher...' },
-    'learn.source': { en: 'Source', fr: 'Source' },
+    'nav.source': { en: 'Source', fr: 'Source' },
+    'nav.guide': { en: 'Calligraphy Guide', fr: 'Guide Calligraphie' },
+
+    // Guide page
+    'guide.title': { en: 'Maghrebi Calligraphy Guide', fr: 'Guide de la Calligraphie Maghrébine' },
+    'guide.desc': {
+        en: 'Maghrebi script is one of the oldest and most beautiful Arabic styles. Understanding its unique characteristics is essential for accurate transcription.',
+        fr: 'L\'écriture maghrébine est l\'un des styles arabes les plus anciens et les plus beaux. Comprendre ses caractéristiques uniques est essentiel pour une transcription précise.'
+    },
+    'guide.dots.title': { en: 'The Dotting System', fr: 'Le système de points' },
+    'guide.dots.desc': {
+        en: 'The Maghrebi system (inherited from Kufi) differs from the Eastern system (Mashreqi) in several ways:',
+        fr: 'Le système maghrébin (hérité du Kufi) diffère du système oriental (Mashreqi) sur plusieurs points :'
+    },
+    'guide.fa.title': { en: 'The letter Faa (ڢ)', fr: 'La lettre Faa (ڢ)' },
+    'guide.fa.desc': {
+        en: 'Unlike the common Faa, the Maghrebi Faa has its dot BELOW the circle.',
+        fr: 'Contrairement au Faa commun, le Faa maghrébin a son point EN DESSOUS de la boucle.'
+    },
+    'guide.qaf.title': { en: 'The letter Qaf (ڧ)', fr: 'La lettre Qaf (ڧ)' },
+    'guide.qaf.desc': {
+        en: 'The Maghrebi Qaf has only ONE dot ABOVE, resembling a standard Faa.',
+        fr: 'Le Qaf maghrébin n\'a qu\'UN SEUL point AU-DESSUS, ressemblant à un Faa standard.'
+    },
+    'guide.nun.title': { en: 'The letter Nun (ن)', fr: 'La lettre Nun (ن)' },
+    'guide.nun.desc': {
+        en: 'In final or isolated positions, the Nun often has NO dot, as the shape is sufficient.',
+        fr: 'En position finale ou isolée, le Nun n\'a souvent AUCUN point, sa forme suffisant à le reconnaître.'
+    },
+    'guide.styles.title': { en: 'Calligraphic Styles', fr: 'Styles Calligraphiques' },
+    'guide.styles.mabsut': {
+        en: 'Mabsut is the readable, clear style used for main texts and Qur\'ans. It values clarity and horizontal extension.',
+        fr: 'Le Mabsut est le style lisible et clair utilisé pour les textes principaux et les Corans. Il privilégie la clarté et l\'extension horizontale.'
+    },
+    'guide.styles.mujawhar': {
+        en: 'Mujawhar is a flowing, cursive style often used for administrative documents and rapid copying.',
+        fr: 'Le Mujawhar est un style cursif et fluide, souvent utilisé pour les documents administratifs et la copie rapide.'
+    },
+    'guide.styles.thuluth': {
+        en: 'Thuluth Maghrebi is an ornamental, large script used for titles, architecture, and decorative elements.',
+        fr: 'Le Thuluth Maghrébin est une écriture ornementale et large, utilisée pour les titres, l\'architecture et les éléments décoratifs.'
+    },
 }
 
 const LanguageContext = createContext<LanguageContextType>({

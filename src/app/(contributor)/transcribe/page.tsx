@@ -775,8 +775,8 @@ export default function TranscribePage() {
                         </div>
 
                         {/* Instruction badge */}
-                        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 select-none">
-                            <div className="flex items-center gap-1.5 bg-amber-500/90 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md backdrop-blur-sm">
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 select-none pointer-events-none">
+                            <div className="flex items-center gap-1.5 bg-amber-500/80 text-white text-[10px] sm:text-[11px] font-bold px-3 py-1 rounded-full shadow-lg backdrop-blur-sm border border-white/20 transition-opacity">
                                 <Highlighter className="w-3 h-3" />
                                 {t('transcribe.instruction')}
                             </div>

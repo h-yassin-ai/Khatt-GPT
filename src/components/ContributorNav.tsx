@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { LayoutDashboard, PenLine, User, LogOut, BookOpen, ShieldCheck, GraduationCap, Languages, History, Menu, X } from 'lucide-react'
+import { LayoutDashboard, PenLine, User, LogOut, BookOpen, ShieldCheck, GraduationCap, Languages, History, Menu, X, Feather } from 'lucide-react'
 import { useLanguage } from '@/lib/language-context'
 import { useState } from 'react'
 
@@ -22,6 +22,9 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
             </Link>
             <Link href="/learn" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <GraduationCap className="w-4 h-4" /> {t('nav.learn')}
+            </Link>
+            <Link href="/guide" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
+                <Feather className="w-4 h-4" /> {t('nav.guide')}
             </Link>
             <Link href="/profile" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <User className="w-4 h-4" /> {t('nav.profile')}
