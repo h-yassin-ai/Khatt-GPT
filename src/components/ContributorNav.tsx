@@ -94,6 +94,5 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
                 </div>
             )}
         </div>
-        </div >
     )
 }
