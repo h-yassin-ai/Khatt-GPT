@@ -23,7 +23,9 @@ type SegmentData = {
     manuscript_title: string;
     manuscript_description?: string;
     manuscript_reference_text_url?: string;
+    manuscript_pdf_url?: string;
     page_image_url: string;
+    page_label?: string;
 }
 
 export default function TranscribePage() {
@@ -42,7 +44,7 @@ export default function TranscribePage() {
     const [searchTerm, setSearchTerm] = useState('')
     const [panelWidth, setPanelWidth] = useState(380)
     const [isResizing, setIsResizing] = useState(false)
-    const [activeTab, setActiveTab] = useState<'reference' | 'recent'>('reference')
+    const [activeTab, setActiveTab] = useState<'reference' | 'recent' | 'pdf'>('reference')
     const [recentTranscriptions, setRecentTranscriptions] = useState<any[]>([])
     const [isEditing, setIsEditing] = useState<string | null>(null)
     const [imgSize, setImgSize] = useState({ width: 0, height: 0 })
@@ -257,13 +259,11 @@ export default function TranscribePage() {
 
     // Auto-center when segment changes if image is already loaded
     useEffect(() => {
-        if (imgSize.width > 0) {
-            // We could auto-center here, but user asked for 100% zoom initially.
-            // However, they also mentioned "it doesn't highlight". 
-            // Let's ensure resetZoom is called to reset pos/scale but keep imgSize for SVG.
-            resetZoom()
+        if (imgSize.width > 0 && segment?.id) {
+            // Auto-center to make it easier for users to see the highlighted line immediately
+            centerOnSegment()
         }
-    }, [segment?.id, imgSize.width])
+    }, [segment?.id, imgSize.width, centerOnSegment])
 
     const handleSubmit = async () => {
         if (!segment || !text.trim()) return
@@ -482,6 +482,20 @@ export default function TranscribePage() {
                         <Highlighter className="w-3.5 h-3.5" />
                         {t('transcribe.center_line')}
                     </Button>
+                    {segment?.manuscript_pdf_url && (
+                        <Button
+                            variant={showReference && activeTab === 'pdf' ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => {
+                                if (!showReference) setShowReference(true);
+                                setActiveTab('pdf');
+                            }}
+                            className="gap-2 rounded-full h-8 px-3 border-red-500/30 text-red-600 hover:bg-red-50 hidden sm:flex"
+                        >
+                            <BookOpen className="w-3.5 h-3.5" />
+                            PDF
+                        </Button>
+                    )}
                     <Button
                         variant={showReference ? "default" : "outline"}
                         size="sm"
@@ -501,8 +515,8 @@ export default function TranscribePage() {
 
                 {/* Collapsible/Resizable Left Panel */}
                 <div
-                    style={{ width: showReference ? `${panelWidth}px` : '0px' }}
-                    className={`relative z-40 h-full bg-card border-r border-border ${!isResizing ? 'transition-all duration-300 ease-in-out' : ''} flex flex-col overflow-hidden shadow-xl lg:shadow-none`}
+                    style={{ width: showReference ? (window.innerWidth < 1024 ? '100%' : `${panelWidth}px`) : '0px' }}
+                    className={`fixed inset-0 lg:relative z-40 h-full bg-card border-r border-border ${!isResizing ? 'transition-all duration-300 ease-in-out' : ''} flex flex-col overflow-hidden shadow-xl lg:shadow-none ${showReference ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
                 >
                     {showReference && (
                         <div className="flex flex-col h-full min-w-[200px]">
@@ -520,6 +534,14 @@ export default function TranscribePage() {
                                 >
                                     <History className="w-4 h-4" /> Récent
                                 </button>
+                                {segment?.manuscript_pdf_url && (
+                                    <button
+                                        onClick={() => setActiveTab('pdf')}
+                                        className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === 'pdf' ? 'text-red-600 bg-red-50 border-b-2 border-red-600' : 'text-muted-foreground hover:bg-muted'}`}
+                                    >
+                                        <FileImage className="w-4 h-4" /> PDF
+                                    </button>
+                                )}
                                 <button onClick={() => setShowReference(false)} className="px-3 hover:bg-destructive/10 hover:text-destructive text-muted-foreground shrink-0 border-l border-border transition-colors">
                                     <X className="w-4 h-4" />
                                 </button>
@@ -640,6 +662,15 @@ export default function TranscribePage() {
                                         )}
                                     </div>
                                 )}
+                                {activeTab === 'pdf' && segment?.manuscript_pdf_url && (
+                                    <div className="flex-1 overflow-hidden flex flex-col">
+                                        <iframe
+                                            src={segment.manuscript_pdf_url}
+                                            className="w-full h-full border-none"
+                                            title="Manuscript PDF"
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -676,7 +707,7 @@ export default function TranscribePage() {
                     {/* Image Area — full page centered on highlighted segment */}
                     <div
                         ref={imageContainerRef}
-                        className="flex-[3] flex flex-col relative justify-center items-center bg-muted/5 border-b border-border/50 overflow-hidden cursor-crosshair"
+                        className="flex-[2] lg:flex-[3] flex flex-col relative justify-center items-center bg-muted/5 border-b border-border/50 overflow-hidden cursor-crosshair"
                         onWheel={handleSegmentWheel}
                         onMouseDown={handleSegmentMouseDown}
                     >
@@ -746,6 +777,12 @@ export default function TranscribePage() {
                                 <span className="text-primary/40">#{segment?.order_index}</span>
                                 <span className="w-[1px] h-3 bg-border" />
                                 <span className="max-w-[120px] truncate">{title}</span>
+                                {segment?.page_label && (
+                                    <>
+                                        <span className="w-[1px] h-3 bg-border" />
+                                        <span className="text-primary font-bold">{segment.page_label}</span>
+                                    </>
+                                )}
                                 {zoomScale !== 1 && (
                                     <>
                                         <span className="w-[1px] h-3 bg-border" />
@@ -765,7 +802,7 @@ export default function TranscribePage() {
                     </div>
 
                     {/* Transcription Area */}
-                    <div className="flex-[2] flex flex-col p-4 lg:px-8 lg:pb-8 lg:pt-4 gap-4 overflow-hidden">
+                    <div className="flex-[3] lg:flex-[2] flex flex-col p-4 lg:px-8 lg:pb-8 lg:pt-4 gap-4 overflow-hidden">
                         <div className="flex justify-between items-center shrink-0">
                             <h2 className="text-xl font-heading font-semibold text-primary" dir="rtl">
                                 {t('transcribe.transcription_header')}

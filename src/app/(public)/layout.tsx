@@ -1,5 +1,6 @@
-import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
+import { ContributorNav } from '@/components/ContributorNav';
+import Link from 'next/link';
 
 export default async function PublicLayout({
     children,
@@ -8,22 +9,22 @@ export default async function PublicLayout({
 }) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()) || [];
+    const isAdmin = user?.email ? adminEmails.includes(user.email) : false;
+
     return (
         <div className="min-h-screen flex flex-col items-center">
             {/* Navigation */}
-            <header className="w-full max-w-7xl px-6 py-6 flex justify-between items-center z-10 sticky top-0 bg-background/80 backdrop-blur-md border-b border-border">
-                <div className="flex items-center gap-2">
-                    {/* Custom logo icon or text */}
-                    <span className="font-heading text-3xl font-bold tracking-tight text-primary">وراقة</span>
-                    <span className="font-heading text-2xl font-semibold ml-2">Waraka</span>
-                </div>
-                <nav className="flex items-center gap-6">
-                    {user ? (
-                        <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
-                            Dashboard
-                        </Link>
-                    ) : (
-                        <>
+            <header className="w-full border-b border-border bg-background/95 backdrop-blur sticky top-0 z-40">
+                {user ? (
+                    <ContributorNav email={user.email ?? ''} isAdmin={isAdmin} />
+                ) : (
+                    <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center w-full">
+                        <div className="flex items-center gap-2">
+                            <span className="font-heading text-3xl font-bold tracking-tight text-primary">وراقة</span>
+                            <span className="font-heading text-2xl font-semibold ml-2">Waraka</span>
+                        </div>
+                        <nav className="flex items-center gap-6">
                             <Link href="/auth/login" className="text-sm font-medium hover:text-primary transition-colors">
                                 Log In
                             </Link>
@@ -33,9 +34,9 @@ export default async function PublicLayout({
                             >
                                 Start Contributing
                             </Link>
-                        </>
-                    )}
-                </nav>
+                        </nav>
+                    </div>
+                )}
             </header>
 
             {/* Main Content */}

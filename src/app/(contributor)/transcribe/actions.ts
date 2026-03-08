@@ -39,8 +39,8 @@ export async function getNextSegment() {
             image_url, 
             order_index, 
             polygon,
-            manuscripts!inner(title, description, reference_text_url),
-            pages!inner(image_url)
+            manuscripts!inner(title, description, reference_text_url, pdf_url),
+            pages!inner(image_url, label)
         `)
         .neq('status', 'archived')
 
@@ -67,7 +67,9 @@ export async function getNextSegment() {
         manuscript_title: segment.manuscripts.title,
         manuscript_description: segment.manuscripts.description,
         manuscript_reference_text_url: segment.manuscripts.reference_text_url,
-        page_image_url: segment.pages.image_url
+        manuscript_pdf_url: segment.manuscripts.pdf_url,
+        page_image_url: segment.pages.image_url,
+        page_label: segment.pages.label
     }
 }
 

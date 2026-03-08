@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, PenTool, Database, ArrowRight, Sparkles, Users, ScrollText, ChevronLeft, ChevronRight } from "lucide-react";
+import { BookOpen, PenTool, Database, ArrowRight, Sparkles, Users, ScrollText, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
+import LineLightbox from "@/components/LineLightbox";
 
 type TranscribedSegment = {
     id: string;
@@ -23,6 +24,7 @@ export default function LandingPage() {
     const [transcribed, setTranscribed] = useState<TranscribedSegment[]>([]);
     const [pending, setPending] = useState<PendingSegment[]>([]);
     const [carouselIdx, setCarouselIdx] = useState(0);
+    const [selectedLine, setSelectedLine] = useState<TranscribedSegment | null>(null);
     const targetCounts = useRef({ manuscripts: 0, segments: 0, contributors: 0 });
     const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -178,14 +180,22 @@ export default function LandingPage() {
                             </div>
                         </div>
                         {transcribed.length > 0 && currentSlide ? (
-                            <div className="p-5 space-y-4">
-                                <div className="rounded-lg overflow-hidden border border-border bg-muted/30 min-h-[120px] flex items-center justify-center relative">
+                            <div
+                                className="p-5 space-y-4 cursor-pointer hover:bg-muted/10 transition-colors"
+                                onClick={() => setSelectedLine(currentSlide)}
+                            >
+                                <div className="rounded-lg overflow-hidden border border-border bg-muted/30 min-h-[120px] flex items-center justify-center relative group">
                                     {currentSlide.image_url ? (
-                                        <img
-                                            src={currentSlide.image_url}
-                                            alt="Ligne manuscrite"
-                                            className="max-h-[120px] w-full object-contain"
-                                        />
+                                        <>
+                                            <img
+                                                src={currentSlide.image_url}
+                                                alt="Ligne manuscrite"
+                                                className="max-h-[120px] w-full object-contain transition-transform group-hover:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                <Search className="w-8 h-8 text-white drop-shadow-md" />
+                                            </div>
+                                        </>
                                     ) : (
                                         <ScrollText className="w-10 h-10 text-muted-foreground opacity-20" />
                                     )}
@@ -279,15 +289,21 @@ export default function LandingPage() {
                             return (
                                 <div
                                     key={seg.id}
-                                    className="flex-none w-[340px] snap-center bg-card border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col"
+                                    onClick={() => setSelectedLine(seg)}
+                                    className="flex-none w-[340px] snap-center bg-card border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/40 transition-all flex flex-col cursor-pointer group"
                                 >
-                                    <div className="h-[130px] bg-muted/40 flex items-center justify-center border-b border-border">
+                                    <div className="relative h-[130px] bg-muted/40 flex items-center justify-center border-b border-border overflow-hidden">
                                         {seg.image_url ? (
-                                            <img
-                                                src={seg.image_url}
-                                                alt="Ligne du manuscrit"
-                                                className="max-h-[130px] max-w-full object-contain"
-                                            />
+                                            <>
+                                                <img
+                                                    src={seg.image_url}
+                                                    alt="Ligne du manuscrit"
+                                                    className="max-h-[130px] max-w-full object-contain transition-transform group-hover:scale-110"
+                                                />
+                                                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                    <Search className="w-6 h-6 text-white drop-shadow-md" />
+                                                </div>
+                                            </>
                                         ) : (
                                             <BookOpen className="w-8 h-8 text-muted-foreground opacity-20" />
                                         )}
@@ -413,6 +429,14 @@ export default function LandingPage() {
                     </Link>
                 </p>
             </section>
+
+            <LineLightbox
+                isOpen={!!selectedLine}
+                onClose={() => setSelectedLine(null)}
+                image_url={selectedLine?.image_url || null}
+                text={selectedLine?.consensus_text || null}
+                title={selectedLine ? (Array.isArray(selectedLine.manuscripts) ? selectedLine.manuscripts[0]?.title : (selectedLine.manuscripts as any)?.title) : ''}
+            />
         </div>
     );
 }

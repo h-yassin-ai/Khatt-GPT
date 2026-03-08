@@ -12,6 +12,7 @@ export default function NewManuscriptPage() {
     const [title, setTitle] = useState('')
     const [description, setDescription] = useState('')
     const [source, setSource] = useState('')
+    const [pdfUrl, setPdfUrl] = useState('')
     const [submitting, setSubmitting] = useState(false)
 
     const router = useRouter()
@@ -28,7 +29,8 @@ export default function NewManuscriptPage() {
             description: description.trim(),
             source: source.trim(),
             segmentsCount: 0,
-            coverUrl: ''
+            coverUrl: '',
+            pdfUrl: pdfUrl.trim()
         })
 
         if (result.error) {
@@ -103,6 +105,17 @@ export default function NewManuscriptPage() {
                         className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none resize-y"
                         placeholder="Historical context or notes about this manuscript..."
                     />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium">PDF URL (Storage or External)</label>
+                    <input
+                        value={pdfUrl}
+                        onChange={e => setPdfUrl(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+                        placeholder="https://.../manuscript.pdf"
+                    />
+                    <p className="text-[10px] text-muted-foreground italic">If provided, contributors will see a PDF panel during transcription.</p>
                 </div>
 
                 <Button type="submit" disabled={submitting || !title.trim()} className="w-full h-12 text-base">

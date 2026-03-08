@@ -8,8 +8,8 @@ import { revalidatePath } from 'next/cache'
 // So this Server Action only handles DB metadata creation.
 
 export async function createManuscriptRecord({
-    title, description, source, segmentsCount, coverUrl
-}: { title: string, description: string, source: string, segmentsCount: number, coverUrl: string }) {
+    title, description, source, segmentsCount, coverUrl, pdfUrl
+}: { title: string, description: string, source: string, segmentsCount: number, coverUrl: string, pdfUrl?: string }) {
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -22,7 +22,8 @@ export async function createManuscriptRecord({
         source,
         uploaded_by: user.id,
         total_segments: segmentsCount,
-        cover_image_url: coverUrl
+        cover_image_url: coverUrl,
+        pdf_url: pdfUrl
     }).select('id').single()
 
     if (error) return { error: error.message }

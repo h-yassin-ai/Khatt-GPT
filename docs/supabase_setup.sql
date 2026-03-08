@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   last_contribution_date date,
   points integer DEFAULT 0,
   is_suspended boolean DEFAULT false,
+  pdf_url text,
   created_at timestamp with time zone DEFAULT now()
 );
 
