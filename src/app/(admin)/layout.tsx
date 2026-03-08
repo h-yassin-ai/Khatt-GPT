@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { LayoutDashboard, Library, Download, LogOut, PieChart, Search, Settings } from 'lucide-react'
+import { LayoutDashboard, Library, Download, LogOut, PieChart, Search, Settings, CheckCircle } from 'lucide-react'
 import { AdminRealtimeAlerts } from './AdminRealtimeAlerts'
 
 // This layout relies on middleware.ts doing the heavy lifting of admin authorization

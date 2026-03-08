@@ -24,7 +24,7 @@ export function OnboardingModal() {
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-[620px] border-border bg-[#FAF7F2]">
+            <DialogContent className="sm:max-w-[620px] border-border bg-[#FAF7F2] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                 <DialogHeader className="mb-4">
                     <DialogTitle className="text-3xl font-heading text-primary font-bold">
                         {t('onboarding.title')}
