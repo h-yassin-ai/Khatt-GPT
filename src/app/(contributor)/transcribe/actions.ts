@@ -52,7 +52,13 @@ export async function getNextSegment() {
 
     const { data: segments, error } = await query
 
-    if (error || !segments || segments.length === 0) {
+    if (error) {
+        console.error("Error fetching next segment:", error)
+        return null
+    }
+
+    if (!segments || segments.length === 0) {
+        console.warn("No segments found for user", user.id, "after filtering transcribed", transcribedSegmentIds.length)
         return null
     }
 
