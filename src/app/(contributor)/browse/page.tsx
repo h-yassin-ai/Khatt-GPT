@@ -19,9 +19,14 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
             cover_image_url,
             total_segments,
             created_at,
-            segments ( status )
+            segments!left ( 
+                status,
+                page_image_url,
+                order_index
+            )
         `)
         .order('created_at', { ascending: false })
+        .order('order_index', { foreignTable: 'segments', ascending: true })
 
     if (query) {
         manuscriptsQuery = manuscriptsQuery.or(`title.ilike.%${query}%,source.ilike.%${query}%`)
@@ -64,9 +69,9 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
                             <div key={ms.id} className="bg-card border border-border hover:border-primary/50 shadow-sm hover:shadow-md rounded-2xl overflow-hidden transition-all flex flex-col group h-full">
                                 {/* Cover Image Section */}
                                 <div className="aspect-[4/5] bg-muted relative overflow-hidden flex items-center justify-center">
-                                    {ms.cover_image_url ? (
+                                    {ms.segments?.[0]?.page_image_url || ms.cover_image_url ? (
                                         <img
-                                            src={ms.cover_image_url}
+                                            src={ms.segments?.[0]?.page_image_url || ms.cover_image_url}
                                             alt={ms.title}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                         />

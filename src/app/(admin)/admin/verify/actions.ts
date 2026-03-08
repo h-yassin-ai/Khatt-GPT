@@ -22,6 +22,19 @@ async function assertAdmin(supabase: any) {
     return { ok: true }
 }
 
+async function getAdminClient() {
+    // If service role key is available, use it to bypass RLS
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+        return createAdminClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+        )
+    }
+    // Fallback to regular client
+    return await createClient()
+}
+
 export async function getSegmentsToVerify() {
     const supabase = await createClient()
 
@@ -31,7 +44,10 @@ export async function getSegmentsToVerify() {
         return []
     }
 
-    const { data: segments, error } = await supabase
+    // Use admin client for the actual data fetching to bypass RLS
+    const adminSupabase = await getAdminClient()
+
+    const { data: segments, error } = await adminSupabase
         .from('segments')
         .select(`
             id,
@@ -75,10 +91,12 @@ export async function approveTranscription(segmentId: string, transcriptionId: s
     const adminCheck = await assertAdmin(supabase)
     if (!adminCheck.ok) return { error: adminCheck.error }
 
+    const adminSupabase = await getAdminClient()
+
     const sanitizedText = text.trim()
     if (!sanitizedText) return { error: 'Transcription text cannot be empty.' }
 
-    const { error: tError } = await supabase
+    const { error: tError } = await adminSupabase
         .from('transcriptions')
         .update({ is_validated: true, text: sanitizedText })
         .eq('id', transcriptionId)
@@ -86,13 +104,13 @@ export async function approveTranscription(segmentId: string, transcriptionId: s
     if (tError) return { error: tError.message }
 
     // Reset validation flag for alternatives from the same segment.
-    await supabase
+    await adminSupabase
         .from('transcriptions')
         .update({ is_validated: false })
         .eq('segment_id', segmentId)
         .neq('id', transcriptionId)
 
-    const { error: sError } = await supabase
+    const { error: sError } = await adminSupabase
         .from('segments')
         .update({
             status: 'validated',
@@ -115,7 +133,9 @@ export async function rejectTranscription(transcriptionId: string) {
     const adminCheck = await assertAdmin(supabase)
     if (!adminCheck.ok) return { error: adminCheck.error }
 
-    const { data: transcription, error: fetchError } = await supabase
+    const adminSupabase = await getAdminClient()
+
+    const { data: transcription, error: fetchError } = await adminSupabase
         .from('transcriptions')
         .select('id, segment_id')
         .eq('id', transcriptionId)
@@ -123,19 +143,19 @@ export async function rejectTranscription(transcriptionId: string) {
 
     if (fetchError || !transcription) return { error: 'Transcription not found' }
 
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await adminSupabase
         .from('transcriptions')
         .delete()
         .eq('id', transcriptionId)
 
     if (deleteError) return { error: deleteError.message }
 
-    const { count: remaining } = await supabase
+    const { count: remaining } = await adminSupabase
         .from('transcriptions')
         .select('*', { count: 'exact', head: true })
         .eq('segment_id', transcription.segment_id)
 
-    await supabase
+    await adminSupabase
         .from('segments')
         .update({
             transcription_count: Math.max(0, remaining || 0),
