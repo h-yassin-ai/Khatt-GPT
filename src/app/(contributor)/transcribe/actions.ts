@@ -32,6 +32,7 @@ export async function getNextSegment() {
     const transcribedSegmentIds = userTranscriptions?.map(t => t.segment_id) || []
 
     // 2. Query segments that are not archived and not in transcribedSegmentIds
+    // Use .not('id', 'in', transcribedSegmentIds) for robust array filtering
     let query = supabase
         .from('segments')
         .select(`
@@ -39,16 +40,17 @@ export async function getNextSegment() {
             image_url, 
             order_index, 
             polygon,
-            manuscripts!inner(title, description, reference_text_url, pdf_url),
-            pages!inner(image_url, label)
+            manuscripts(title, description, reference_text_url, pdf_url),
+            pages(image_url, label)
         `)
+        .neq('status', 'validated')
         .neq('status', 'archived')
 
     if (transcribedSegmentIds.length > 0) {
-        query = query.not('id', 'in', `(${transcribedSegmentIds.join(',')})`)
+        query = query.filter('id', 'not.in', `(${transcribedSegmentIds.map(id => `"${id}"`).join(',')})`)
     }
 
-    query = query.limit(50)
+    query = query.limit(100)
 
     const { data: segments, error } = await query
 
@@ -70,12 +72,12 @@ export async function getNextSegment() {
         image_url: segment.image_url,
         order_index: segment.order_index,
         polygon: segment.polygon,
-        manuscript_title: segment.manuscripts.title,
-        manuscript_description: segment.manuscripts.description,
-        manuscript_reference_text_url: segment.manuscripts.reference_text_url,
-        manuscript_pdf_url: segment.manuscripts.pdf_url,
-        page_image_url: segment.pages.image_url,
-        page_label: segment.pages.label
+        manuscript_title: segment.manuscripts?.title || 'Unknown Manuscript',
+        manuscript_description: segment.manuscripts?.description || '',
+        manuscript_reference_text_url: segment.manuscripts?.reference_text_url || '',
+        manuscript_pdf_url: segment.manuscripts?.pdf_url || '',
+        page_image_url: segment.pages?.image_url || '',
+        page_label: segment.pages?.label || 'Unknown Page'
     }
 }
 
