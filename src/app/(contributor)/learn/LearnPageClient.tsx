@@ -21,11 +21,22 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
     const { t } = useLanguage()
     const router = useRouter()
     const [query, setQuery] = useState(initialQuery)
+    const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set())
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
         const params = query.trim() ? `?query=${encodeURIComponent(query.trim())}` : ''
         router.push(`/learn${params}`)
+    }
+
+    const toggleReveal = (id: string) => {
+        const next = new Set(revealedIds)
+        if (next.has(id)) {
+            next.delete(id)
+        } else {
+            next.add(id)
+        }
+        setRevealedIds(next)
     }
 
     return (
@@ -119,16 +130,30 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
                                             )}
                                         </div>
 
-                                        <p className="font-arabic text-2xl leading-[2.2] text-foreground text-right" dir="rtl">
-                                            {seg.consensus_text}
-                                        </p>
+                                        <div className="relative group/text cursor-pointer" onClick={() => !isValidated && toggleReveal(seg.id)}>
+                                            <p 
+                                                className={`font-arabic text-2xl leading-[2.2] text-foreground text-right transition-all duration-300 ${(!isValidated && !revealedIds.has(seg.id)) ? 'blur-md select-none' : ''}`} 
+                                                dir="rtl"
+                                            >
+                                                {seg.consensus_text}
+                                            </p>
+                                            {!isValidated && !revealedIds.has(seg.id) && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-background/10 backdrop-blur-[2px] rounded-lg">
+                                                    <span className="bg-primary/90 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg uppercase tracking-widest opacity-0 group-hover/text:opacity-100 transition-opacity">
+                                                        Cliquer pour révéler
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Warning for unvalidated */}
                                     {!isValidated && (
                                         <div className="flex items-start gap-2 p-3 rounded-lg bg-orange-500/8 border border-orange-500/20 text-orange-700 text-xs leading-relaxed">
                                             <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                                            <span>{t('learn.unvalidated')}</span>
+                                            <span className="cursor-pointer font-bold underline decoration-dotted" onClick={() => toggleReveal(seg.id)}>
+                                                {t('learn.unvalidated')}
+                                            </span>
                                         </div>
                                     )}
                                 </div>

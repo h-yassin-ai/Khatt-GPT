@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { getNextSegment, submitTranscription, flagSegment, getRecentTranscriptions, updateTranscription } from './actions'
+import { getNextSegment, submitTranscription, flagSegment, getRecentTranscriptions, updateTranscription, getPendingSegmentCount } from './actions'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import Zoom from 'react-medium-image-zoom'
@@ -46,6 +46,7 @@ export default function TranscribePage() {
     const [isResizing, setIsResizing] = useState(false)
     const [activeTab, setActiveTab] = useState<'reference' | 'recent' | 'pdf'>('reference')
     const [recentTranscriptions, setRecentTranscriptions] = useState<any[]>([])
+    const [pendingCount, setPendingCount] = useState<number | null>(null)
     const [isEditing, setIsEditing] = useState<string | null>(null)
     const [imgSize, setImgSize] = useState({ width: 0, height: 0 })
     const [zoomScale, setZoomScale] = useState(1)
@@ -75,7 +76,13 @@ export default function TranscribePage() {
     useEffect(() => {
         loadSegment()
         fetchRecent()
+        fetchPendingCount()
     }, [loadSegment])
+
+    const fetchPendingCount = async () => {
+        const count = await getPendingSegmentCount()
+        setPendingCount(count)
+    }
 
     const fetchRecent = async () => {
         const recent = await getRecentTranscriptions()
@@ -296,6 +303,7 @@ export default function TranscribePage() {
         setIsEditing(null)
         await loadSegment()
         fetchRecent()
+        fetchPendingCount()
         setSubmitting(false)
     }
 
@@ -314,6 +322,7 @@ export default function TranscribePage() {
     const handleSkip = async () => {
         setSubmitting(true)
         await loadSegment()
+        fetchPendingCount()
         setSubmitting(false)
     }
 
@@ -323,6 +332,7 @@ export default function TranscribePage() {
         await flagSegment(segment.id)
         toast({ title: "Segment flagged", description: "Admin will review this segment." })
         await loadSegment()
+        fetchPendingCount()
         setSubmitting(false)
     }
 
@@ -464,6 +474,12 @@ export default function TranscribePage() {
                     <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <span className={`w-2 h-2 rounded-full ${isOffline ? 'bg-amber-500' : 'bg-primary animate-pulse'}`}></span>
                         {t('transcribe.session')} : {sessionCount} {t('transcribe.segments')}
+                        {pendingCount !== null && (
+                            <>
+                                <span className="w-1 h-1 rounded-full bg-muted-foreground/30"></span>
+                                <span>{pendingCount.toLocaleString()} {t('transcribe.segments_waiting') || 'en attente'}</span>
+                            </>
+                        )}
                     </p>
                     {isOffline && (
                         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">

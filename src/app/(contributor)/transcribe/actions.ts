@@ -73,6 +73,21 @@ export async function getNextSegment() {
     }
 }
 
+export async function getPendingSegmentCount() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return 0
+
+    const { count } = await supabase
+        .from('segments')
+        .select('*', { count: 'exact', head: true })
+        .neq('status', 'validated')
+        .neq('status', 'archived')
+
+    return count || 0
+}
+
 
 export async function submitTranscription(segmentId: string, text: string) {
     const supabase = await createClient()

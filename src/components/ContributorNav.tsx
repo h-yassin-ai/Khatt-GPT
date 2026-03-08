@@ -11,26 +11,26 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
 
     const NavLinks = () => (
         <>
-            <Link href="/dashboard" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
+            <Link href="/dashboard" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <LayoutDashboard className="w-4 h-4" /> {t('nav.dashboard')}
             </Link>
-            <Link href="/browse" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
+            <Link href="/browse" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <BookOpen className="w-4 h-4" /> {t('nav.browse')}
             </Link>
-            <Link href="/transcribe" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
+            <Link href="/transcribe" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <PenLine className="w-4 h-4" /> {t('nav.transcribe')}
             </Link>
-            <Link href="/learn" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
+            <Link href="/learn" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <GraduationCap className="w-4 h-4" /> {t('nav.learn')}
             </Link>
-            <Link href="/profile" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
+            <Link href="/profile" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <User className="w-4 h-4" /> {t('nav.profile')}
             </Link>
-            <Link href="/contributions" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
+            <Link href="/contributions" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <History className="w-4 h-4" /> {t('nav.contributions') || 'Contributions'}
             </Link>
             {isAdmin && (
-                <Link href="/admin" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-primary hover:text-primary/80 font-bold">
+                <Link href="/admin" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-primary hover:text-primary/80 font-bold whitespace-nowrap">
                     <ShieldCheck className="w-4 h-4" /> {t('nav.admin')}
                 </Link>
             )}
@@ -38,13 +38,12 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
     )
 
     return (
-        <div className="container flex h-16 items-center justify-between px-6 max-w-7xl mx-auto">
-            <div className="flex items-center gap-6">
-                <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="flex items-center gap-2 lg:gap-6">
+                <Link href="/dashboard" className="flex items-center gap-1.5 shrink-0">
                     <span className="font-heading text-2xl font-bold text-primary">وراقة</span>
-                    <span className="font-heading text-xl font-semibold hidden sm:inline-block">Waraka</span>
+                    <span className="font-heading text-lg lg:text-xl font-semibold hidden sm:inline-block">Waraka</span>
                 </Link>
-                <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
+                <nav className="hidden md:flex items-center gap-0.5 lg:gap-1 text-[13px] lg:text-sm font-medium">
                     <NavLinks />
                 </nav>
             </div>
@@ -58,7 +57,7 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
                     title={lang === 'fr' ? 'Switch to English' : 'Passer en français'}
                 >
                     <Languages className="w-3.5 h-3.5" />
-                    {t('nav.lang_toggle')}
+                    <span className="whitespace-nowrap">{t('nav.lang_toggle')}</span>
                 </button>
                 <div className="hidden md:block">
                     <form action="/auth/signout" method="post">

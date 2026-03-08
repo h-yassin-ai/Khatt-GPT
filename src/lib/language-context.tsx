@@ -90,7 +90,7 @@ const translations: Record<string, Record<Language, string>> = {
     'learn.desc': { en: 'Browse transcribed lines to train your eye. Each line shows the manuscript image alongside its transcription.', fr: 'Parcourez les lignes transcrites pour entraîner votre regard. Chaque ligne montre l\'image du manuscrit avec sa transcription.' },
     'learn.validated': { en: 'Validated by admin', fr: 'Validé par un admin' },
     'learn.in_progress': { en: 'In progress', fr: 'En cours' },
-    'learn.unvalidated': { en: 'The text below is preliminary and has not yet been formally validated by an expert.', fr: 'Le texte ci-dessous est préliminaire et n\'a pas encore été formellement validé par un expert.' },
+    'learn.unvalidated': { en: 'The text below is preliminary and has not yet been formally validated. CLIQUER to reveal!', fr: 'Le texte ci-dessous est préliminaire et n\'a pas encore été formellement validé. CLIQUER pour révéler !' },
     'learn.no_segments': { en: 'No transcribed segments available yet.', fr: 'Aucun segment transcrit disponible pour le moment.' },
     'learn.search': { en: 'Search...', fr: 'Rechercher...' },
     'learn.source': { en: 'Source', fr: 'Source' },
