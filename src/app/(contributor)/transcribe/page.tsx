@@ -44,6 +44,7 @@ type GamificationSnapshot = {
     badges: Array<{ slug: string; name: string; description: string; unlocked: boolean; progressPct: number; currentValue: number; target: number; xpReward: number }>;
     nextBadge: { slug: string; name: string; description: string; progressPct: number; currentValue: number; target: number; xpReward: number } | null;
 }
+
 export default function TranscribePage() {
     const [segment, setSegment] = useState<SegmentData | null>(null)
     const [text, setText] = useState('')
@@ -72,8 +73,8 @@ export default function TranscribePage() {
     const [rewardBurst, setRewardBurst] = useState<{ xp: number; combo: number; streak: number; id: number } | null>(null)
     const [badgeReveal, setBadgeReveal] = useState<Array<{ name: string; description: string; points: number }>>([])
     const [showBadgeReveal, setShowBadgeReveal] = useState(false)
+    const [showGamification, setShowGamification] = useState(false)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
-    const zoomContainerRef = useRef<HTMLDivElement>(null)
     const imageContainerRef = useRef<HTMLDivElement>(null)
     const rewardTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -303,7 +304,7 @@ export default function TranscribePage() {
             const queue: any[] = await get('waraka_offline_queue') || []
             queue.push({ id: segment.id, text })
             await set('waraka_offline_queue', queue)
-            toast({ title: "Offline Mode 🔌", description: "Saved to device. Will sync when connection is restored." })
+            toast({ title: "Offline Mode \uD83D\uDCC4", description: "Saved to device. Will sync when connection is restored." })
             setText('')
             setSessionCount(prev => prev + 1)
             setSubmitting(false)
@@ -377,7 +378,6 @@ export default function TranscribePage() {
     const startEditing = (t: any) => {
         setIsEditing(t.id)
         setText(t.text)
-        // Optionally scroll to top or focus textarea
         textareaRef.current?.focus()
     }
 
@@ -474,7 +474,6 @@ export default function TranscribePage() {
     const title = segment?.manuscript_title || 'Unknown Manuscript'
     const hasNonArabic = text.trim() !== '' && /[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\s.,،؟!؛'"]/g.test(text);
 
-    // Highlight search term in reference text
     const getHighlightedText = (text: string, highlight: string) => {
         if (!highlight.trim()) return text;
         const regex = new RegExp(`(${highlight})`, 'gi');
@@ -509,7 +508,7 @@ export default function TranscribePage() {
             const end = Math.min(referenceText.length, match.index + match[0].length + 60);
             matches.push({
                 index: match.index,
-                id: matchCounter, // This will correspond to the counter in highlighed text
+                id: matchCounter,
                 snippet: referenceText.substring(start, end),
                 match: match[0]
             });
@@ -520,7 +519,6 @@ export default function TranscribePage() {
     }
 
     const scrollToMatch = (id: number) => {
-        // Find the nth mark element
         const marks = document.querySelectorAll('#reference-content mark');
         if (marks[id]) {
             marks[id].scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -610,18 +608,30 @@ export default function TranscribePage() {
                     </motion.div>
                 )}
             </AnimatePresence>
+            
             {/* Sub-header */}
-            <div className="w-full flex justify-between items-center px-4 py-2 border-b border-border/50 shrink-0 bg-background/50 backdrop-blur-sm z-30">
+            <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-2 border-b border-border/50 shrink-0 bg-background/50 backdrop-blur-sm z-30 gap-2">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-700 text-[10px] font-bold px-3 py-1 rounded-full border border-amber-500/20">
+                        <Highlighter className="w-3.5 h-3.5" />
+                        {t('transcribe.instruction')}
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-lg border border-border/50">
+                        <span className="text-primary/70">#{segment?.order_index || '...'}</span>
+                        <span className="w-[1px] h-3 bg-border" />
+                        <span className="max-w-[150px] truncate">{title}</span>
+                        {segment?.page_label && (
+                            <>
+                                <span className="w-[1px] h-3 bg-border" />
+                                <span className="text-primary font-bold">{segment.page_label}</span>
+                            </>
+                        )}
+                    </div>
+                </div>
                 <div className="flex items-center gap-4">
                     <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <span className={`w-2 h-2 rounded-full ${isOffline ? 'bg-amber-500' : 'bg-primary animate-pulse'}`}></span>
                         {t('transcribe.session')} : {sessionCount} {t('transcribe.segments')}
-                        {pendingCount !== null && (
-                            <>
-                                <span className="w-1 h-1 rounded-full bg-muted-foreground/30"></span>
-                                <span>{pendingCount.toLocaleString()} {t('transcribe.segments_waiting') || 'en attente'}</span>
-                            </>
-                        )}
                     </p>
                     {isOffline && (
                         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
@@ -630,6 +640,23 @@ export default function TranscribePage() {
                     )}
                 </div>
                 <div className="flex items-center gap-3">
+                    {gamification && (
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-700 px-2.5 py-1 rounded-full border border-amber-500/20 shadow-sm">
+                                <Zap className="w-3 h-3" />
+                                <span className="text-xs font-bold leading-none">{gamification.points} XP</span>
+                            </div>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => setShowGamification(!showGamification)}
+                                className={`w-6 h-6 p-0 rounded-full transition-all border ${showGamification ? 'bg-primary text-primary-foreground border-primary shadow-md scale-110' : 'bg-background text-muted-foreground border-border hover:bg-muted'}`}
+                                title="Toggle XP boosts and levels"
+                            >
+                                <ChevronRight className={`w-3 h-3 transition-transform duration-300 ${showGamification ? 'rotate-90' : ''}`} />
+                            </Button>
+                        </div>
+                    )}
                     <Button
                         variant="outline"
                         size="sm"
@@ -670,81 +697,109 @@ export default function TranscribePage() {
             </div>
 
             {gamification && (
-                <div className="w-full border-b border-border/50 bg-gradient-to-r from-primary/5 via-amber-500/5 to-secondary/5 px-4 py-3 shrink-0 hidden lg:block">
-                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
-                        <div className="rounded-xl border border-primary/20 bg-background/80 p-3">
-                            <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                                <span className="flex items-center gap-2"><Trophy className="w-3.5 h-3.5 text-primary" /> Niveau {gamification.level.level}</span>
-                                <span className="text-primary">{gamification.level.levelName}</span>
-                            </div>
-                            <div className="w-full h-2 rounded-full bg-muted overflow-hidden mb-2">
-                                <div className="h-full bg-primary transition-all" style={{ width: `${gamification.level.progressPct}%` }} />
-                            </div>
-                            <div className="text-xs text-muted-foreground flex items-center justify-between">
-                                <span>{gamification.points} XP</span>
-                                <span>
-                                    {gamification.level.nextLevelXp
-                                        ? `${gamification.level.xpIntoLevel}/${gamification.level.xpForNextLevel} vers le prochain palier`
-                                        : 'Niveau max atteint'}
-                                </span>
-                            </div>
+                <div className="w-full border-b border-border/50 bg-background/50 backdrop-blur-sm px-4 py-2 flex items-center justify-between lg:hidden z-20">
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-full border border-primary/20">
+                            <Zap className="w-3.5 h-3.5" />
+                            <span className="text-xs font-bold">{gamification.points} XP</span>
                         </div>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Niveau {gamification.level.level}</span>
+                    </div>
+                    <Button
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setShowGamification(!showGamification)}
+                        className={`w-8 h-8 p-0 rounded-full transition-all ${showGamification ? 'bg-primary text-primary-foreground rotate-180' : 'bg-muted text-muted-foreground'}`}
+                    >
+                        <ChevronRight className="w-4 h-4" />
+                    </Button>
+                </div>
+            )}
 
-                        <div className="rounded-xl border border-amber-500/20 bg-background/80 p-3">
-                            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                                <Zap className="w-3.5 h-3.5 text-amber-600" /> Boosts actifs
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                {gamification.boosts.length > 0 ? gamification.boosts.map((boost) => (
-                                    <span key={boost.slug} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold ${boost.isDoubleXp ? 'border-amber-500/40 bg-amber-500/10 text-amber-700' : 'border-primary/30 bg-primary/10 text-primary'}`}>
-                                        <Flame className="w-3 h-3" /> {boost.label}
+            <AnimatePresence>
+                {gamification && (showGamification || (typeof window !== 'undefined' && window.innerWidth >= 1024)) && (
+                    <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="w-full border-b border-border/50 bg-gradient-to-r from-primary/5 via-amber-500/5 to-secondary/5 px-4 py-3 shrink-0 overflow-hidden"
+                    >
+                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+                            <div className="rounded-xl border border-primary/20 bg-background/80 p-3">
+                                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                    <span className="flex items-center gap-2"><Trophy className="w-3.5 h-3.5 text-primary" /> Niveau {gamification.level.level}</span>
+                                    <span className="text-primary">{gamification.level.levelName}</span>
+                                </div>
+                                <div className="w-full h-2 rounded-full bg-muted overflow-hidden mb-2">
+                                    <div className="h-full bg-primary transition-all" style={{ width: `${gamification.level.progressPct}%` }} />
+                                </div>
+                                <div className="text-xs text-muted-foreground flex items-center justify-between">
+                                    <span>{gamification.points} XP</span>
+                                    <span>
+                                        {gamification.level.nextLevelXp
+                                            ? `${gamification.level.xpIntoLevel}/${gamification.level.xpForNextLevel} vers le prochain palier`
+                                            : 'Niveau max atteint'}
                                     </span>
-                                )) : (
-                                    <span className="text-xs text-muted-foreground">Aucun boost actif. Serie de 3 jours = premier multiplicateur.</span>
+                                </div>
+                            </div>
+
+                            <div className="rounded-xl border border-amber-500/20 bg-background/80 p-3">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                    <Zap className="w-3.5 h-3.5 text-amber-600" /> Boosts actifs
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {gamification.boosts.length > 0 ? gamification.boosts.map((boost) => (
+                                        <span key={boost.slug} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold ${boost.isDoubleXp ? 'border-amber-500/40 bg-amber-500/10 text-amber-700' : 'border-primary/30 bg-primary/10 text-primary'}`}>
+                                            <Flame className="w-3 h-3" /> {boost.label}
+                                        </span>
+                                    )) : (
+                                        <span className="text-xs text-muted-foreground">Aucun boost actif. Serie de 3 jours = premier multiplicateur.</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="rounded-xl border border-secondary/20 bg-background/80 p-3">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                    <Star className="w-3.5 h-3.5 text-secondary" /> Prochain badge
+                                </div>
+                                {gamification.nextBadge ? (
+                                    <>
+                                        <div className="text-sm font-semibold text-foreground mb-1">{gamification.nextBadge.name}</div>
+                                        <div className="text-xs text-muted-foreground mb-2">{gamification.nextBadge.description}</div>
+                                        <div className="w-full h-2 rounded-full bg-muted overflow-hidden mb-2">
+                                            <div className="h-full bg-secondary transition-all" style={{ width: `${gamification.nextBadge.progressPct}%` }} />
+                                        </div>
+                                        <div className="text-xs text-muted-foreground flex justify-between">
+                                            <span>{gamification.nextBadge.currentValue}/{gamification.nextBadge.target}</span>
+                                            <span>+{gamification.nextBadge.xpReward} XP</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-xs text-muted-foreground">Tous les badges disponibles sont debloques.</div>
                                 )}
                             </div>
                         </div>
 
-                        <div className="rounded-xl border border-secondary/20 bg-background/80 p-3">
-                            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                                <Star className="w-3.5 h-3.5 text-secondary" /> Prochain badge
+                        {topBadges.length > 0 && (
+                            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                                {topBadges.map((badge) => (
+                                    <div key={badge.slug} className={`min-w-[180px] rounded-lg border px-3 py-2 ${badge.unlocked ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-border bg-background/70'}`}>
+                                        <div className="text-xs font-bold truncate flex items-center justify-between gap-2">
+                                            <span>{badge.name}</span>
+                                            <span className="text-[10px] text-muted-foreground">+{badge.xpReward} XP</span>
+                                        </div>
+                                        <div className="mt-1 text-[11px] text-muted-foreground">{badge.currentValue}/{badge.target}</div>
+                                        <div className="mt-1 w-full h-1.5 rounded bg-muted overflow-hidden">
+                                            <div className={`h-full ${badge.unlocked ? 'bg-emerald-500' : 'bg-primary'}`} style={{ width: `${badge.progressPct}%` }} />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                            {gamification.nextBadge ? (
-                                <>
-                                    <div className="text-sm font-semibold text-foreground mb-1">{gamification.nextBadge.name}</div>
-                                    <div className="text-xs text-muted-foreground mb-2">{gamification.nextBadge.description}</div>
-                                    <div className="w-full h-2 rounded-full bg-muted overflow-hidden mb-2">
-                                        <div className="h-full bg-secondary transition-all" style={{ width: `${gamification.nextBadge.progressPct}%` }} />
-                                    </div>
-                                    <div className="text-xs text-muted-foreground flex justify-between">
-                                        <span>{gamification.nextBadge.currentValue}/{gamification.nextBadge.target}</span>
-                                        <span>+{gamification.nextBadge.xpReward} XP</span>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="text-xs text-muted-foreground">Tous les badges disponibles sont debloques.</div>
-                            )}
-                        </div>
-                    </div>
-
-                    {topBadges.length > 0 && (
-                        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                            {topBadges.map((badge) => (
-                                <div key={badge.slug} className={`min-w-[180px] rounded-lg border px-3 py-2 ${badge.unlocked ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-border bg-background/70'}`}>
-                                    <div className="text-xs font-bold truncate flex items-center justify-between gap-2">
-                                        <span>{badge.name}</span>
-                                        <span className="text-[10px] text-muted-foreground">+{badge.xpReward} XP</span>
-                                    </div>
-                                    <div className="mt-1 text-[11px] text-muted-foreground">{badge.currentValue}/{badge.target}</div>
-                                    <div className="mt-1 w-full h-1.5 rounded bg-muted overflow-hidden">
-                                        <div className={`h-full ${badge.unlocked ? 'bg-emerald-500' : 'bg-primary'}`} style={{ width: `${badge.progressPct}%` }} />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
             <div className="flex flex-1 gap-0 pt-0 min-h-0 relative">
 
                 {/* Collapsible/Resizable Left Panel */}
@@ -996,36 +1051,17 @@ export default function TranscribePage() {
                                     draggable={false}
                                 />
                             ) : null}
-                        {/* Instruction badge */}
-                        <div className="absolute top-[60px] lg:bottom-3 left-1/2 -translate-x-1/2 z-20 select-none pointer-events-none">
-                            <div className="flex items-center gap-1.5 bg-amber-500/90 text-white text-[10px] sm:text-[11px] font-bold px-3 py-1.5 rounded-full shadow-lg backdrop-blur-sm border border-white/20 transition-opacity">
-                                <Highlighter className="w-3 h-3" />
-                                {t('transcribe.instruction')}
-                            </div>
-                        </div>
                         </div>
 
-                        <div className="absolute top-3 left-3 flex gap-2 z-10 select-none">
-                            <div className="bg-background/90 backdrop-blur shadow-sm border border-border px-3 py-1 rounded-full text-[10px] font-bold tracking-tight flex items-center gap-2">
-                                <span className="text-primary/40">#{segment?.order_index}</span>
-                                <span className="w-[1px] h-3 bg-border" />
-                                <span className="max-w-[120px] truncate">{title}</span>
-                                {segment?.page_label && (
-                                    <>
-                                        <span className="w-[1px] h-3 bg-border" />
-                                        <span className="text-primary font-bold">{segment.page_label}</span>
-                                    </>
-                                )}
-                                {zoomScale !== 1 && (
-                                    <>
-                                        <span className="w-[1px] h-3 bg-border" />
-                                        <button onClick={resetZoom} className="text-primary hover:underline">
-                                            {Math.round(zoomScale * 100)}% ({t('transcribe.reset_zoom')})
-                                        </button>
-                                    </>
-                                )}
+                        {zoomScale !== 1 && (
+                            <div className="absolute top-3 left-3 z-30 select-none">
+                                <div className="bg-background/90 backdrop-blur shadow-sm border border-border px-3 py-1 rounded-full text-[10px] font-bold tracking-tight">
+                                    <button onClick={resetZoom} className="text-primary hover:underline">
+                                        {Math.round(zoomScale * 100)}% ({t('transcribe.reset_zoom')})
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Zoom Hint */}
                         <div className="absolute bottom-3 right-3 text-[9px] text-muted-foreground opacity-40 select-none flex items-center gap-2 pointer-events-none">
@@ -1140,14 +1176,3 @@ export default function TranscribePage() {
         </div>
     )
 }
-
-
-
-
-
-
-
-
-
-
-

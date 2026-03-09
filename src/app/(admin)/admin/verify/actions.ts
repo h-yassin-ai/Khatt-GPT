@@ -25,12 +25,14 @@ async function assertAdmin(supabase: any) {
 async function getAdminClient() {
     // If service role key is available, use it to bypass RLS
     if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        console.log('[admin.verify] Using Service Role Key for admin client')
         const { createClient: createAdminClient } = await import('@supabase/supabase-js')
         return createAdminClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY
         )
     }
+    console.warn('[admin.verify] SUPABASE_SERVICE_ROLE_KEY missing - falling back to user client (RLS may apply)')
     // Fallback to regular client
     return await createClient()
 }
@@ -68,9 +70,12 @@ export async function getSegmentsToVerify() {
         .order('created_at', { ascending: false })
 
     if (error) {
-        console.error('Error fetching segments for verification:', error)
+        console.error('[admin.verify] Error fetching segments:', error)
         return []
     }
+
+    // Debug log to see raw counts
+    console.log(`[admin.verify] Found ${segments?.length || 0} non-validated segments`)
 
     const withTranscriptions = (segments || [])
         .map((segment: any) => ({
@@ -80,8 +85,15 @@ export async function getSegmentsToVerify() {
                     new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
             ),
         }))
-        .filter((segment: any) => segment.transcriptions.length > 0)
+        .filter((segment: any) => {
+            const hasDrafts = segment.transcriptions.length > 0
+            if (!hasDrafts) {
+                // console.log(`[admin.verify] Segment ${segment.id} has no transcriptions yet`)
+            }
+            return hasDrafts
+        })
 
+    console.log(`[admin.verify] Returning ${withTranscriptions.length} segments with transcriptions to UI`)
     return withTranscriptions
 }
 

@@ -19,7 +19,7 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
             cover_image_url,
             total_segments,
             created_at,
-            segments!left ( 
+            segments ( 
                 status,
                 page_image_url,
                 order_index

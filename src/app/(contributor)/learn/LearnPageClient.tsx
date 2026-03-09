@@ -1,12 +1,13 @@
 'use client'
 
-import { GraduationCap, ShieldCheck, AlertTriangle, BookOpen, Search } from 'lucide-react'
+import { GraduationCap, ShieldCheck, AlertTriangle, BookOpen, Search, Shuffle, RefreshCcw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import Zoom from 'react-medium-image-zoom'
 import 'react-medium-image-zoom/dist/styles.css'
 import Link from 'next/link'
 import { useLanguage } from '@/lib/language-context'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 type Segment = {
     id: string
@@ -22,6 +23,19 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
     const router = useRouter()
     const [query, setQuery] = useState(initialQuery)
     const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set())
+    const [randomSeed, setRandomSeed] = useState(0)
+
+    const displayedSegments = useMemo(() => {
+        if (randomSeed === 0) return segments.slice(0, 15)
+        
+        // Simple shuffle algorithm
+        const shuffled = [...segments]
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1))
+            ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+        }
+        return shuffled.slice(0, 15)
+    }, [segments, randomSeed])
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
@@ -39,6 +53,11 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
         setRevealedIds(next)
     }
 
+    const handleShuffle = () => {
+        setRandomSeed(prev => prev + 1)
+        setRevealedIds(new Set()) // Reset revealed states when shuffling
+    }
+
     return (
         <div className="flex flex-col gap-8 pb-12">
             {/* Header */}
@@ -52,17 +71,28 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
                     </p>
                 </div>
 
-                <form onSubmit={handleSearch} className="w-full md:w-auto flex items-center relative">
-                    <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                        type="text"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder={t('learn.search')}
-                        className="w-full md:w-64 pl-9 pr-4 py-2 rounded-full border border-border bg-card shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-arabic"
-                        dir="rtl"
-                    />
-                </form>
+                <div className="w-full md:w-auto flex items-center gap-3">
+                    <Button
+                        onClick={handleShuffle}
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full gap-2 border-primary/20 hover:bg-primary/5 text-primary font-bold whitespace-nowrap"
+                    >
+                        <RefreshCcw className={`w-4 h-4 ${randomSeed > 0 ? 'animate-spin-once' : ''}`} />
+                        Aléatoire
+                    </Button>
+                    <form onSubmit={handleSearch} className="flex-1 md:w-64 flex items-center relative">
+                        <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                            type="text"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder={t('learn.search')}
+                            className="w-full pl-9 pr-4 py-2 rounded-full border border-border bg-card shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-arabic"
+                            dir="rtl"
+                        />
+                    </form>
+                </div>
             </div>
 
             {/* Legend */}
@@ -79,8 +109,8 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
 
             {/* Segments list */}
             <div className="grid grid-cols-1 gap-5">
-                {segments.length > 0 ? (
-                    segments.map(seg => {
+                {displayedSegments.length > 0 ? (
+                    displayedSegments.map(seg => {
                         const isValidated = seg.status === 'validated'
                         const manuscriptTitle = Array.isArray(seg.manuscripts)
                             ? seg.manuscripts[0]?.title
@@ -113,8 +143,8 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
                                 <div className="w-full md:w-2/3 p-5 flex flex-col justify-between gap-3">
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between gap-2">
-                                            <span className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                                                {t('learn.source')}: {manuscriptTitle}
+                                            <span className="text-xs uppercase tracking-wider font-bold text-primary">
+                                                {manuscriptTitle}
                                             </span>
                                             {/* Validation badge */}
                                             {isValidated ? (

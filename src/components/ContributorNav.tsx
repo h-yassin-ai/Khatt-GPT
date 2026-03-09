@@ -9,31 +9,31 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
     const { lang, setLang, t } = useLanguage()
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-    const NavLinks = () => (
+    const NavLinks = ({ onItemClick }: { onItemClick?: () => void }) => (
         <>
-            <Link href="/dashboard" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
+            <Link href="/dashboard" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <LayoutDashboard className="w-4 h-4" /> {t('nav.dashboard')}
             </Link>
-            <Link href="/browse" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
+            <Link href="/browse" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <BookOpen className="w-4 h-4" /> {t('nav.browse')}
             </Link>
-            <Link href="/transcribe" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
+            <Link href="/transcribe" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <PenLine className="w-4 h-4" /> {t('nav.transcribe')}
             </Link>
-            <Link href="/learn" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
+            <Link href="/learn" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <GraduationCap className="w-4 h-4" /> {t('nav.learn')}
             </Link>
-            <Link href="/guide" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
+            <Link href="/guide" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <Feather className="w-4 h-4" /> {t('nav.guide')}
             </Link>
-            <Link href="/profile" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
+            <Link href="/profile" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <User className="w-4 h-4" /> {t('nav.profile')}
             </Link>
-            <Link href="/contributions" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
+            <Link href="/contributions" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <History className="w-4 h-4" /> {t('nav.contributions') || 'Contributions'}
             </Link>
             {isAdmin && (
-                <Link href="/admin" className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-primary hover:text-primary/80 font-bold whitespace-nowrap">
+                <Link href="/admin" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-primary hover:text-primary/80 font-bold whitespace-nowrap">
                     <ShieldCheck className="w-4 h-4" /> {t('nav.admin')}
                 </Link>
             )}
@@ -86,7 +86,7 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
                 <div className="absolute top-16 left-0 right-0 z-50 bg-background border-b border-border shadow-xl md:hidden animate-in slide-in-from-top duration-200">
                     <div className="flex flex-col p-4 gap-2">
                         <div className="px-3 py-2 text-xs font-bold text-muted-foreground uppercase">{email}</div>
-                        <NavLinks />
+                        <NavLinks onItemClick={() => setMobileMenuOpen(false)} />
                         <hr className="my-2 border-border" />
                         <form action="/auth/signout" method="post" className="w-full">
                             <button type="submit" className="w-full flex items-center gap-2 px-3 py-3 text-sm font-medium rounded-md text-destructive hover:bg-destructive/10">
