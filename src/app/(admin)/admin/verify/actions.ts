@@ -15,8 +15,9 @@ async function assertAdmin(supabase: any) {
         .map((email) => email.trim())
         .filter(Boolean)
 
-    if (!adminEmails.includes(user.email)) {
-        return { ok: false, error: 'Admin access required' }
+    const userEmail = user.email.toLowerCase()
+    if (!adminEmails.map(e => e.toLowerCase()).includes(userEmail)) {
+        return { ok: false, error: `Admin access required for ${userEmail}` }
     }
 
     return { ok: true }
@@ -71,7 +72,7 @@ export async function getSegmentsToVerify() {
 
     if (error) {
         console.error('[admin.verify] Error fetching segments:', error)
-        return []
+        throw new Error(`Erreur Supabase: ${error.message} (${error.code})`)
     }
 
     // Debug log to see raw counts

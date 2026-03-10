@@ -18,6 +18,7 @@ Create a `.env.local` file at the root of the project:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://olqpqxhebeavktkucori.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 ADMIN_EMAILS=your@email.com
 ```
 
@@ -118,6 +119,7 @@ In Vercel → Project → **Settings → Environment Variables**, add:
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://olqpqxhebeavktkucori.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon/public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase service_role key (required for admin bypass RLS) |
 | `ADMIN_EMAILS` | `your@email.com` (comma-separated for multiple) |
 
 > 💡 Get your keys from: [Supabase Dashboard → Project Settings → API](https://supabase.com/dashboard/project/olqpqxhebeavktkucori/settings/api)
@@ -161,6 +163,7 @@ Go to: https://supabase.com/dashboard/project/olqpqxhebeavktkucori/settings/api
 
 - **Project URL**: `https://olqpqxhebeavktkucori.supabase.co`
 - **anon key**: shown as "Project API keys → anon public"
+- **service_role key**: shown as "Project API keys → service_role"
 
 ---
 
@@ -171,6 +174,7 @@ Copy this to a `.env.local` file at the project root:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://olqpqxhebeavktkucori.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=REPLACE_WITH_YOUR_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY=REPLACE_WITH_YOUR_SERVICE_ROLE_KEY
 ADMIN_EMAILS=REPLACE_WITH_YOUR_EMAIL
 ```
 
