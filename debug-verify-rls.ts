@@ -22,32 +22,26 @@ const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY
 const supabase = createClient(supabaseUrl!, supabaseKey!)
 
 async function test() {
-    console.log('--- INSPECTING COLUMNS ---')
+    console.log('--- CHECKING FOREIGN KEY CONSTRAINTS ---')
     
-    // We can't use standard SQL easily if we are using the JS client and not direct DB access
-    // But we can just try to fetch one row and see everything
-    const { data: segment, error: sError } = await supabase
-        .from('segments')
-        .select('*')
-        .limit(1)
-        .single()
+    // We can try to query information_schema if we have service_role
+    // But many Supabase instances restrict direct SQL via REST unless using RPC or similar.
+    // Let's try to see if we can use a query that doesn't use joins first to verify table existence for both.
     
-    if (sError) {
-        console.error('Error fetching segment columns:', sError)
-    } else {
-        console.log('Segment columns:', Object.keys(segment))
-    }
+    const { data: t, error: te } = await supabase.from('transcriptions').select('id').limit(1)
+    console.log('Transcriptions table accessible:', !te, te?.message || '')
 
-    const { data: transcription, error: tError } = await supabase
-        .from('transcriptions')
-        .select('*')
-        .limit(1)
-        .single()
+    const { data: p, error: pe } = await supabase.from('profiles').select('id').limit(1)
+    console.log('Profiles table accessible:', !pe, pe?.message || '')
+
+    // Try a manual join alternative: fetch segments, then transcriptions, then match.
+    // This is a workaround if the FK is truly missing.
     
-    if (tError) {
-         console.error('Error fetching transcription columns:', tError)
-    } else {
-        console.log('Transcription columns:', Object.keys(transcription))
+    // BUT first, let's try to find out why PGRST200 is happening.
+    // Is there a "display_name" column in profiles?
+    if (!pe && p && p.length > 0) {
+        const { data: pDetail } = await supabase.from('profiles').select('*').limit(1).single()
+        console.log('Profile columns:', Object.keys(pDetail || {}))
     }
 }
 

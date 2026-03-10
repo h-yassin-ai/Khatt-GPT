@@ -134,13 +134,28 @@ export async function getNextSegment() {
     const segment = availableSegments[randomIdx] as any
 
     // Fetch existing transcriptions for this segment by other users to show as references
-    const { data: otherTranscriptions } = await supabase
+    const { data: otherData } = await supabase
         .from('transcriptions')
-        .select('text, profiles!contributor_id(email, avatar_url, role)')
+        .select('text, contributor_id')
         .eq('segment_id', segment.id)
         .neq('contributor_id', user.id)
         .order('submitted_at', { ascending: false })
         .limit(10)
+
+    let otherTranscriptions: any[] = []
+    if (otherData && otherData.length > 0) {
+        const cIds = Array.from(new Set(otherData.map((d: any) => d.contributor_id)))
+        const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, email, avatar_url, role')
+            .in('id', cIds)
+        
+        const pMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+        otherTranscriptions = otherData.map((d: any) => ({
+            text: d.text,
+            profiles: pMap.get(d.contributor_id) || null
+        }))
+    }
 
     return {
         id: segment.id,

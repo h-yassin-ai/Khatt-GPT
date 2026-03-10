@@ -64,7 +64,7 @@ export async function getSegmentsToVerify() {
                 text,
                 submitted_at,
                 is_validated,
-                profiles!contributor_id ( username, display_name )
+                contributor_id
             )
         `)
         .neq('status', 'validated')
@@ -78,13 +78,35 @@ export async function getSegmentsToVerify() {
     // Debug log to see raw counts
     console.log(`[admin.verify] Found ${segments?.length || 0} non-validated segments`)
 
+    // 1. Collect all unique contributor IDs
+    const contributorIds = new Set<string>()
+    segments?.forEach((s: any) => {
+        s.transcriptions?.forEach((t: any) => {
+            if (t.contributor_id) contributorIds.add(t.contributor_id)
+        })
+    })
+
+    // 2. Fetch those profiles in one go
+    const { data: profiles } = await adminSupabase
+        .from('profiles')
+        .select('id, username, display_name')
+        .in('id', Array.from(contributorIds))
+
+    const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+
+    // 3. Assemble and sort
     const withTranscriptions = (segments || [])
         .map((segment: any) => ({
             ...segment,
-            transcriptions: (segment.transcriptions || []).sort(
-                (a: any, b: any) =>
-                    new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
-            ),
+            transcriptions: (segment.transcriptions || [])
+                .map((t: any) => ({
+                    ...t,
+                    profiles: profileMap.get(t.contributor_id) || null
+                }))
+                .sort(
+                    (a: any, b: any) =>
+                        new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
+                ),
         }))
         .filter((segment: any) => {
             const hasDrafts = segment.transcriptions.length > 0
