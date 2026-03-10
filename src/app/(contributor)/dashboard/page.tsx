@@ -73,8 +73,6 @@ export default async function DashboardPage() {
     const avatarColor = getAvatarColor(profile.username)
     const initials = profile.display_name?.substring(0, 2).toUpperCase() || profile.username.substring(0, 2).toUpperCase()
 
-    const initials = profile.display_name?.substring(0, 2).toUpperCase() || profile.username.substring(0, 2).toUpperCase()
-
     return (
         <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto py-8">
 
