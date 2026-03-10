@@ -20,10 +20,10 @@ export default async function PublicLayout({
                     <ContributorNav email={user.email ?? ''} isAdmin={isAdmin} />
                 ) : (
                     <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center w-full">
-                        <div className="flex items-center gap-2">
-                            <span className="font-heading text-3xl font-bold tracking-tight text-primary">وراقة</span>
-                            <span className="font-heading text-2xl font-semibold ml-2">Khatt-GPT</span>
-                        </div>
+                        <Link href="/" className="flex items-center gap-2.5 shrink-0">
+                            <img src="/logo.png" alt="Khatt-GPT Logo" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,193,7,0.4)] transition-transform hover:scale-105" />
+                            <span className="font-heading text-2xl lg:text-3xl font-bold tracking-tight">Khatt-GPT</span>
+                        </Link>
                         <nav className="flex items-center gap-6">
                             <Link href="/auth/login" className="text-sm font-medium hover:text-primary transition-colors">
                                 Log In

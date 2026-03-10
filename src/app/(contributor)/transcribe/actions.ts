@@ -133,6 +133,15 @@ export async function getNextSegment() {
     const randomIdx = Math.floor(Math.random() * availableSegments.length)
     const segment = availableSegments[randomIdx] as any
 
+    // Fetch existing transcriptions for this segment by other users to show as references
+    const { data: otherTranscriptions } = await supabase
+        .from('transcriptions')
+        .select('text, profiles(email, avatar_url, role)')
+        .eq('segment_id', segment.id)
+        .neq('contributor_id', user.id)
+        .order('submitted_at', { ascending: false })
+        .limit(10)
+
     return {
         id: segment.id,
         image_url: segment.image_url,
@@ -143,6 +152,7 @@ export async function getNextSegment() {
         manuscript_reference_text_url: segment.manuscripts?.reference_text_url || '',
         page_image_url: segment.pages?.image_url || '',
         page_label: segment.pages?.label || 'Unknown Page',
+        other_transcriptions: otherTranscriptions || [],
     }
 }
 

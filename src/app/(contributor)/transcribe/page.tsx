@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import Zoom from 'react-medium-image-zoom'
 import 'react-medium-image-zoom/dist/styles.css'
-import { Flag, SkipForward, Send, AlertCircle, Sparkles, Keyboard, BookOpen, Search, X, ChevronRight, Loader2, History, ImageIcon, CheckCircle2, PenLine, Highlighter, FileImage, Trophy, Zap, Flame, Star } from 'lucide-react'
+import { Flag, SkipForward, Send, AlertCircle, Sparkles, Keyboard, BookOpen, Search, X, ChevronRight, Loader2, History, ImageIcon, CheckCircle2, PenLine, Highlighter, FileImage, Trophy, Zap, Flame, Star, Users } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { OnboardingModal } from '@/components/OnboardingModal'
 import DraggableKeyboard from '@/components/DraggableKeyboard'
@@ -26,6 +26,14 @@ type SegmentData = {
     manuscript_pdf_url?: string;
     page_image_url: string;
     page_label?: string;
+    other_transcriptions?: {
+        text: string;
+        profiles: {
+            email: string;
+            avatar_url: string | null;
+            role: string;
+        };
+    }[];
 }
 
 type GamificationSnapshot = {
@@ -61,7 +69,7 @@ export default function TranscribePage() {
     const [searchTerm, setSearchTerm] = useState('')
     const [panelWidth, setPanelWidth] = useState(380)
     const [isResizing, setIsResizing] = useState(false)
-    const [activeTab, setActiveTab] = useState<'reference' | 'recent' | 'pdf'>('reference')
+    const [activeTab, setActiveTab] = useState<'reference' | 'recent' | 'pdf' | 'community'>('community')
     const [recentTranscriptions, setRecentTranscriptions] = useState<any[]>([])
     const [pendingCount, setPendingCount] = useState<number | null>(null)
     const [isEditing, setIsEditing] = useState<string | null>(null)
@@ -276,7 +284,7 @@ export default function TranscribePage() {
 
         // Zoom to a readable scale. On mobile, we need much higher zoom to read handwritten lines.
         const isMobile = window.innerWidth < 768
-        const targetZoom = isMobile ? 2.8 : 1.5
+        const targetZoom = isMobile ? 2.8 : 2.0
 
         setZoomScale(targetZoom)
         // Adjust panY slightly so the line is perfectly in the upper-middle, not dead-center where fingers/UI might obscure it.
@@ -295,7 +303,8 @@ export default function TranscribePage() {
     useEffect(() => {
         if (imgSize.width > 0 && segment?.id) {
             // Auto-center to make it easier for users to see the highlighted line immediately
-            centerOnSegment()
+            // Timeout ensures the DOM container has its proper height so math is correct
+            setTimeout(centerOnSegment, 100)
         }
     }, [segment?.id, imgSize.width, centerOnSegment])
 
@@ -644,7 +653,7 @@ export default function TranscribePage() {
                 </div>
                 <div className="flex items-center gap-3">
                     {gamification && (
-                        <div className="flex items-center gap-2">
+                        <div className="hidden lg:flex items-center gap-2">
                             <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-700 px-2.5 py-1 rounded-full border border-amber-500/20 shadow-sm">
                                 <Zap className="w-3 h-3" />
                                 <span className="text-xs font-bold leading-none">{gamification.points} XP</span>
@@ -720,7 +729,7 @@ export default function TranscribePage() {
             )}
 
             <AnimatePresence>
-                {gamification && (showGamification || (typeof window !== 'undefined' && window.innerWidth >= 1024)) && (
+                {gamification && showGamification && (
                     <motion.div 
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
@@ -826,6 +835,20 @@ export default function TranscribePage() {
                                 >
                                     <History className="w-4 h-4" /> Récent
                                 </button>
+                                {segment?.other_transcriptions && segment.other_transcriptions.length > 0 && (
+                                    <button
+                                        onClick={() => setActiveTab('community')}
+                                        className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === 'community' ? 'text-primary bg-primary/5 border-b-2 border-primary' : 'text-muted-foreground hover:bg-muted'}`}
+                                    >
+                                        <div className="relative">
+                                            <Users className="w-4 h-4" />
+                                            <span className="absolute -top-1.5 -right-2.5 bg-primary text-primary-foreground text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                                                {segment.other_transcriptions.length}
+                                            </span>
+                                        </div>
+                                        Communauté
+                                    </button>
+                                )}
                                 {segment?.manuscript_pdf_url && (
                                     <button
                                         onClick={() => setActiveTab('pdf')}
@@ -947,6 +970,49 @@ export default function TranscribePage() {
                                                         </Button>
                                                     </div>
                                                     <p className="text-xs font-arabic leading-relaxed line-clamp-2 text-right" dir="rtl">
+                                                        {t.text}
+                                                    </p>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+                                {activeTab === 'community' && segment?.other_transcriptions && (
+                                    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                                        <div className="text-xs text-muted-foreground mb-2 text-center border-b border-border/50 pb-2">
+                                            Ces transcriptions ont été soumises par d'autres contributeurs pour cette ligne.
+                                        </div>
+                                        {segment.other_transcriptions.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2 opacity-60">
+                                                <Users className="w-10 h-10 mb-2 opacity-50" />
+                                                <p className="text-sm font-semibold">Soyez le premier !</p>
+                                                <p className="text-xs text-center max-w-[200px]">Personne n'a encore transcrit cette ligne. Votre contribution est précieuse.</p>
+                                            </div>
+                                        ) : (
+                                            segment.other_transcriptions.map((t, idx) => (
+                                                <div key={idx} className="p-3 rounded-lg border border-primary/20 bg-primary/5 shadow-sm flex flex-col gap-2">
+                                                    <div className="flex justify-between items-center">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden shrink-0 border border-primary/30">
+                                                                {t.profiles?.avatar_url ? (
+                                                                    <img src={t.profiles.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <span className="text-[10px] font-bold text-primary">{t.profiles?.email?.substring(0, 2).toUpperCase() || 'AN'}</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[10px] font-bold text-foreground">
+                                                                    {t.profiles?.email?.split('@')[0] || 'Anonyme'}
+                                                                </span>
+                                                                {t.profiles?.role === 'admin' && (
+                                                                    <span className="text-[9px] text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-sm font-bold w-fit mt-0.5 border border-amber-500/20">
+                                                                        ADMIN
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-lg font-arabic leading-relaxed text-right p-2 bg-background/80 rounded border border-border/50" dir="rtl">
                                                         {t.text}
                                                     </p>
                                                 </div>
