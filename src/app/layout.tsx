@@ -23,7 +23,7 @@ const amiri = Amiri({
 });
 
 export const metadata: Metadata = {
-  title: 'Waraka | Collaborative Arabic Manuscript Transcription',
+  title: 'Khatt-GPT | Collaborative Arabic Manuscript Transcription',
   description: 'A platform connecting a community of contributors to transcribe segmented Maghrebi Arabic manuscripts into text, preserving history.',
 };
 

@@ -11,7 +11,7 @@ export function OnboardingModal() {
     const { t } = useLanguage()
 
     useEffect(() => {
-        const hasSeen = localStorage.getItem("waraka_onboarding_seen")
+        const hasSeen = localStorage.getItem("khatt_gpt_onboarding_seen")
         if (!hasSeen) {
             setOpen(true)
         }
@@ -19,7 +19,7 @@ export function OnboardingModal() {
 
     const handleClose = () => {
         setOpen(false)
-        localStorage.setItem("waraka_onboarding_seen", "true")
+        localStorage.setItem("khatt_gpt_onboarding_seen", "true")
     }
 
     return (

@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'Waraka Transcriptions',
-        short_name: 'Waraka',
+        name: 'Khatt-GPT Transcriptions',
+        short_name: 'Khatt-GPT',
         description: 'Collaborative Arabic Manuscript Transcription Platform',
         start_url: '/',
         display: 'standalone',

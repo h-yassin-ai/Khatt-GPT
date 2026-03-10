@@ -23,7 +23,7 @@ const translations: Record<string, Record<Language, string>> = {
     'nav.lang_toggle': { en: 'FR', fr: 'EN' },
 
     // Onboarding
-    'onboarding.title': { en: 'Welcome to Waraka', fr: 'Bienvenue sur Waraka' },
+    'onboarding.title': { en: 'Welcome to Khatt-GPT', fr: 'Bienvenue sur Khatt-GPT' },
     'onboarding.description': {
         en: "You're about to help preserve Maghrebi history. Here's a quick guide on how to contribute and transcribe Arabic manuscripts effectively.",
         fr: 'Vous allez aider à préserver l\'histoire maghrébine. Voici un guide rapide pour contribuer et transcrire des manuscrits arabes efficacement.'

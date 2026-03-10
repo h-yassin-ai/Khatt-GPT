@@ -45,7 +45,7 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
             <div className="flex items-center gap-2 lg:gap-6">
                 <Link href="/dashboard" className="flex items-center gap-1.5 shrink-0">
                     <span className="font-heading text-2xl font-bold text-primary">وراقة</span>
-                    <span className="font-heading text-lg lg:text-xl font-semibold hidden sm:inline-block">Waraka</span>
+                    <span className="font-heading text-lg lg:text-xl font-semibold hidden sm:inline-block">Khatt-GPT</span>
                 </Link>
                 <nav className="hidden md:flex items-center gap-0.5 lg:gap-1 text-[13px] lg:text-sm font-medium">
                     <NavLinks />

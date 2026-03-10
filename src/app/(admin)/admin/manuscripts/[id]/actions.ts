@@ -65,7 +65,7 @@ export async function validateTranscription(transcriptionId: string, isValid: bo
                             const headers: Record<string, string> = {
                                 'Content-Type': 'application/json'
                             }
-                            if (wh.secret) headers['X-Waraka-Signature'] = wh.secret
+                            if (wh.secret) headers['X-Khatt-GPT-Signature'] = wh.secret
 
                             fetch(wh.url, {
                                 method: 'POST',

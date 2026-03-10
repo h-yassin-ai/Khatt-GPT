@@ -78,7 +78,7 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
                                     ) : (
                                         <div className="flex flex-col items-center gap-2 text-muted-foreground opacity-20">
                                             <BookOpen className="w-16 h-16" />
-                                            <span className="font-heading font-bold">WARAKA</span>
+                                            <span className="font-heading font-bold">KHATT-GPT</span>
                                         </div>
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">

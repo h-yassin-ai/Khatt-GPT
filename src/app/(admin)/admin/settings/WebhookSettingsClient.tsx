@@ -132,7 +132,7 @@ export default function WebhookSettingsClient({ initialWebhooks }: { initialWebh
                             placeholder="Optional secret used for HMAC verification"
                             className="bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary font-mono"
                         />
-                        <p className="text-xs text-muted-foreground">Passed in headers as <code>X-Waraka-Signature</code> if provided.</p>
+                        <p className="text-xs text-muted-foreground">Passed in headers as <code>X-Khatt-GPT-Signature</code> if provided.</p>
                     </div>
                     <Button type="submit" disabled={isAdding} className="w-fit mt-2">
                         {isAdding ? 'Adding...' : 'Register Webhook Endpoint'}

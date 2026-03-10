@@ -22,7 +22,7 @@ export default async function PublicLayout({
                     <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center w-full">
                         <div className="flex items-center gap-2">
                             <span className="font-heading text-3xl font-bold tracking-tight text-primary">وراقة</span>
-                            <span className="font-heading text-2xl font-semibold ml-2">Waraka</span>
+                            <span className="font-heading text-2xl font-semibold ml-2">Khatt-GPT</span>
                         </div>
                         <nav className="flex items-center gap-6">
                             <Link href="/auth/login" className="text-sm font-medium hover:text-primary transition-colors">
@@ -46,7 +46,7 @@ export default async function PublicLayout({
 
             {/* Footer */}
             <footer className="w-full max-w-7xl p-6 text-center text-sm text-muted-foreground border-t border-border mt-16">
-                <p>© {new Date().getFullYear()} Waraka. Preserving Maghrebi Manuscripts.</p>
+                <p>© {new Date().getFullYear()} Khatt-GPT. Preserving Maghrebi Manuscripts.</p>
             </footer>
         </div>
     );
