@@ -1,9 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { LayoutDashboard, PenLine, User, LogOut, BookOpen, ShieldCheck, GraduationCap, Languages, History, Menu, X, Feather } from 'lucide-react'
+import { LayoutDashboard, PenLine, User, LogOut, BookOpen, ShieldCheck, GraduationCap, Languages, History, Menu, X, Feather, ChevronDown } from 'lucide-react'
 import { useLanguage } from '@/lib/language-context'
 import { useState } from 'react'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
 
 export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boolean }) {
     const { lang, setLang, t } = useLanguage()
@@ -14,38 +21,62 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
             <Link href="/dashboard" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <LayoutDashboard className="w-4 h-4" /> {t('nav.dashboard')}
             </Link>
-            <Link href="/browse" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
-                <BookOpen className="w-4 h-4" /> {t('nav.browse')}
-            </Link>
             <Link href="/transcribe" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <PenLine className="w-4 h-4" /> {t('nav.transcribe')}
             </Link>
-            <Link href="/learn" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
-                <GraduationCap className="w-4 h-4" /> {t('nav.learn')}
-            </Link>
-            <Link href="/guide" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
-                <Feather className="w-4 h-4" /> {t('nav.guide')}
-            </Link>
-            <Link href="/profile" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
-                <User className="w-4 h-4" /> {t('nav.profile')}
-            </Link>
-            <Link href="/contributions" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
-                <History className="w-4 h-4" /> {t('nav.contributions') || 'Contributions'}
-            </Link>
-            {isAdmin && (
-                <Link href="/admin" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-primary hover:text-primary/80 font-bold whitespace-nowrap">
-                    <ShieldCheck className="w-4 h-4" /> {t('nav.admin')}
-                </Link>
-            )}
+            
+            <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap outline-none">
+                    More <ChevronDown className="w-4 h-4 opacity-50" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem asChild>
+                        <Link href="/browse" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
+                            <BookOpen className="w-4 h-4" /> {t('nav.browse')}
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href="/learn" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
+                            <GraduationCap className="w-4 h-4" /> {t('nav.learn')}
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href="/guide" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
+                            <Feather className="w-4 h-4" /> {t('nav.guide')}
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                        <Link href="/profile" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
+                            <User className="w-4 h-4" /> {t('nav.profile')}
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href="/contributions" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
+                            <History className="w-4 h-4" /> {t('nav.contributions') || 'Contributions'}
+                        </Link>
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                        <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem asChild>
+                                <Link href="/admin" onClick={onItemClick} className="flex w-full items-center gap-2 text-primary font-bold cursor-pointer">
+                                    <ShieldCheck className="w-4 h-4" /> {t('nav.admin')}
+                                </Link>
+                            </DropdownMenuItem>
+                        </>
+                    )}
+                </DropdownMenuContent>
+            </DropdownMenu>
         </>
     )
 
     return (
         <div className="container flex h-16 items-center justify-between px-6 max-w-7xl mx-auto">
             <div className="flex items-center gap-2 lg:gap-6">
-                <Link href="/dashboard" className="flex items-center gap-1.5 shrink-0">
-                    <span className="font-heading text-2xl font-bold text-primary">وراقة</span>
-                    <span className="font-heading text-lg lg:text-xl font-semibold hidden sm:inline-block">Khatt-GPT</span>
+                <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0">
+                    <img src="/logo.png" alt="Khatt-GPT Logo" className="w-9 h-9 object-contain drop-shadow-[0_0_8px_rgba(255,193,7,0.4)] transition-transform hover:scale-105" />
+                    <span className="font-heading text-lg lg:text-xl font-bold tracking-tight">Khatt-GPT</span>
                 </Link>
                 <nav className="hidden md:flex items-center gap-0.5 lg:gap-1 text-[13px] lg:text-sm font-medium">
                     <NavLinks />

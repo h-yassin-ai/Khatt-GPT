@@ -12,7 +12,7 @@ type LanguageContextType = {
 
 const translations: Record<string, Record<Language, string>> = {
     // Nav
-    'nav.dashboard': { en: 'Dashboard', fr: 'Tableau de bord' },
+    'nav.dashboard': { en: 'Dashboard', fr: 'Dashboard' },
     'nav.browse': { en: 'Browse Dataset', fr: 'Parcourir' },
     'nav.transcribe': { en: 'Transcribe', fr: 'Transcrire' },
     'nav.learn': { en: 'Learn to Read', fr: 'Apprendre à lire' },
