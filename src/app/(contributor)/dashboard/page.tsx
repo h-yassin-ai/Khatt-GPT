@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { Hexagon, BookOpen, Flame, PenTool, Loader2 } from 'lucide-react'
+import { Flame, Hexagon, BookOpen, PenTool, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { getLevelProgress } from '@/lib/gamification'
 
 // Simple hash utility to generate consistent colors for avatars based on username
 function getAvatarColor(str: string) {
@@ -72,12 +73,7 @@ export default async function DashboardPage() {
     const avatarColor = getAvatarColor(profile.username)
     const initials = profile.display_name?.substring(0, 2).toUpperCase() || profile.username.substring(0, 2).toUpperCase()
 
-    const getLevel = (points: number) => {
-        if (points < 100) return 'Novice'
-        if (points < 500) return 'Apprenti'
-        if (points < 2000) return 'Scribe'
-        return 'Maître Copiste'
-    }
+    const initials = profile.display_name?.substring(0, 2).toUpperCase() || profile.username.substring(0, 2).toUpperCase()
 
     return (
         <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto py-8">
@@ -103,7 +99,7 @@ export default async function DashboardPage() {
 
                         <div className="flex flex-col items-center mt-2 z-10">
                             <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-primary/30">
-                                {getLevel(profile.points || 0)}
+                                {getLevelProgress(profile.points || 0).levelName}
                             </span>
                         </div>
 

@@ -274,11 +274,14 @@ export default function TranscribePage() {
         const panX = (imgSize.width / 2 - polyCenterX) * renderScale
         const panY = (imgSize.height / 2 - polyCenterY) * renderScale
 
-        // Zoom to 100% as requested by user (1.0 scale relative to fit-to-screen)
-        const targetZoom = 1.0
+        // Zoom to a readable scale. On mobile, we need much higher zoom to read handwritten lines.
+        const isMobile = window.innerWidth < 768
+        const targetZoom = isMobile ? 2.8 : 1.5
 
         setZoomScale(targetZoom)
-        setZoomPos({ x: panX, y: panY })
+        // Adjust panY slightly so the line is perfectly in the upper-middle, not dead-center where fingers/UI might obscure it.
+        const yOffset = isMobile ? (containerH * 0.1) : 0
+        setZoomPos({ x: panX, y: panY + yOffset })
     }, [segment, imgSize.width, imgSize.height])
 
     const handlePageImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {

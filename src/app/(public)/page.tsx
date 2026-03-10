@@ -163,7 +163,7 @@ export default function LandingPage() {
                         <span className="text-primary italic">qui fut écrit.</span>
                     </h1>
                     <p className="font-sans text-xl text-muted-foreground leading-relaxed max-w-xl">
-                        Waraka est un effort collaboratif pour numériser et transcrire les manuscrits arabes maghrébins. Rejoignez notre communauté et aidez à construire l'avenir de la recherche historique.
+                        Khatt-GPT est un effort collaboratif spécialisé dans le <span className="text-primary font-medium">Khatt Maghribi</span> pour numériser et transcrire les manuscrits anciens. Rejoignez notre communauté et préservez l'histoire.
                     </p>
                     <div className="flex flex-wrap items-center gap-4 pt-2">
                         <Link
@@ -191,7 +191,7 @@ export default function LandingPage() {
                             <div className="w-3 h-3 rounded-full bg-amber-400/40" />
                             <div className="w-3 h-3 rounded-full bg-green-500/40" />
                             <div className="flex-1 mx-4 h-5 bg-background/60 rounded border border-border/50 flex items-center px-2">
-                                <span className="text-[9px] text-muted-foreground/60 font-mono">waraka.ma/transcribe</span>
+                                <span className="text-[9px] text-muted-foreground/60 font-mono">khatt-gpt.ma/transcribe</span>
                             </div>
                         </div>
                         {transcribed.length > 0 && currentSlide ? (
