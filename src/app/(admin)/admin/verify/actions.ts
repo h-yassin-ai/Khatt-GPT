@@ -64,7 +64,7 @@ export async function getSegmentsToVerify() {
                 text,
                 submitted_at,
                 is_validated,
-                profiles ( username, display_name )
+                profiles!contributor_id ( username, display_name )
             )
         `)
         .neq('status', 'validated')

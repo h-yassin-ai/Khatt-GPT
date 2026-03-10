@@ -136,7 +136,7 @@ export async function getNextSegment() {
     // Fetch existing transcriptions for this segment by other users to show as references
     const { data: otherTranscriptions } = await supabase
         .from('transcriptions')
-        .select('text, profiles(email, avatar_url, role)')
+        .select('text, profiles!contributor_id(email, avatar_url, role)')
         .eq('segment_id', segment.id)
         .neq('contributor_id', user.id)
         .order('submitted_at', { ascending: false })
