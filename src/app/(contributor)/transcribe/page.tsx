@@ -274,20 +274,41 @@ export default function TranscribePage() {
 
         const xs = (segment.polygon as any[]).map((p) => Number(p.x))
         const ys = (segment.polygon as any[]).map((p) => Number(p.y))
-        const polyCenterX = (Math.min(...xs) + Math.max(...xs)) / 2
-        const polyCenterY = (Math.min(...ys) + Math.max(...ys)) / 2
-        const polyHeight = (Math.max(...ys) - Math.min(...ys)) * renderScale
+        const minY = Math.min(...ys)
+        const maxY = Math.max(...ys)
+        const minX = Math.min(...xs)
+        const maxX = Math.max(...xs)
+
+        const polyCenterX = (minX + maxX) / 2
+        const polyCenterY = (minY + maxY) / 2
+        
+        // Height of the polygon in container pixels
+        const polyHeight = (maxY - minY) * renderScale
+        const polyWidth = (maxX - minX) * renderScale
+
+        // We want the line + some padding to perfectly fill the container's height.
+        // padding is screen pixels: 100px top, 100px bottom = 200px total
+        const isMobile = window.innerWidth < 768
+        const padding = isMobile ? 120 : 200 
+        
+        let targetZoom = (containerH - padding) / polyHeight
+        
+        // Ensure width also fits with some padding
+        const targetZoomWidth = (containerW - 60) / polyWidth
+        
+        // Use the smaller zoom to ensure both height and width fit inside the container
+        targetZoom = Math.min(targetZoom, targetZoomWidth)
+
+        // Clamp to avoid extreme zooming or reversing
+        targetZoom = Math.min(Math.max(targetZoom, 1.5), 8.0)
 
         // Pan so polygon center = container center
         const panX = (imgSize.width / 2 - polyCenterX) * renderScale
         const panY = (imgSize.height / 2 - polyCenterY) * renderScale
 
-        // Zoom to a readable scale. On mobile, we need much higher zoom to read handwritten lines.
-        const isMobile = window.innerWidth < 768
-        const targetZoom = isMobile ? 2.8 : 2.0
-
         setZoomScale(targetZoom)
-        // Adjust panY slightly so the line is perfectly in the upper-middle, not dead-center where fingers/UI might obscure it.
+        
+        // On mobile, maybe offset slightly up so keyboard doesn't cover if they type
         const yOffset = isMobile ? (containerH * 0.1) : 0
         setZoomPos({ x: panX, y: panY + yOffset })
     }, [segment, imgSize.width, imgSize.height])
@@ -629,9 +650,11 @@ export default function TranscribePage() {
                         {t('transcribe.instruction')}
                     </div>
                     <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-lg border border-border/50">
-                        <span className="text-primary/70">#{segment?.order_index || '...'}</span>
-                        <span className="w-[1px] h-3 bg-border" />
-                        <span className="max-w-[150px] truncate">{title}</span>
+                        <span className="text-primary/70 shrink-0">#{segment?.order_index || '...'}</span>
+                        <span className="w-[1px] h-3 bg-border shrink-0" />
+                        <span className="max-w-[120px] sm:max-w-[200px] md:max-w-[300px] overflow-x-auto whitespace-nowrap scrollbar-hide align-bottom" title={title}>
+                            {title}
+                        </span>
                         {segment?.page_label && (
                             <>
                                 <span className="w-[1px] h-3 bg-border" />
