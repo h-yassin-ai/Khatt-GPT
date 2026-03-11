@@ -1,66 +1,59 @@
-import { createClient } from '@/utils/supabase/server'
-import { LearnPageClient } from './LearnPageClient'
+import Link from 'next/link'
+import { BookOpen, Shuffle, GraduationCap, ArrowRight } from 'lucide-react'
 
-
-export default async function LearnPage({ searchParams }: { searchParams: Promise<{ query?: string }> }) {
-    const supabase = await createClient()
-    const query = (await searchParams).query || ''
-
-    // 1. Fetch segments that have at least one transcription
-    let segmentsQuery = supabase
-        .from('segments')
-        .select(`
-            id,
-            image_url,
-            consensus_text,
-            status,
-            order_index,
-            transcription_count,
-            manuscripts!inner ( title ),
-            transcriptions ( text, submitted_at )
-        `)
-        .gt('transcription_count', 0)
-        .order('status', { ascending: false })
-        .limit(100)
-
-    if (query) {
-        segmentsQuery = segmentsQuery.ilike('consensus_text', `%${query}%`)
-    }
-
-    const { data: rawSegments } = await segmentsQuery
-
-    // 2. Process segments to add fallback text if consensus_text is missing
-    const segments = (rawSegments ?? []).map((seg: any) => {
-        let display_text = seg.consensus_text
-
-        // If no consensus yet, use the latest transcription as fallback
-        if (!display_text && seg.transcriptions && seg.transcriptions.length > 0) {
-            // Sort transcriptions by submitted_at descending
-            const sorted = [...seg.transcriptions].sort((a, b) =>
-                new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
-            )
-            display_text = sorted[0].text
-        }
-
-        return {
-            id: seg.id,
-            image_url: seg.image_url,
-            consensus_text: display_text,
-            status: seg.status,
-            order_index: seg.order_index,
-            manuscripts: seg.manuscripts,
-            transcription_count: seg.transcription_count
-        }
-    })
-
-    // Sort: validated first, then those with consensus, then others
-    segments.sort((a, b) => {
-        if (a.status === 'validated' && b.status !== 'validated') return -1
-        if (a.status !== 'validated' && b.status === 'validated') return 1
-        return 0
-    })
-
+export default function LearnHubPage() {
     return (
-        <LearnPageClient segments={segments} initialQuery={query} />
+        <div className="flex flex-col gap-8 pb-12 max-w-5xl mx-auto w-full">
+            <div className="flex flex-col text-center items-center justify-center pt-8 pb-4">
+                <h1 className="text-4xl font-heading font-bold text-foreground flex items-center gap-3 mb-4">
+                    <GraduationCap className="w-10 h-10 text-primary" /> Apprendre
+                </h1>
+                <p className="text-muted-foreground max-w-2xl text-lg">
+                    Découvrez le patrimoine écrit et exercez votre lecture. Choisissez un manuscrit spécifique à explorer, ou entraînez-vous en lisant des lignes validées aléatoires.
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Option 1: Browse Manuscripts */}
+                <Link 
+                    href="/browse"
+                    className="group bg-card border border-border hover:border-primary/50 shadow-sm hover:shadow-md rounded-2xl p-8 flex flex-col items-center text-center transition-all duration-300 hover:-translate-y-1 relative overflow-hidden"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full -z-10 transition-transform group-hover:scale-110" />
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-primary-foreground transition-colors text-primary shadow-sm">
+                        <BookOpen className="w-8 h-8" />
+                    </div>
+                    <h2 className="text-2xl font-heading font-bold text-foreground mb-3">
+                        Parcourir les manuscrits
+                    </h2>
+                    <p className="text-muted-foreground mb-8">
+                        Explorez notre bibliothèque complète de manuscrits historiques. Choisissez une œuvre spécifique, observez sa progression et parcourez ses pages.
+                    </p>
+                    <div className="mt-auto flex items-center text-primary font-bold gap-2 group-hover:gap-3 transition-all">
+                        Explorer la bibliothèque <ArrowRight className="w-4 h-4" />
+                    </div>
+                </Link>
+
+                {/* Option 2: Random Lines */}
+                <Link 
+                    href="/learn/random"
+                    className="group bg-card border border-border hover:border-secondary/50 shadow-sm hover:shadow-md rounded-2xl p-8 flex flex-col items-center text-center transition-all duration-300 hover:-translate-y-1 relative overflow-hidden"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/5 rounded-bl-full -z-10 transition-transform group-hover:scale-110" />
+                    <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mb-6 group-hover:bg-secondary group-hover:text-secondary-foreground transition-colors text-secondary shadow-sm">
+                        <Shuffle className="w-8 h-8" />
+                    </div>
+                    <h2 className="text-2xl font-heading font-bold text-foreground mb-3">
+                        Lignes au hasard
+                    </h2>
+                    <p className="text-muted-foreground mb-8">
+                        Lisez et étudiez des segments transcrits pris au hasard parmi tous les manuscrits. Un excellent moyen de vous familiariser avec différentes écritures.
+                    </p>
+                    <div className="mt-auto flex items-center text-secondary font-bold gap-2 group-hover:gap-3 transition-all">
+                        Débuter l'entraînement <ArrowRight className="w-4 h-4" />
+                    </div>
+                </Link>
+            </div>
+        </div>
     )
 }

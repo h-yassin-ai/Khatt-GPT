@@ -21,12 +21,12 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
             created_at,
             segments ( 
                 status,
-                page_image_url,
+                image_url,
                 order_index
             )
         `)
         .order('created_at', { ascending: false })
-        .order('order_index', { foreignTable: 'segments', ascending: true })
+        .order('order_index', { referencedTable: 'segments', ascending: true })
 
     if (query) {
         manuscriptsQuery = manuscriptsQuery.or(`title.ilike.%${query}%,source.ilike.%${query}%`)
@@ -69,9 +69,9 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
                             <div key={ms.id} className="bg-card border border-border hover:border-primary/50 shadow-sm hover:shadow-md rounded-2xl overflow-hidden transition-all flex flex-col group h-full">
                                 {/* Cover Image Section */}
                                 <div className="aspect-[4/5] bg-muted relative overflow-hidden flex items-center justify-center">
-                                    {ms.segments?.[0]?.page_image_url || ms.cover_image_url ? (
+                                    {ms.segments?.[0]?.image_url || ms.cover_image_url ? (
                                         <img
-                                            src={ms.segments?.[0]?.page_image_url || ms.cover_image_url}
+                                            src={ms.segments?.[0]?.image_url || ms.cover_image_url}
                                             alt={ms.title}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                         />
@@ -83,7 +83,7 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
                                         <Link 
-                                            href="/transcribe" 
+                                            href={`/transcribe?manuscriptId=${ms.id}`} 
                                             className="w-full bg-primary text-primary-foreground py-2 rounded-lg font-semibold shadow-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
                                         >
                                             Transcrire <ArrowRight className="w-4 h-4" />

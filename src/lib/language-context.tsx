@@ -35,13 +35,13 @@ const translations: Record<string, Record<Language, string>> = {
     },
     'onboarding.step2.title': { en: '2. Type Exactly What You See', fr: '2. Tapez exactement ce que vous voyez' },
     'onboarding.step2.desc': {
-        en: "Transcribe the segment character-by-character. We've provided a specialized Arabic keyboard with diacritics and correct mapping to aid your work. Accuracy is more important than speed.",
-        fr: 'Transcrivez le segment caractère par caractère. Un clavier arabe spécialisé avec diacritiques est fourni pour vous aider. La précision est plus importante que la vitesse.'
+        en: "Transcribe the segment character-by-character. No vocalization is needed, write exactly what you see (e.g., ءاله instead of آله). Accuracy is more important than speed.",
+        fr: 'Il ne faut aucune vocalisation et écrire exactement ce qu\'on voit comme ءاله au lieu de آله etc. La précision est plus importante que la vitesse.'
     },
     'onboarding.step3.title': { en: '3. Use "Open Panel" to Help You', fr: '3. Utilisez "Ouvrir le panneau" pour vous aider' },
     'onboarding.step3.desc': {
-        en: '"Open Panel" gives you two powerful tools: (1) See the full page image of the manuscript to understand the context, and (2) Access the printed book text where you can search for the phrase — keep in mind that the manuscript may differ slightly from the printed version due to scribal variations.',
-        fr: '"Ouvrir le panneau" vous donne deux outils : (1) Voir l\'image complète de la page du manuscrit pour comprendre le contexte, et (2) Accéder au texte du livre imprimé où vous pouvez rechercher la phrase — notez que le manuscrit peut différer légèrement de la version imprimée en raison des variations des copistes.'
+        en: 'The full manuscript image is displayed above. "Open Panel" gives you access to the printed book text where you can search for the phrase to understand the context — keep in mind that the handwritten manuscript may differ slightly from the printed version due to scribal variations.',
+        fr: '"Ouvrir le panneau" vous donne accès au texte du livre imprimé (Référence) où vous pouvez rechercher la phrase pour comprendre le contexte — notez que le manuscrit peut différer légèrement de la version imprimée en raison des variations des copistes. (L\'image de la page entière est déjà intégrée à l\'écran).'
     },
     'onboarding.step4.title': { en: '4. Level Up and Reach Consensus', fr: '4. Progressez et atteignez un consensus' },
     'onboarding.step4.desc': {
@@ -134,6 +134,14 @@ const translations: Record<string, Record<Language, string>> = {
     'guide.styles.thuluth': {
         en: 'Thuluth Maghrebi is an ornamental, large script used for titles, architecture, and decorative elements.',
         fr: 'Le Thuluth Maghrébin est une écriture ornementale et large, utilisée pour les titres, l\'architecture et les éléments décoratifs.'
+    },
+    'guide.styles.koufi': {
+        en: 'Kufic is an angular, historic script frequently used in early Quranic manuscripts and architectural inscriptions.',
+        fr: 'Le Koufi est une écriture angulaire historique, fréquemment utilisée dans les premiers manuscrits coraniques et les inscriptions architecturales.'
+    },
+    'guide.styles.musnad': {
+        en: 'Musnad is an ancient script native to the Arabian Peninsula, also known as Epigraphic South Arabian.',
+        fr: 'Le Musnad est une écriture ancienne originaire de la péninsule arabique, également connue sous le nom de sudarabique épigraphique.'
     },
 }
 

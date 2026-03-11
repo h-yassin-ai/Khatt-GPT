@@ -69,7 +69,7 @@ export async function getGamificationSnapshot() {
     return buildSnapshot(profile, unlockedSlugs, accuracyRate)
 }
 
-export async function getNextSegment() {
+export async function getNextSegment(manuscriptId?: string) {
     const supabase = await createClient()
     const {
         data: { user },
@@ -87,17 +87,21 @@ export async function getNextSegment() {
 
     const transcribedSegmentIds = new Set(userTranscriptions?.map((t: any) => t.segment_id) || [])
 
-    const { count: totalActive } = await supabase
+    const countQuery = supabase
         .from('segments')
         .select('*', { count: 'exact', head: true })
         .neq('status', 'validated')
         .neq('status', 'archived')
 
+    const { count: totalActive } = await (manuscriptId 
+        ? countQuery.eq('manuscript_id', manuscriptId) 
+        : countQuery)
+
     const poolSize = 300
     const maxOffset = totalActive ? Math.max(0, totalActive - poolSize) : 0
     const randomOffset = Math.floor(Math.random() * (maxOffset + 1))
 
-    const { data: segments, error: segmentsError } = await supabase
+    const segmentQuery = supabase
         .from('segments')
         .select(`
             id,
@@ -109,7 +113,12 @@ export async function getNextSegment() {
         `)
         .neq('status', 'validated')
         .neq('status', 'archived')
-        .range(randomOffset, randomOffset + poolSize - 1)
+
+    const pagedQuery = manuscriptId
+        ? segmentQuery.eq('manuscript_id', manuscriptId).range(randomOffset, randomOffset + poolSize - 1)
+        : segmentQuery.range(randomOffset, randomOffset + poolSize - 1)
+
+    const { data: segments, error: segmentsError } = await pagedQuery
 
     if (segmentsError) {
         console.error('Error fetching segments pool:', segmentsError)
@@ -165,6 +174,68 @@ export async function getNextSegment() {
         manuscript_title: segment.manuscripts?.title || 'Unknown Manuscript',
         manuscript_description: segment.manuscripts?.description || '',
         manuscript_reference_text_url: segment.manuscripts?.reference_text_url || '',
+        manuscript_pdf_url: segment.manuscripts?.pdf_url || '',
+        page_image_url: segment.pages?.image_url || '',
+        page_label: segment.pages?.label || 'Unknown Page',
+        other_transcriptions: otherTranscriptions || [],
+    }
+}
+
+export async function getSegmentById(segmentId: string) {
+    const supabase = await createClient()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) throw new Error('Unauthenticated')
+
+    const { data: segment, error } = await supabase
+        .from('segments')
+        .select(`
+            *,
+            manuscripts(title, description, reference_text_url, pdf_url),
+            pages(image_url, label)
+        `)
+        .eq('id', segmentId)
+        .single()
+
+    if (error || !segment) {
+        throw new Error('Segment not found')
+    }
+
+    // Fetch existing transcriptions for this segment by other users to show as references
+    const { data: otherData } = await supabase
+        .from('transcriptions')
+        .select('text, contributor_id')
+        .eq('segment_id', segment.id)
+        .neq('contributor_id', user.id)
+        .order('submitted_at', { ascending: false })
+        .limit(10)
+
+    let otherTranscriptions: any[] = []
+    if (otherData && otherData.length > 0) {
+        const cIds = Array.from(new Set(otherData.map((d: any) => d.contributor_id)))
+        const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, email, avatar_url, role')
+            .in('id', cIds)
+        
+        const pMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+        otherTranscriptions = otherData.map((d: any) => ({
+            text: d.text,
+            profiles: pMap.get(d.contributor_id) || null
+        }))
+    }
+
+    return {
+        id: segment.id,
+        image_url: segment.image_url,
+        order_index: segment.order_index,
+        polygon: segment.polygon,
+        manuscript_title: segment.manuscripts?.title || 'Unknown Manuscript',
+        manuscript_description: segment.manuscripts?.description || '',
+        manuscript_reference_text_url: segment.manuscripts?.reference_text_url || '',
+        manuscript_pdf_url: segment.manuscripts?.pdf_url || '',
         page_image_url: segment.pages?.image_url || '',
         page_label: segment.pages?.label || 'Unknown Page',
         other_transcriptions: otherTranscriptions || [],

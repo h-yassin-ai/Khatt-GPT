@@ -40,7 +40,7 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
         const params = query.trim() ? `?query=${encodeURIComponent(query.trim())}` : ''
-        router.push(`/learn${params}`)
+        router.push(`/learn/random${params}`)
     }
 
     const toggleReveal = (id: string) => {

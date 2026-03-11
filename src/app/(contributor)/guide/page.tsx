@@ -10,6 +10,13 @@ export default function CalligraphyGuidePage() {
 
     const styles = [
         {
+            id: 'koufi',
+            title: 'Koufi',
+            description: t('guide.styles.koufi'),
+            image: '/images/guide/koufi.png',
+            color: 'bg-emerald-500/10'
+        },
+        {
             id: 'mabsut',
             title: 'Mabsut',
             description: t('guide.styles.mabsut'),
@@ -24,8 +31,15 @@ export default function CalligraphyGuidePage() {
             color: 'bg-secondary/10'
         },
         {
+            id: 'musnad',
+            title: 'Musnad',
+            description: t('guide.styles.musnad'),
+            image: '/images/guide/musnad.png',
+            color: 'bg-amber-500/10'
+        },
+        {
             id: 'thuluth',
-            title: 'Thuluth Maghribi',
+            title: 'Thuluth',
             description: t('guide.styles.thuluth'),
             image: '/images/guide/thuluth.png',
             color: 'bg-blue-500/10'

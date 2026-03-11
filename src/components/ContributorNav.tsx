@@ -24,28 +24,19 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
             <Link href="/transcribe" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <PenLine className="w-4 h-4" /> {t('nav.transcribe')}
             </Link>
+            <Link href="/learn" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
+                <GraduationCap className="w-4 h-4" /> {t('nav.learn')}
+            </Link>
+            <Link href="/guide" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
+                <Feather className="w-4 h-4" /> {t('nav.guide')}
+            </Link>
             
             <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap outline-none">
-                    More <ChevronDown className="w-4 h-4 opacity-50" />
+                    <User className="w-4 h-4" /> <ChevronDown className="w-3 h-3 opacity-50" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem asChild>
-                        <Link href="/browse" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
-                            <BookOpen className="w-4 h-4" /> {t('nav.browse')}
-                        </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                        <Link href="/learn" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
-                            <GraduationCap className="w-4 h-4" /> {t('nav.learn')}
-                        </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                        <Link href="/guide" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
-                            <Feather className="w-4 h-4" /> {t('nav.guide')}
-                        </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
+
                     <DropdownMenuItem asChild>
                         <Link href="/profile" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
                             <User className="w-4 h-4" /> {t('nav.profile')}
