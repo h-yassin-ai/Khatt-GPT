@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { LayoutDashboard, PenLine, User, LogOut, BookOpen, ShieldCheck, GraduationCap, Languages, History, Menu, X, Feather, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, PenLine, User, LogOut, BookOpen, ShieldCheck, GraduationCap, Languages, History, Menu, X, Feather, ChevronDown, Shuffle } from 'lucide-react'
 import { useLanguage } from '@/lib/language-context'
 import { useState } from 'react'
 import {
@@ -21,9 +21,23 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
             <Link href="/dashboard" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <LayoutDashboard className="w-4 h-4" /> {t('nav.dashboard')}
             </Link>
-            <Link href="/transcribe" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
-                <PenLine className="w-4 h-4" /> {t('nav.transcribe')}
-            </Link>
+            <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap outline-none">
+                    <PenLine className="w-4 h-4" /> {t('nav.transcribe')} <ChevronDown className="w-3 h-3 opacity-50" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                    <DropdownMenuItem asChild>
+                        <Link href="/transcribe" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
+                            <Shuffle className="w-4 h-4 text-primary" /> Aléatoire
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href="/browse" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
+                            <BookOpen className="w-4 h-4 text-emerald-600" /> Choisir un manuscrit
+                        </Link>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
             <Link href="/learn" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <GraduationCap className="w-4 h-4" /> {t('nav.learn')}
             </Link>

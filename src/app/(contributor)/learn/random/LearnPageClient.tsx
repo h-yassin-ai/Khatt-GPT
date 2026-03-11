@@ -37,10 +37,17 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
         return shuffled.slice(0, 15)
     }, [segments, randomSeed])
 
+    const searchParams = useSearchParams()
+    const manuscriptId = searchParams.get('manuscriptId')
+
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
-        const params = query.trim() ? `?query=${encodeURIComponent(query.trim())}` : ''
-        router.push(`/learn/random${params}`)
+        const params = new URLSearchParams()
+        if (query.trim()) params.set('query', query.trim())
+        if (manuscriptId) params.set('manuscriptId', manuscriptId)
+
+        const qryString = params.toString()
+        router.push(`/learn/random${qryString ? '?' + qryString : ''}`)
     }
 
     const toggleReveal = (id: string) => {

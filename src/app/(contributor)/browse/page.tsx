@@ -23,10 +23,15 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
                 status,
                 image_url,
                 order_index
+            ),
+            pages (
+                image_url,
+                order_index
             )
         `)
         .order('created_at', { ascending: false })
         .order('order_index', { referencedTable: 'segments', ascending: true })
+        .order('order_index', { referencedTable: 'pages', ascending: true })
 
     if (query) {
         manuscriptsQuery = manuscriptsQuery.or(`title.ilike.%${query}%,source.ilike.%${query}%`)
@@ -65,15 +70,18 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
                         const total = ms.total_segments || ms.segments?.length || 1
                         const progress = Math.round((validatedCount / total) * 100)
 
+                        const firstPageImage = ms.pages && ms.pages.length > 0 ? ms.pages[0].image_url : null;
+                        const coverImage = firstPageImage || ms.cover_image_url || ms.segments?.[0]?.image_url;
+
                         return (
-                            <div key={ms.id} className="bg-card border border-border hover:border-primary/50 shadow-sm hover:shadow-md rounded-2xl overflow-hidden transition-all flex flex-col group h-full">
+                            <div key={ms.id} className="bg-card border border-border hover:border-primary/50 shadow-sm hover:shadow-md rounded-2xl overflow-hidden transition-all flex flex-col group h-full relative">
                                 {/* Cover Image Section */}
                                 <div className="aspect-[4/5] bg-muted relative overflow-hidden flex items-center justify-center">
-                                    {ms.segments?.[0]?.image_url || ms.cover_image_url ? (
+                                    {coverImage ? (
                                         <img
-                                            src={ms.segments?.[0]?.image_url || ms.cover_image_url}
+                                            src={coverImage}
                                             alt={ms.title}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100"
                                         />
                                     ) : (
                                         <div className="flex flex-col items-center gap-2 text-muted-foreground opacity-20">
@@ -81,12 +89,18 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
                                             <span className="font-heading font-bold">KHATT-GPT</span>
                                         </div>
                                     )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-6 gap-3">
                                         <Link 
                                             href={`/transcribe?manuscriptId=${ms.id}`} 
-                                            className="w-full bg-primary text-primary-foreground py-2 rounded-lg font-semibold shadow-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
+                                            className="w-full bg-primary text-primary-foreground py-2.5 rounded-lg font-bold shadow-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
                                         >
                                             Transcrire <ArrowRight className="w-4 h-4" />
+                                        </Link>
+                                        <Link 
+                                            href={`/learn/random?manuscriptId=${ms.id}`} 
+                                            className="w-full bg-white/20 backdrop-blur-md text-white border border-white/30 py-2.5 rounded-lg font-bold shadow-xl flex items-center justify-center gap-2 hover:bg-white/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                        >
+                                            <BookOpen className="w-4 h-4" /> Lire les segments
                                         </Link>
                                     </div>
                                 </div>

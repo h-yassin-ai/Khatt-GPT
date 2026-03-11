@@ -5,7 +5,6 @@ import {
   getNextSegment,
   submitTranscription,
   flagSegment,
-  getRecentTranscriptions,
   updateTranscription,
   getPendingSegmentCount,
   getGamificationSnapshot,
@@ -128,9 +127,8 @@ function TranscribeContent() {
   const [loadingRef, setLoadingRef] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<
-    "reference" | "recent" | "pdf" | "community"
+    "reference" | "pdf" | "community"
   >("community");
-  const [recentTranscriptions, setRecentTranscriptions] = useState<any[]>([]);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
@@ -174,7 +172,6 @@ function TranscribeContent() {
 
   useEffect(() => {
     loadSegment();
-    fetchRecent();
     fetchPendingCount();
     fetchGamification();
   }, [loadSegment]);
@@ -182,11 +179,6 @@ function TranscribeContent() {
   const fetchPendingCount = async () => {
     const count = await getPendingSegmentCount();
     setPendingCount(count);
-  };
-
-  const fetchRecent = async () => {
-    const recent = await getRecentTranscriptions();
-    setRecentTranscriptions(recent);
   };
 
   const fetchGamification = async () => {
@@ -482,7 +474,6 @@ function TranscribeContent() {
 
     setIsEditing(null);
     await loadSegment();
-    fetchRecent();
     fetchPendingCount();
     setSubmitting(false);
   };
@@ -1263,26 +1254,19 @@ function TranscribeContent() {
                     <BookOpen className="w-4 h-4" /> Référence
                   </button>
                   <button
-                    onClick={() => setActiveTab("recent")}
-                    className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === "recent" ? "text-primary bg-primary/5 border-b-2 border-primary" : "text-muted-foreground hover:bg-muted"}`}
+                    onClick={() => setActiveTab("community")}
+                    className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === "community" ? "text-primary bg-primary/5 border-b-2 border-primary" : "text-muted-foreground hover:bg-muted"}`}
                   >
-                    <History className="w-4 h-4" /> Récent
+                    <div className="relative">
+                      <Users className="w-4 h-4" />
+                      {segment?.other_transcriptions && segment.other_transcriptions.length > 0 && (
+                        <span className="absolute -top-1.5 -right-2.5 bg-primary text-primary-foreground text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                          {segment.other_transcriptions.length}
+                        </span>
+                      )}
+                    </div>
+                    Propositions
                   </button>
-                  {segment?.other_transcriptions &&
-                    segment.other_transcriptions.length > 0 && (
-                      <button
-                        onClick={() => setActiveTab("community")}
-                        className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === "community" ? "text-primary bg-primary/5 border-b-2 border-primary" : "text-muted-foreground hover:bg-muted"}`}
-                      >
-                        <div className="relative">
-                          <Users className="w-4 h-4" />
-                          <span className="absolute -top-1.5 -right-2.5 bg-primary text-primary-foreground text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                            {segment.other_transcriptions.length}
-                          </span>
-                        </div>
-                        Communauté
-                      </button>
-                    )}
                   {segment?.manuscript_pdf_url && (
                     <button
                       onClick={() => setActiveTab("pdf")}
@@ -1397,74 +1381,13 @@ function TranscribeContent() {
                       </div>
                     </>
                   )}
-                  {activeTab === "recent" && (
-                    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-                      {recentTranscriptions.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2 opacity-40">
-                          <History className="w-10 h-10" />
-                          <p className="text-xs">Aucune activité récente</p>
-                        </div>
-                      ) : (
-                        recentTranscriptions.map((t) => (
-                          <div
-                            key={t.id}
-                            className="p-3 rounded-lg border border-border bg-card shadow-sm hover:shadow-md transition-all group flex flex-col gap-2"
-                          >
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded shrink-0 overflow-hidden bg-muted border border-border">
-                                  {t.segment_image &&
-                                  t.segment_image.trim() !== "" ? (
-                                    <img
-                                      src={t.segment_image || undefined}
-                                      className="w-full h-full object-cover"
-                                      alt="Segment thumbnail"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-muted">
-                                      <ImageIcon className="w-4 h-4 text-muted-foreground opacity-30" />
-                                    </div>
-                                  )}
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-bold text-muted-foreground">
-                                    LINE #{t.segment_index}
-                                  </p>
-                                  <p className="text-[9px] text-muted-foreground opacity-70">
-                                    {new Date(
-                                      t.submitted_at,
-                                    ).toLocaleTimeString()}
-                                  </p>
-                                </div>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-[10px] font-bold gap-1 text-primary hover:bg-primary/5"
-                                onClick={() => startEditing(t)}
-                              >
-                                <PenLine className="w-3 h-3" /> Modifier
-                              </Button>
-                            </div>
-                            <p
-                              className="text-xs font-arabic leading-relaxed line-clamp-2 text-right"
-                              dir="rtl"
-                            >
-                              {t.text}
-                            </p>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                  {activeTab === "community" &&
-                    segment?.other_transcriptions && (
+                  {activeTab === "community" && (
                       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
                         <div className="text-xs text-muted-foreground mb-2 text-center border-b border-border/50 pb-2">
                           Ces transcriptions ont été soumises par d'autres
                           contributeurs pour cette ligne.
                         </div>
-                        {segment.other_transcriptions.length === 0 ? (
+                        {(!segment?.other_transcriptions || segment.other_transcriptions.length === 0) ? (
                           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2 opacity-60">
                             <Users className="w-10 h-10 mb-2 opacity-50" />
                             <p className="text-sm font-semibold">
@@ -1476,7 +1399,7 @@ function TranscribeContent() {
                             </p>
                           </div>
                         ) : (
-                          segment.other_transcriptions.map((t, idx) => (
+                          segment.other_transcriptions?.map((t, idx) => (
                             <div
                               key={idx}
                               className="p-3 rounded-lg border border-primary/20 bg-primary/5 shadow-sm flex flex-col gap-2"

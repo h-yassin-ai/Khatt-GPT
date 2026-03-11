@@ -369,41 +369,6 @@ export async function flagSegment(segmentId: string) {
     return { success: true }
 }
 
-export async function getRecentTranscriptions() {
-    const supabase = await createClient()
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) return []
-
-    const { data, error } = await supabase
-        .from('transcriptions')
-        .select(`
-            id,
-            text,
-            submitted_at,
-            segments(id, image_url, order_index, polygon)
-        `)
-        .eq('contributor_id', user.id)
-        .order('submitted_at', { ascending: false })
-        .limit(10)
-
-    if (error) {
-        console.error('Error fetching recent transcriptions:', error)
-        return []
-    }
-
-    return (data || []).map((t: any) => ({
-        id: t.id,
-        text: t.text,
-        submitted_at: t.submitted_at,
-        segment_id: t.segments.id,
-        segment_image: t.segments.image_url,
-        segment_index: t.segments.order_index,
-        segment_polygon: t.segments.polygon,
-    }))
-}
 
 export async function updateTranscription(transcriptionId: string, newText: string) {
     const supabase = await createClient()

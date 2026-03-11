@@ -2,9 +2,10 @@ import { createClient } from '@/utils/supabase/server'
 import { LearnPageClient } from './LearnPageClient'
 
 
-export default async function LearnPage({ searchParams }: { searchParams: Promise<{ query?: string }> }) {
+export default async function LearnPage({ searchParams }: { searchParams: Promise<{ query?: string, manuscriptId?: string }> }) {
     const supabase = await createClient()
     const query = (await searchParams).query || ''
+    const manuscriptId = (await searchParams).manuscriptId || ''
 
     // 1. Fetch segments that have at least one transcription
     let segmentsQuery = supabase
@@ -25,6 +26,10 @@ export default async function LearnPage({ searchParams }: { searchParams: Promis
 
     if (query) {
         segmentsQuery = segmentsQuery.ilike('consensus_text', `%${query}%`)
+    }
+
+    if (manuscriptId) {
+        segmentsQuery = segmentsQuery.eq('manuscript_id', manuscriptId)
     }
 
     const { data: rawSegments } = await segmentsQuery
