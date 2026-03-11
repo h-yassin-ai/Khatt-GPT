@@ -18,8 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             {/* Sidebar */}
             <aside className="w-64 border-r border-border bg-card/50 flex flex-col">
                 <div className="h-16 flex items-center px-6 border-b border-border">
-                    <img src="/logo.png" alt="Khatt-GPT Logo" className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(255,193,7,0.4)]" />
-                    <span className="font-heading text-lg lg:text-xl font-bold tracking-tight ml-2">Khatt-Admin</span>
+                    <span className="font-heading text-xl lg:text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-primary via-primary/90 to-amber-600 drop-shadow-sm">Khatt-Admin</span>
                 </div>
 
                 <nav className="flex-1 px-4 py-6 space-y-2">

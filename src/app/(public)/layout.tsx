@@ -21,8 +21,7 @@ export default async function PublicLayout({
                 ) : (
                     <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center w-full">
                         <Link href="/" className="flex items-center gap-2.5 shrink-0">
-                            <img src="/logo.png" alt="Khatt-GPT Logo" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,193,7,0.4)] transition-transform hover:scale-105" />
-                            <span className="font-heading text-2xl lg:text-3xl font-bold tracking-tight">Khatt-GPT</span>
+                            <span className="font-heading text-2xl lg:text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-primary via-primary/90 to-amber-600 drop-shadow-sm">Khatt-GPT</span>
                         </Link>
                         <nav className="flex items-center gap-6">
                             <Link href="/auth/login" className="text-sm font-medium hover:text-primary transition-colors">

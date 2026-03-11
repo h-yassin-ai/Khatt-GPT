@@ -66,8 +66,7 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
         <div className="container flex h-16 items-center justify-between px-6 max-w-7xl mx-auto">
             <div className="flex items-center gap-2 lg:gap-6">
                 <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0">
-                    <img src="/logo.png" alt="Khatt-GPT Logo" className="w-9 h-9 object-contain drop-shadow-[0_0_8px_rgba(255,193,7,0.4)] transition-transform hover:scale-105" />
-                    <span className="font-heading text-lg lg:text-xl font-bold tracking-tight">Khatt-GPT</span>
+                    <span className="font-heading text-xl lg:text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-primary via-primary/90 to-amber-600 drop-shadow-sm">Khatt-GPT</span>
                 </Link>
                 <nav className="hidden md:flex items-center gap-0.5 lg:gap-1 text-[13px] lg:text-sm font-medium">
                     <NavLinks />
