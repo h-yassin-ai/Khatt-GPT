@@ -1,13 +1,188 @@
 'use client'
 
 import { useState } from 'react'
-import { approveTranscription, rejectTranscription } from './actions'
+import { approveTranscription, rejectTranscription, getValidatedSegments } from './actions'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
-import { Check, X, Edit2, Save, Trash2, AlertCircle, ImageIcon } from 'lucide-react'
+import {
+    Check, X, Edit2, Save, Trash2, AlertCircle, ImageIcon,
+    ClipboardCheck, History, ChevronDown, Loader2
+} from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 
-export function VerifyPageClient({ initialSegments }: { initialSegments: any[] }) {
+type Transcription = {
+    id: string
+    text: string
+    submitted_at: string
+    is_validated: boolean
+    contributor_id: string
+    image_url?: string | null
+    xp_awarded?: number | null
+    profiles?: { display_name?: string; username?: string } | null
+}
+
+type Segment = {
+    id: string
+    image_url?: string | null
+    status: string
+    order_index: number
+    transcription_count?: number
+    consensus_text?: string | null
+    consensus_reached_at?: string | null
+    manuscripts?: { title?: string } | null
+    transcriptions: Transcription[]
+}
+
+function TranscriptionCard({
+    t,
+    seg,
+    loading,
+    editingId,
+    editText,
+    onApprove,
+    onReject,
+    onStartEdit,
+    onCancelEdit,
+    onSaveEdit,
+    onEditTextChange,
+}: {
+    t: Transcription
+    seg: Segment
+    loading: string | null
+    editingId: string | null
+    editText: string
+    onApprove: () => void
+    onReject: () => void
+    onStartEdit: () => void
+    onCancelEdit: () => void
+    onSaveEdit: () => void
+    onEditTextChange: (v: string) => void
+}) {
+    // Use the image captured at submission time; fall back to segment's current image
+    const displayImage = t.image_url || seg.image_url
+    const imageDiffers = t.image_url && seg.image_url && t.image_url !== seg.image_url
+
+    return (
+        <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm flex flex-col lg:flex-row group hover:border-primary/30 transition-colors">
+            {/* Image column */}
+            <div className="lg:w-1/3 bg-black/5 flex flex-col items-center justify-center p-3 min-h-[160px] border-b lg:border-b-0 lg:border-r border-border relative">
+                {displayImage ? (
+                    <img
+                        src={displayImage}
+                        alt="Segment"
+                        className="max-w-full max-h-[260px] object-contain shadow rounded-sm"
+                    />
+                ) : (
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground opacity-30">
+                        <ImageIcon className="w-10 h-10" />
+                        <span className="text-xs">Pas d'image</span>
+                    </div>
+                )}
+                <div className="absolute top-2 left-2 bg-background/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold border border-border shadow-sm">
+                    {seg.manuscripts?.title} – #{seg.order_index}
+                </div>
+                {imageDiffers && (
+                    <div className="absolute bottom-2 left-2 right-2 bg-amber-500/90 text-white text-[10px] px-2 py-1 rounded text-center font-medium">
+                        Image au moment de la soumission
+                    </div>
+                )}
+            </div>
+
+            {/* Content column */}
+            <div className="flex-1 p-5 flex flex-col gap-3">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                            {t.profiles?.display_name?.charAt(0) || t.profiles?.username?.charAt(0) || '?'}
+                        </div>
+                        <span className="text-xs font-medium text-foreground">
+                            {t.profiles?.display_name || t.profiles?.username || 'Inconnu'}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground opacity-60">
+                            {new Date(t.submitted_at).toLocaleDateString('fr-FR')}
+                        </span>
+                    </div>
+                    {t.xp_awarded ? (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20">
+                            +{t.xp_awarded} XP
+                        </span>
+                    ) : null}
+                </div>
+
+                {/* Status badge */}
+                <div className="flex gap-2">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${seg.status === 'conflict'
+                        ? 'bg-destructive/10 text-destructive border-destructive/20 animate-pulse'
+                        : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                        }`}>
+                        {seg.status === 'conflict' ? 'CONFLIT' : 'EN ATTENTE'}
+                    </span>
+                </div>
+
+                {/* Text / edit area */}
+                {editingId === t.id ? (
+                    <div className="flex flex-col gap-2">
+                        <Textarea
+                            value={editText}
+                            onChange={(e) => onEditTextChange(e.target.value)}
+                            dir="rtl"
+                            className="font-arabic text-xl leading-loose p-4 resize-none min-h-[100px]"
+                        />
+                        <div className="text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded border border-amber-200 dark:border-amber-700">
+                            Modifier le texte retirera 1/4 des XP attribués au contributeur.
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                            <Button size="sm" variant="outline" onClick={onCancelEdit} disabled={loading === t.id}>
+                                Annuler
+                            </Button>
+                            <Button size="sm" onClick={onSaveEdit} disabled={loading === t.id}>
+                                <Save className="w-3.5 h-3.5 mr-2" />
+                                Modifier et Valider
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <p className="font-arabic text-2xl leading-loose text-right text-foreground" dir="rtl">
+                            {t.text}
+                        </p>
+                        <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-xs gap-1.5"
+                                onClick={onStartEdit}
+                                disabled={loading !== null}
+                            >
+                                <Edit2 className="w-3 h-3" /> Modifier
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-xs gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20"
+                                onClick={onReject}
+                                disabled={loading !== null}
+                            >
+                                <Trash2 className="w-3 h-3" /> Refuser
+                            </Button>
+                            <Button
+                                size="sm"
+                                className="h-8 text-xs gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                                onClick={onApprove}
+                                disabled={loading !== null}
+                            >
+                                <Check className="w-3.5 h-3.5" /> Valider
+                            </Button>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    )
+}
+
+function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
     const [segments, setSegments] = useState(initialSegments)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editText, setEditText] = useState('')
@@ -19,41 +194,31 @@ export function VerifyPageClient({ initialSegments }: { initialSegments: any[] }
         const result = await approveTranscription(segmentId, transcriptionId, text)
         if (result.success) {
             toast({ title: "Validé !", description: "La transcription a été approuvée comme officielle." })
-            // Remove the segment from the list as it's now validated
             setSegments(prev => prev.filter(s => s.id !== segmentId))
         } else {
-            toast({ title: "Erreur", description: result.error, variant: "destructive" })
+            toast({ title: "Erreur", description: (result as any).error, variant: "destructive" })
         }
         setLoading(null)
     }
 
     const handleReject = async (transcriptionId: string) => {
-        if (!confirm("Voulez-vous vraiment supprimer cette transcription ?")) return
-        
+        if (!confirm("Voulez-vous vraiment refuser cette transcription ? Les XP du contributeur seront retirés.")) return
+
         setLoading(transcriptionId)
         const result = await rejectTranscription(transcriptionId)
         if (result.success) {
-            toast({ title: "Refusé", description: "La transcription a été supprimée." })
-            // Refresh local state: remove the transcription from the segment's list
-            setSegments(prev => prev.map(s => ({
-                ...s,
-                transcriptions: s.transcriptions.filter((t: any) => t.id !== transcriptionId)
-            })).filter(s => s.transcriptions.length > 0))
+            toast({ title: "Refusé", description: "La transcription a été supprimée et les XP retirés." })
+            setSegments(prev => prev
+                .map(s => ({
+                    ...s,
+                    transcriptions: s.transcriptions.filter((t) => t.id !== transcriptionId)
+                }))
+                .filter(s => s.transcriptions.length > 0)
+            )
         } else {
-            toast({ title: "Erreur", description: result.error, variant: "destructive" })
+            toast({ title: "Erreur", description: (result as any).error, variant: "destructive" })
         }
         setLoading(null)
-    }
-
-    const startEditing = (id: string, text: string) => {
-        setEditingId(id)
-        setEditText(text)
-    }
-
-    const handleSaveAndApprove = async (segmentId: string, transcriptionId: string) => {
-        if (!editText.trim()) return
-        await handleApprove(segmentId, transcriptionId, editText)
-        setEditingId(null)
     }
 
     if (segments.length === 0) {
@@ -66,112 +231,202 @@ export function VerifyPageClient({ initialSegments }: { initialSegments: any[] }
         )
     }
 
+    // Flatten: one card per transcription (not per segment)
+    const allCards = segments.flatMap(seg =>
+        seg.transcriptions.map(t => ({ t, seg }))
+    )
+
+    return (
+        <div className="flex flex-col gap-4">
+            <p className="text-sm text-muted-foreground">
+                {allCards.length} proposition{allCards.length > 1 ? 's' : ''} à vérifier
+            </p>
+            {allCards.map(({ t, seg }) => (
+                <TranscriptionCard
+                    key={t.id}
+                    t={t}
+                    seg={seg}
+                    loading={loading}
+                    editingId={editingId}
+                    editText={editText}
+                    onApprove={() => handleApprove(seg.id, t.id, t.text)}
+                    onReject={() => handleReject(t.id)}
+                    onStartEdit={() => { setEditingId(t.id); setEditText(t.text) }}
+                    onCancelEdit={() => setEditingId(null)}
+                    onSaveEdit={() => {
+                        if (!editText.trim()) return
+                        handleApprove(seg.id, t.id, editText)
+                        setEditingId(null)
+                    }}
+                    onEditTextChange={setEditText}
+                />
+            ))}
+        </div>
+    )
+}
+
+function ValidatedTab() {
+    const [loaded, setLoaded] = useState(false)
+    const [loading, setLoading] = useState(false)
+    const [segments, setSegments] = useState<Segment[]>([])
+    const [page, setPage] = useState(0)
+    const [hasMore, setHasMore] = useState(true)
+    const LIMIT = 20
+
+    const loadPage = async (p: number) => {
+        setLoading(true)
+        const data = await getValidatedSegments(p, LIMIT)
+        if (p === 0) setSegments(data)
+        else setSegments(prev => [...prev, ...data])
+        setHasMore(data.length === LIMIT)
+        setLoaded(true)
+        setLoading(false)
+    }
+
+    const handleLoad = () => {
+        loadPage(0)
+        setPage(0)
+    }
+
+    const handleLoadMore = () => {
+        const next = page + 1
+        setPage(next)
+        loadPage(next)
+    }
+
+    if (!loaded) {
+        return (
+            <div className="flex flex-col items-center justify-center py-16 gap-4 text-center bg-muted/10 rounded-xl border border-dashed border-border">
+                <History className="w-10 h-10 text-muted-foreground/30" />
+                <p className="text-muted-foreground text-sm">Cliquez pour charger l'historique des validations</p>
+                <Button variant="outline" onClick={handleLoad} disabled={loading}>
+                    {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ChevronDown className="w-4 h-4 mr-2" />}
+                    Charger les validations
+                </Button>
+            </div>
+        )
+    }
+
+    if (segments.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center py-16 text-center bg-muted/10 rounded-xl border border-dashed border-border">
+                <ClipboardCheck className="w-10 h-10 text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground">Aucune transcription validée pour l'instant.</p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="flex flex-col gap-4">
+            <p className="text-sm text-muted-foreground">{segments.length} segment{segments.length > 1 ? 's' : ''} validé{segments.length > 1 ? 's' : ''} (chargés)</p>
+            {segments.map(seg => {
+                const approvedT = seg.transcriptions.find(t => t.is_validated) || seg.transcriptions[0]
+                const displayImage = (approvedT?.image_url) || seg.image_url
+                return (
+                    <div key={seg.id} className="bg-card border border-green-500/20 shadow-sm rounded-xl overflow-hidden flex flex-col lg:flex-row">
+                        {/* Image */}
+                        <div className="lg:w-1/3 bg-black/5 flex items-center justify-center p-3 min-h-[140px] border-b lg:border-b-0 lg:border-r border-border relative">
+                            {displayImage ? (
+                                <img src={displayImage} alt="Segment" className="max-w-full max-h-[240px] object-contain shadow rounded-sm" />
+                            ) : (
+                                <div className="flex flex-col items-center gap-2 text-muted-foreground opacity-30">
+                                    <ImageIcon className="w-8 h-8" />
+                                    <span className="text-xs">Pas d'image</span>
+                                </div>
+                            )}
+                            <div className="absolute top-2 left-2 bg-background/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold border border-border shadow-sm">
+                                {seg.manuscripts?.title} – #{seg.order_index}
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 p-5 flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 border border-green-500/20">
+                                    ✓ VALIDÉ
+                                </span>
+                                {seg.consensus_reached_at && (
+                                    <span className="text-[10px] text-muted-foreground">
+                                        {new Date(seg.consensus_reached_at).toLocaleDateString('fr-FR')}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="font-arabic text-2xl leading-loose text-right text-foreground" dir="rtl">
+                                {seg.consensus_text}
+                            </p>
+                            {approvedT && (
+                                <div className="flex items-center gap-2 mt-1">
+                                    <div className="w-5 h-5 rounded-full bg-green-500/10 flex items-center justify-center text-[10px] font-bold text-green-700">
+                                        {approvedT.profiles?.display_name?.charAt(0) || approvedT.profiles?.username?.charAt(0) || '?'}
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">
+                                        {approvedT.profiles?.display_name || approvedT.profiles?.username || 'Inconnu'}
+                                    </span>
+                                    {approvedT.xp_awarded ? (
+                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20 ml-auto">
+                                            +{approvedT.xp_awarded} XP
+                                        </span>
+                                    ) : null}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )
+            })}
+            {hasMore && (
+                <div className="flex justify-center pt-2">
+                    <Button variant="outline" onClick={handleLoadMore} disabled={loading}>
+                        {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ChevronDown className="w-4 h-4 mr-2" />}
+                        Charger plus
+                    </Button>
+                </div>
+            )}
+        </div>
+    )
+}
+
+export function VerifyPageClient({ initialSegments }: { initialSegments: Segment[] }) {
+    const [activeTab, setActiveTab] = useState<'pending' | 'validated'>('pending')
+
+    const pendingCount = initialSegments.reduce((sum, s) => sum + s.transcriptions.length, 0)
+
     return (
         <div className="flex flex-col gap-6">
-            {segments.map((seg) => (
-                <div key={seg.id} className="bg-card border border-border shadow-sm rounded-xl overflow-hidden flex flex-col lg:flex-row">
-                    {/* Left: Segment Image */}
-                    <div className="lg:w-1/3 bg-black/5 flex items-center justify-center p-4 min-h-[200px] border-b lg:border-b-0 lg:border-r border-border relative">
-                        {seg.image_url ? (
-                            <img src={seg.image_url} alt="Segment" className="max-w-full max-h-[300px] object-contain shadow-lg rounded-sm" />
-                        ) : (
-                            <div className="flex flex-col items-center gap-2 text-muted-foreground opacity-30">
-                                <ImageIcon className="w-10 h-10" />
-                                <span className="text-xs">No image</span>
-                            </div>
-                        )}
-                        <div className="absolute top-2 left-2 bg-background/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold border border-border shadow-sm">
-                            {seg.manuscripts?.title} - #{seg.order_index}
-                        </div>
-                    </div>
+            {/* Tabs */}
+            <div className="flex gap-1 p-1 bg-muted/40 rounded-lg w-fit border border-border">
+                <button
+                    onClick={() => setActiveTab('pending')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'pending'
+                        ? 'bg-background shadow-sm text-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                >
+                    <AlertCircle className="w-4 h-4" />
+                    À vérifier
+                    {pendingCount > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded-full">
+                            {pendingCount}
+                        </span>
+                    )}
+                </button>
+                <button
+                    onClick={() => setActiveTab('validated')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'validated'
+                        ? 'bg-background shadow-sm text-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                >
+                    <ClipboardCheck className="w-4 h-4" />
+                    Validations effectuées
+                </button>
+            </div>
 
-                    {/* Right: Transcriptions List */}
-                    <div className="flex-1 p-6 flex flex-col gap-4">
-                        <div className="flex justify-between items-center mb-2">
-                            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                                <AlertCircle className="w-4 h-4" /> {seg.transcriptions.length} Proposition{seg.transcriptions.length > 1 ? 's' : ''}
-                            </h3>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${seg.status === 'conflict' ? 'bg-destructive/10 text-destructive border-destructive/20 animate-pulse' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'}`}>
-                                {seg.status === 'conflict' ? 'CONFLIT' : 'EN ATTENTE'}
-                            </span>
-                        </div>
-
-                        <div className="space-y-4">
-                            {seg.transcriptions.map((t: any) => (
-                                <div key={t.id} className="p-4 rounded-lg border border-border bg-muted/30 flex flex-col gap-3 group hover:border-primary/30 transition-colors">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                                                {t.profiles?.display_name?.charAt(0) || t.profiles?.username?.charAt(0) || '?'}
-                                            </div>
-                                            <span className="text-xs font-medium text-foreground">
-                                                {t.profiles?.display_name || t.profiles?.username || 'Unknown'}
-                                            </span>
-                                            <span className="text-[10px] text-muted-foreground opacity-60">
-                                                {new Date(t.submitted_at).toLocaleDateString()}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {editingId === t.id ? (
-                                        <div className="flex flex-col gap-2">
-                                            <Textarea 
-                                                value={editText}
-                                                onChange={(e) => setEditText(e.target.value)}
-                                                dir="rtl"
-                                                className="font-arabic text-xl leading-loose p-4 resize-none min-h-[100px]"
-                                            />
-                                            <div className="flex gap-2 justify-end">
-                                                <Button size="sm" variant="outline" onClick={() => setEditingId(null)} disabled={loading === t.id}>
-                                                    Annuler
-                                                </Button>
-                                                <Button size="sm" onClick={() => handleSaveAndApprove(seg.id, t.id)} disabled={loading === t.id}>
-                                                    <Save className="w-3.5 h-3.5 mr-2" />
-                                                    Modifier et Valider
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <p className="font-arabic text-2xl leading-loose text-right text-foreground" dir="rtl">
-                                                {t.text}
-                                            </p>
-                                            <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button 
-                                                    size="sm" 
-                                                    variant="outline" 
-                                                    className="h-8 text-xs gap-1.5" 
-                                                    onClick={() => startEditing(t.id, t.text)}
-                                                    disabled={loading !== null}
-                                                >
-                                                    <Edit2 className="w-3 h-3" /> Modifier
-                                                </Button>
-                                                <Button 
-                                                    size="sm" 
-                                                    variant="outline" 
-                                                    className="h-8 text-xs gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20" 
-                                                    onClick={() => handleReject(t.id)}
-                                                    disabled={loading !== null}
-                                                >
-                                                    <Trash2 className="w-3 h-3" /> Refuser
-                                                </Button>
-                                                <Button 
-                                                    size="sm" 
-                                                    className="h-8 text-xs gap-1.5 bg-green-600 hover:bg-green-700 text-white" 
-                                                    onClick={() => handleApprove(seg.id, t.id, t.text)}
-                                                    disabled={loading !== null}
-                                                >
-                                                    <Check className="w-3.5 h-3.5" /> Valider
-                                                </Button>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            ))}
+            {/* Tab content */}
+            {activeTab === 'pending' ? (
+                <PendingTab initialSegments={initialSegments} />
+            ) : (
+                <ValidatedTab />
+            )}
         </div>
     )
 }

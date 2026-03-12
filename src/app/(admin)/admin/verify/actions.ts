@@ -64,7 +64,9 @@ export async function getSegmentsToVerify() {
                 text,
                 submitted_at,
                 is_validated,
-                contributor_id
+                contributor_id,
+                image_url,
+                xp_awarded
             )
         `)
         .neq('status', 'validated')
@@ -110,14 +112,72 @@ export async function getSegmentsToVerify() {
         }))
         .filter((segment: any) => {
             const hasDrafts = segment.transcriptions.length > 0
-            if (!hasDrafts) {
-                // console.log(`[admin.verify] Segment ${segment.id} has no transcriptions yet`)
-            }
             return hasDrafts
         })
 
     console.log(`[admin.verify] Returning ${withTranscriptions.length} segments with transcriptions to UI`)
     return withTranscriptions
+}
+
+export async function getValidatedSegments(page = 0, limit = 20) {
+    const supabase = await createClient()
+
+    const adminCheck = await assertAdmin(supabase)
+    if (!adminCheck.ok) return []
+
+    const adminSupabase = await getAdminClient()
+
+    const { data: segments, error } = await adminSupabase
+        .from('segments')
+        .select(`
+            id,
+            image_url,
+            status,
+            order_index,
+            consensus_text,
+            consensus_reached_at,
+            manuscripts ( title ),
+            transcriptions (
+                id,
+                text,
+                submitted_at,
+                is_validated,
+                contributor_id,
+                image_url,
+                xp_awarded
+            )
+        `)
+        .eq('status', 'validated')
+        .order('consensus_reached_at', { ascending: false })
+        .range(page * limit, (page + 1) * limit - 1)
+
+    if (error) {
+        console.error('[admin.verify] Error fetching validated segments:', error)
+        return []
+    }
+
+    // Collect contributor IDs
+    const contributorIds = new Set<string>()
+    segments?.forEach((s: any) => {
+        s.transcriptions?.forEach((t: any) => {
+            if (t.contributor_id) contributorIds.add(t.contributor_id)
+        })
+    })
+
+    const { data: profiles } = await adminSupabase
+        .from('profiles')
+        .select('id, username, display_name')
+        .in('id', Array.from(contributorIds))
+
+    const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+
+    return (segments || []).map((segment: any) => ({
+        ...segment,
+        transcriptions: (segment.transcriptions || []).map((t: any) => ({
+            ...t,
+            profiles: profileMap.get(t.contributor_id) || null
+        })),
+    }))
 }
 
 export async function approveTranscription(segmentId: string, transcriptionId: string, text: string) {
@@ -130,6 +190,15 @@ export async function approveTranscription(segmentId: string, transcriptionId: s
 
     const sanitizedText = text.trim()
     if (!sanitizedText) return { error: 'Transcription text cannot be empty.' }
+
+    // Fetch original transcription to detect modification and get xp_awarded
+    const { data: original } = await adminSupabase
+        .from('transcriptions')
+        .select('text, contributor_id, xp_awarded')
+        .eq('id', transcriptionId)
+        .single()
+
+    const wasModified = original && original.text.trim() !== sanitizedText
 
     const { error: tError } = await adminSupabase
         .from('transcriptions')
@@ -156,10 +225,30 @@ export async function approveTranscription(segmentId: string, transcriptionId: s
 
     if (sError) return { error: sError.message }
 
+    // If text was modified by admin: deduct 1/4 of xp_awarded from the contributor
+    if (wasModified && original?.contributor_id && original?.xp_awarded) {
+        const deduction = Math.round(original.xp_awarded / 4)
+        if (deduction > 0) {
+            const { data: profile } = await adminSupabase
+                .from('profiles')
+                .select('points')
+                .eq('id', original.contributor_id)
+                .single()
+
+            if (profile) {
+                const newPoints = Math.max(0, (profile.points || 0) - deduction)
+                await adminSupabase
+                    .from('profiles')
+                    .update({ points: newPoints })
+                    .eq('id', original.contributor_id)
+            }
+        }
+    }
+
     revalidatePath('/admin')
     revalidatePath('/admin/verify')
     revalidatePath('/learn')
-    return { success: true }
+    return { success: true, wasModified }
 }
 
 export async function rejectTranscription(transcriptionId: string) {
@@ -172,7 +261,7 @@ export async function rejectTranscription(transcriptionId: string) {
 
     const { data: transcription, error: fetchError } = await adminSupabase
         .from('transcriptions')
-        .select('id, segment_id')
+        .select('id, segment_id, contributor_id, xp_awarded')
         .eq('id', transcriptionId)
         .single()
 
@@ -200,8 +289,26 @@ export async function rejectTranscription(transcriptionId: string) {
         })
         .eq('id', transcription.segment_id)
 
+    // Deduct XP from the contributor
+    if (transcription.contributor_id && transcription.xp_awarded) {
+        const { data: profile } = await adminSupabase
+            .from('profiles')
+            .select('points, total_contributions')
+            .eq('id', transcription.contributor_id)
+            .single()
+
+        if (profile) {
+            await adminSupabase
+                .from('profiles')
+                .update({
+                    points: Math.max(0, (profile.points || 0) - transcription.xp_awarded),
+                    total_contributions: Math.max(0, (profile.total_contributions || 0) - 1),
+                })
+                .eq('id', transcription.contributor_id)
+        }
+    }
+
     revalidatePath('/admin')
     revalidatePath('/admin/verify')
     return { success: true }
 }
-

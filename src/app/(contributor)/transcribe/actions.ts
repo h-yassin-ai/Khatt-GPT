@@ -326,27 +326,15 @@ export async function submitTranscription(segmentId: string, text: string) {
         return { error: 'Submission rejected: Text exceeds maximum length for a given segment.' }
     }
 
-    const { error: insertError } = await supabase
-        .from('transcriptions')
-        .insert({
-            segment_id: segmentId,
-            contributor_id: user.id,
-            text: text.trim(),
-        })
+    // Fetch segment image_url at submission time
+    const { data: segmentData } = await supabase
+        .from('segments')
+        .select('image_url, transcription_count')
+        .eq('id', segmentId)
+        .single()
 
-    if (insertError) return { error: insertError.message }
-
-    const { data: seg } = await supabase.from('segments').select('transcription_count').eq('id', segmentId).single()
-    if (seg) {
-        await supabase
-            .from('segments')
-            .update({ transcription_count: (seg.transcription_count || 0) + 1 })
-            .eq('id', segmentId)
-
-        await computeConsensus(segmentId)
-    }
-
-    const { data: profile } = await supabase
+    // Pre-compute reward so we can store xp_awarded at insert time
+    const { data: profileForReward } = await supabase
         .from('profiles')
         .select('total_contributions, current_streak, last_contribution_date, points')
         .eq('id', user.id)
@@ -360,9 +348,35 @@ export async function submitTranscription(segmentId: string, text: string) {
         newStreak: 1,
         boosts: [],
     }
+    if (profileForReward) {
+        reward = computeTranscriptionReward(profileForReward)
+    }
+
+    const { error: insertError } = await supabase
+        .from('transcriptions')
+        .insert({
+            segment_id: segmentId,
+            contributor_id: user.id,
+            text: text.trim(),
+            image_url: segmentData?.image_url || null,
+            xp_awarded: reward.finalXp,
+        })
+
+    if (insertError) return { error: insertError.message }
+
+    const seg = segmentData
+    if (seg) {
+        await supabase
+            .from('segments')
+            .update({ transcription_count: (seg.transcription_count || 0) + 1 })
+            .eq('id', segmentId)
+
+        await computeConsensus(segmentId)
+    }
+
+    const profile = profileForReward
 
     if (profile) {
-        reward = computeTranscriptionReward(profile)
         const today = new Date().toISOString().slice(0, 10)
 
         await supabase
