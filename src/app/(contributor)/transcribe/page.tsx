@@ -47,9 +47,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/lib/language-context";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { ManuscriptNavigation } from "./ManuscriptNavigation";
 
 type SegmentData = {
   id: string;
+  manuscript_id: string;
+  page_id: string;
   image_url: string;
   order_index: number;
   polygon?: any;
@@ -152,17 +155,22 @@ function TranscribeContent() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const rewardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isNavOpen, setIsNavOpen] = useState(false);
 
   const { t } = useLanguage();
   const { toast } = useToast();
 
-  const loadSegment = useCallback(async () => {
+  const loadSegment = useCallback(async (targetId?: string) => {
     setLoading(true);
     setErrorObj(null);
     setText("");
     try {
-      const nextSeg = await getNextSegment(manuscriptId);
+      const nextSeg = await getNextSegment(manuscriptId, targetId);
       setSegment(nextSeg as any);
+      if (nextSeg?.id) {
+        const saved = localStorage.getItem(`waraka_autosave_${nextSeg.id}`);
+        if (saved) setText(saved);
+      }
     } catch (err: any) {
       setErrorObj(err.message);
     } finally {
@@ -258,6 +266,20 @@ function TranscribeContent() {
       window.removeEventListener("offline", handleOffline);
     };
   }, [toast]);
+
+  // Auto-save transcription text
+  useEffect(() => {
+    if (segment?.id && !loading && !submitting) {
+      const delayDebounceFn = setTimeout(() => {
+        if (text) {
+          localStorage.setItem(`waraka_autosave_${segment.id}`, text);
+        } else {
+          localStorage.removeItem(`waraka_autosave_${segment.id}`);
+        }
+      }, 500);
+      return () => clearTimeout(delayDebounceFn);
+    }
+  }, [text, segment?.id, loading, submitting]);
 
   // Segment Zoom & Pan Logic
   const handleSegmentWheel = (e: React.WheelEvent) => {
@@ -419,6 +441,8 @@ function TranscribeContent() {
       return;
     }
 
+    localStorage.removeItem(`waraka_autosave_${segment.id}`);
+
     if (isEditing) {
       toast({ title: "Updated", description: "Transcription updated." });
     } else {
@@ -484,7 +508,8 @@ function TranscribeContent() {
       const seg = await getSegmentById(t.segment_id);
       setSegment(seg as any);
       setIsEditing(t.id);
-      setText(t.text);
+      const saved = localStorage.getItem(`waraka_autosave_${t.segment_id}`);
+      setText(saved || t.text);
       textareaRef.current?.focus();
     } catch (err: any) {
       toast({
@@ -513,6 +538,7 @@ function TranscribeContent() {
     if (!segment) return;
     setSubmitting(true);
     await flagSegment(segment.id);
+    localStorage.removeItem(`waraka_autosave_${segment.id}`);
     toast({
       title: "Segment flagged",
       description: "Admin will review this segment.",
@@ -797,6 +823,18 @@ function TranscribeContent() {
               {title}
             </div>
           </div>
+
+          {segment?.manuscript_id && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsNavOpen(true)}
+              className="gap-2 rounded-full h-8 px-3 border-primary/40 text-primary bg-primary/5 hover:bg-primary/10 transition-colors"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-bold uppercase tracking-tight">Naviguer</span>
+            </Button>
+          )}
         </div>
         <div className="flex items-center gap-4">
           <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -1460,6 +1498,21 @@ function TranscribeContent() {
           </div>
         </div>
       </div>
+      
+      {segment?.manuscript_id && (
+        <ManuscriptNavigation
+          manuscriptId={segment.manuscript_id}
+          isOpen={isNavOpen}
+          onClose={() => setIsNavOpen(false)}
+          onSelectSegment={(sid) => {
+            loadSegment(sid);
+            setIsNavOpen(false);
+          }}
+          currentSegmentId={segment.id}
+          currentPageId={segment.page_id}
+          t={t}
+        />
+      )}
     </div>
   );
 }

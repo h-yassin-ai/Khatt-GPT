@@ -69,13 +69,57 @@ export async function getGamificationSnapshot() {
     return buildSnapshot(profile, unlockedSlugs, accuracyRate)
 }
 
-export async function getNextSegment(manuscriptId?: string) {
+export async function getManuscriptPages(manuscriptId: string) {
+    const supabase = await createClient()
+    const { data: pages, error } = await supabase
+        .from('pages')
+        .select('id, order_index, image_url')
+        .eq('manuscript_id', manuscriptId)
+        .order('order_index', { ascending: true })
+
+    if (error) throw new Error(error.message)
+    return pages
+}
+
+export async function getPageSegments(pageId: string) {
+    const supabase = await createClient()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) throw new Error('Unauthenticated')
+
+    const { data: segments, error } = await supabase
+        .from('segments')
+        .select(`
+            id,
+            order_index,
+            status,
+            transcriptions(id, contributor_id)
+        `)
+        .eq('page_id', pageId)
+        .order('order_index', { ascending: true })
+
+    if (error) throw new Error(error.message)
+
+    return segments.map((seg: any) => ({
+        ...seg,
+        is_done_by_me: seg.transcriptions?.some((t: any) => t.contributor_id === user.id) || false,
+        transcription_count: seg.transcriptions?.length || 0
+    }))
+}
+
+export async function getNextSegment(manuscriptId?: string, targetSegmentId?: string) {
     const supabase = await createClient()
     const {
         data: { user },
     } = await supabase.auth.getUser()
 
     if (!user) return null
+
+    if (targetSegmentId) {
+        return getSegmentById(targetSegmentId)
+    }
 
     const { data: p } = await supabase.from('profiles').select('is_suspended').eq('id', user.id).single()
     if (p?.is_suspended) throw new Error('Your account has been suspended by an administrator.')
@@ -108,8 +152,10 @@ export async function getNextSegment(manuscriptId?: string) {
             image_url,
             order_index,
             polygon,
-            manuscripts(title, description, reference_text_url),
-            pages(image_url, label)
+            manuscript_id,
+            page_id,
+            manuscripts(id, title, description, reference_text_url, pdf_url),
+            pages(id, image_url, label)
         `)
         .neq('status', 'validated')
         .neq('status', 'archived')
@@ -168,6 +214,8 @@ export async function getNextSegment(manuscriptId?: string) {
 
     return {
         id: segment.id,
+        manuscript_id: segment.manuscripts?.id || '',
+        page_id: segment.pages?.id || '',
         image_url: segment.image_url,
         order_index: segment.order_index,
         polygon: segment.polygon,
@@ -193,8 +241,8 @@ export async function getSegmentById(segmentId: string) {
         .from('segments')
         .select(`
             *,
-            manuscripts(title, description, reference_text_url, pdf_url),
-            pages(image_url, label)
+            manuscripts(id, title, description, reference_text_url, pdf_url),
+            pages(id, image_url, label)
         `)
         .eq('id', segmentId)
         .single()
@@ -229,6 +277,8 @@ export async function getSegmentById(segmentId: string) {
 
     return {
         id: segment.id,
+        manuscript_id: segment.manuscripts?.id || '',
+        page_id: segment.pages?.id || '',
         image_url: segment.image_url,
         order_index: segment.order_index,
         polygon: segment.polygon,
