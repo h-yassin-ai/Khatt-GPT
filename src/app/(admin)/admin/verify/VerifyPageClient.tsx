@@ -64,7 +64,7 @@ function TranscriptionCard({
 
     return (
         <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm flex flex-col lg:flex-row group hover:border-primary/30 transition-colors">
-            {/* Image column */}
+            {/* Image columsn */}
             <div className="lg:w-1/3 bg-black/5 flex flex-col items-center justify-center p-3 min-h-[160px] border-b lg:border-b-0 lg:border-r border-border relative">
                 {displayImage ? (
                     <img
