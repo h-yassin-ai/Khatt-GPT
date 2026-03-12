@@ -35,7 +35,12 @@ export async function updateSession(request: NextRequest) {
     const pathname = request.nextUrl.pathname
 
     // Public routes that don't need auth checking
-    const isPublicRoute = pathname === '/' || pathname.startsWith('/auth')
+    const isPublicRoute = 
+        pathname === '/' || 
+        pathname.startsWith('/auth') || 
+        pathname === '/manifest.webmanifest' ||
+        pathname === '/favicon.ico' ||
+        pathname === '/sw.js'
 
     // Not logged in and trying to access protected route
     if (!user && !isPublicRoute) {

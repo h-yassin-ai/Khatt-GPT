@@ -37,6 +37,7 @@ import {
   Flame,
   Star,
   Users,
+  List,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { OnboardingModal } from "@/components/OnboardingModal";
