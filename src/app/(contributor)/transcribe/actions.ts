@@ -154,7 +154,7 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
             polygon,
             manuscript_id,
             page_id,
-            manuscripts(id, title, description, reference_text_url, pdf_url),
+            manuscripts(id, title, description, reference_text_url),
             pages(id, image_url, label)
         `)
         .neq('status', 'validated')
@@ -222,7 +222,6 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
         manuscript_title: segment.manuscripts?.title || 'Unknown Manuscript',
         manuscript_description: segment.manuscripts?.description || '',
         manuscript_reference_text_url: segment.manuscripts?.reference_text_url || '',
-        manuscript_pdf_url: segment.manuscripts?.pdf_url || '',
         page_image_url: segment.pages?.image_url || '',
         page_label: segment.pages?.label || 'Unknown Page',
         other_transcriptions: otherTranscriptions || [],
@@ -241,7 +240,7 @@ export async function getSegmentById(segmentId: string) {
         .from('segments')
         .select(`
             *,
-            manuscripts(id, title, description, reference_text_url, pdf_url),
+            manuscripts(id, title, description, reference_text_url),
             pages(id, image_url, label)
         `)
         .eq('id', segmentId)
@@ -285,7 +284,6 @@ export async function getSegmentById(segmentId: string) {
         manuscript_title: segment.manuscripts?.title || 'Unknown Manuscript',
         manuscript_description: segment.manuscripts?.description || '',
         manuscript_reference_text_url: segment.manuscripts?.reference_text_url || '',
-        manuscript_pdf_url: segment.manuscripts?.pdf_url || '',
         page_image_url: segment.pages?.image_url || '',
         page_label: segment.pages?.label || 'Unknown Page',
         other_transcriptions: otherTranscriptions || [],
