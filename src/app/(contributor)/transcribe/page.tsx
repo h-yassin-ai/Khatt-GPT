@@ -938,107 +938,116 @@ function TranscribeContent() {
         )}
       </AnimatePresence>
       <div className="flex flex-1 gap-0 pt-0 min-h-0 relative">
-        {/* Main Content: Image Left, Transcription Right */}
-        <div className="flex-1 flex flex-col lg:flex-row min-w-0 bg-background overflow-hidden relative">
-          {/* Image Area — full page by default */}
-          <div
-            ref={imageContainerRef}
-            className="flex-[2] lg:flex-auto lg:w-1/2 flex flex-col relative justify-center items-center bg-[#F3EFE9] border-b lg:border-b-0 lg:border-r border-border/50 overflow-hidden cursor-crosshair shadow-inner"
-            onWheel={handleSegmentWheel}
-            onMouseDown={handleSegmentMouseDown}
-          >
-            <div
-              className="w-full h-full flex items-center justify-center transition-transform duration-75 ease-out select-none"
-              style={{
-                transform: `scale(${zoomScale}) translate(${zoomPos.x / zoomScale}px, ${zoomPos.y / zoomScale}px)`,
-                transformOrigin: "center",
-              }}
-            >
-              {segment?.page_image_url ? (
-                <div className="relative">
-                  <img
-                    src={segment.page_image_url || undefined}
-                    alt="Page du manuscrit"
-                    className="max-h-full max-w-full object-contain drop-shadow-2xl rounded-sm"
-                    draggable={false}
-                    onLoad={handlePageImageLoad}
-                  />
-                  {segment?.polygon &&
-                    Array.isArray(segment.polygon) &&
-                    imgSize.width > 0 && (
-                      <svg
-                        viewBox={`0 0 ${imgSize.width} ${imgSize.height}`}
-                        className="absolute inset-0 w-full h-full pointer-events-none z-10"
-                        preserveAspectRatio="xMidYMid meet"
-                      >
-                        <defs>
-                          <mask id="seg-mask">
-                            <rect
-                              width={imgSize.width}
-                              height={imgSize.height}
-                              fill="white"
-                            />
-                            <polygon
-                              points={segment.polygon
-                                .map((p: any) => `${p.x},${p.y}`)
-                                .join(" ")}
-                              fill="black"
-                            />
-                          </mask>
-                        </defs>
-                        {/* Darken everything outside the polygon */}
+    {/* Main Content: Image Left, Transcription Right */}
+    <div className="flex-1 flex flex-col lg:flex-row min-w-0 bg-background overflow-hidden relative">
+      {/* Image Area — segment crop by default on mobile, full page on desktop */}
+      <div
+        ref={imageContainerRef}
+        className="flex-[1.5] lg:flex-auto lg:w-1/2 flex flex-col relative justify-center items-center bg-[#F3EFE9] border-b lg:border-b-0 lg:border-r border-border/50 overflow-hidden cursor-crosshair shadow-inner min-h-[200px]"
+        onWheel={handleSegmentWheel}
+        onMouseDown={handleSegmentMouseDown}
+      >
+        <div
+          className="w-full h-full flex items-center justify-center transition-transform duration-75 ease-out select-none"
+          style={{
+            transform: `scale(${zoomScale}) translate(${zoomPos.x / zoomScale}px, ${zoomPos.y / zoomScale}px)`,
+            transformOrigin: "center",
+          }}
+        >
+          {/* Mobile: use segment crop | Desktop: use full page or segment crop */}
+          {segment?.image_url && (typeof window !== 'undefined' && window.innerWidth < 1024) ? (
+             <img
+               src={segment.image_url}
+               alt="Segment Crop"
+               className="max-h-[85%] max-w-[95%] object-contain drop-shadow-xl rounded-sm"
+               draggable={false}
+             />
+          ) : segment?.page_image_url ? (
+            <div className="relative">
+              <img
+                src={segment.page_image_url || undefined}
+                alt="Page du manuscrit"
+                className="max-h-full max-w-full object-contain drop-shadow-2xl rounded-sm"
+                draggable={false}
+                onLoad={handlePageImageLoad}
+              />
+              {segment?.polygon &&
+                Array.isArray(segment.polygon) &&
+                imgSize.width > 0 && (
+                  <svg
+                    viewBox={`0 0 ${imgSize.width} ${imgSize.height}`}
+                    className="absolute inset-0 w-full h-full pointer-events-none z-10"
+                    preserveAspectRatio="xMidYMid meet"
+                  >
+                    <defs>
+                      <mask id="seg-mask">
                         <rect
                           width={imgSize.width}
                           height={imgSize.height}
-                          fill="rgba(0,0,0,0.5)"
-                          mask="url(#seg-mask)"
+                          fill="white"
                         />
-                        {/* Highlight the polygon */}
                         <polygon
                           points={segment.polygon
                             .map((p: any) => `${p.x},${p.y}`)
                             .join(" ")}
-                          fill="rgba(255,200,0,0.12)"
-                          stroke="rgba(255,180,0,0.9)"
-                          strokeWidth={Math.max(2, imgSize.width / 300)}
+                          fill="black"
                         />
-                      </svg>
-                    )}
-                </div>
-              ) : segment?.image_url ? (
-                <img
-                  src={segment.image_url || undefined}
-                  alt="Segment"
-                  className="max-h-full max-w-full object-contain drop-shadow-2xl rounded-sm"
-                  draggable={false}
-                />
-              ) : null}
+                      </mask>
+                    </defs>
+                    <rect
+                      width={imgSize.width}
+                      height={imgSize.height}
+                      fill="rgba(0,0,0,0.5)"
+                      mask="url(#seg-mask)"
+                    />
+                    <polygon
+                      points={segment.polygon
+                        .map((p: any) => `${p.x},${p.y}`)
+                        .join(" ")}
+                      fill="rgba(255,200,0,0.12)"
+                      stroke="rgba(255,180,0,0.9)"
+                      strokeWidth={Math.max(2, imgSize.width / 300)}
+                    />
+                  </svg>
+                )}
             </div>
+          ) : segment?.image_url ? (
+             <img
+               src={segment.image_url}
+               alt="Segment"
+               className="max-h-full max-w-full object-contain drop-shadow-2xl rounded-sm"
+               draggable={false}
+             />
+          ) : null}
+        </div>
 
             <div className="absolute top-3 left-3 z-30 select-none flex gap-2">
-              {zoomScale !== 1 && (
-                <div className="bg-background/90 backdrop-blur shadow-sm border border-border px-3 py-1 rounded-full text-[10px] font-bold tracking-tight">
+              <div className="flex items-center gap-1.5 bg-background/90 backdrop-blur shadow-sm border border-border px-2.5 py-1.5 rounded-full pointer-events-auto">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-[9px] font-bold text-primary hover:bg-primary/5 rounded-full lg:hidden"
+                  onClick={() => setShowContext(true)}
+                >
+                  <ImageIcon className="w-3 h-3 mr-1" /> Voir la page
+                </Button>
+                {zoomScale !== 1 && (
                   <button
                     onClick={resetZoom}
-                    className="text-primary hover:underline"
+                    className="text-[9px] font-bold text-primary hover:underline px-1 border-l border-border/50 ml-1"
                   >
-                    {Math.round(zoomScale * 100)}% ({t("transcribe.reset_zoom")}
-                    )
+                    {Math.round(zoomScale * 100)}% ({t("transcribe.reset_zoom")})
                   </button>
-                </div>
-              )}
-              {zoomScale === 1 &&
-                segment?.polygon &&
-                Array.isArray(segment.polygon) && (
-                  <div className="bg-primary/90 text-primary-foreground backdrop-blur shadow-sm border border-primary/50 px-3 py-1 rounded-full text-[10px] font-bold tracking-tight pointer-events-auto transition-opacity hover:bg-primary">
-                    <button
-                      onClick={centerOnSegment}
-                      className="flex items-center gap-1"
-                    >
-                      <Search className="w-3 h-3" /> Zoomer sur la ligne
-                    </button>
-                  </div>
                 )}
+                {zoomScale === 1 && segment?.polygon && Array.isArray(segment.polygon) && (
+                   <button
+                     onClick={centerOnSegment}
+                     className="text-[9px] font-bold text-primary hover:underline px-1 border-l border-border/50 ml-1 hidden lg:flex items-center gap-1"
+                   >
+                     <Search className="w-3 h-3" /> Zoomer
+                   </button>
+                )}
+              </div>
             </div>
 
             {/* Zoom Hint */}
@@ -1378,6 +1387,73 @@ function TranscribeContent() {
         </div>
       </div>
       
+      {/* Full Page Context Popup */}
+      <AnimatePresence>
+        {showContext && segment && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex flex-col p-4 md:p-8"
+          >
+            <div className="flex justify-between items-center mb-4 text-white">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary p-2 rounded-lg">
+                  <ImageIcon className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-heading font-semibold text-lg leading-tight">{title}</h3>
+                  <p className="text-xs text-white/60">Page {segment.page_label} — Vue d'ensemble</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowContext(false)}
+                className="text-white hover:bg-white/10 rounded-full h-10 w-10 p-0"
+              >
+                <X className="w-6 h-6" />
+              </Button>
+            </div>
+            
+            <div className="flex-1 relative rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center">
+              {segment.page_image_url && (
+                <div className="relative w-full h-full flex items-center justify-center group p-4">
+                  <Zoom>
+                    <div className="relative">
+                      <img
+                        src={segment.page_image_url}
+                        alt="Full Page Context"
+                        className="max-h-[85vh] max-w-full object-contain rounded shadow-2xl"
+                      />
+                      {segment.polygon && imgSize.width > 0 && (
+                        <svg
+                          viewBox={`0 0 ${imgSize.width} ${imgSize.height}`}
+                          className="absolute inset-0 w-full h-full pointer-events-none"
+                          preserveAspectRatio="xMidYMid meet"
+                        >
+                          <polygon
+                            points={segment.polygon.map((p: any) => `${p.x},${p.y}`).join(" ")}
+                            fill="rgba(255,200,0,0.15)"
+                            stroke="rgba(255,180,0,1)"
+                            strokeWidth={Math.max(4, imgSize.width / 150)}
+                          />
+                        </svg>
+                      )}
+                    </div>
+                  </Zoom>
+                  <div className="absolute inset-x-0 bottom-4 flex justify-center pointer-events-none">
+                    <span className="bg-black/40 backdrop-blur px-3 py-1.5 rounded-full text-[10px] text-white/80 font-medium">
+                      Cliquez pour zoomer ou déplacez l'image
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {segment?.manuscript_id && (
         <ManuscriptNavigation
           manuscriptId={segment.manuscript_id}
