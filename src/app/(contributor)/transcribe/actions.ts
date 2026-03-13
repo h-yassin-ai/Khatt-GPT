@@ -109,7 +109,7 @@ export async function getPageSegments(pageId: string) {
     }))
 }
 
-export async function getNextSegment(manuscriptId?: string, targetSegmentId?: string) {
+export async function getNextSegment(manuscriptId?: string, targetSegmentId?: string, afterSegmentId?: string) {
     const supabase = await createClient()
     const {
         data: { user },
@@ -131,62 +131,103 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
 
     const transcribedSegmentIds = new Set(userTranscriptions?.map((t: any) => t.segment_id) || [])
 
-    const countQuery = supabase
-        .from('segments')
-        .select('*', { count: 'exact', head: true })
-        .neq('status', 'validated')
-        .neq('status', 'archived')
+    let segmentsData: any[] = [];
 
-    const { count: totalActive } = await (manuscriptId 
-        ? countQuery.eq('manuscript_id', manuscriptId) 
-        : countQuery)
+    if (manuscriptId) {
+        // Sequential mode: order by page index then segment index
+        const { data, error } = await supabase
+            .from('segments')
+            .select(`
+                id,
+                image_url,
+                order_index,
+                polygon,
+                manuscript_id,
+                page_id,
+                manuscripts(id, title, description, reference_text_url),
+                pages!inner(id, image_url, label, order_index)
+            `)
+            .neq('status', 'validated')
+            .neq('status', 'archived')
+            .eq('manuscript_id', manuscriptId)
+            .order('order_index', { referencedTable: 'pages', ascending: true })
+            .order('order_index', { ascending: true })
+            .limit(500)
 
-    const poolSize = 300
-    const maxOffset = totalActive ? Math.max(0, totalActive - poolSize) : 0
-    const randomOffset = Math.floor(Math.random() * (maxOffset + 1))
+        if (error) {
+            console.error('Error fetching sequential segments:', error)
+            throw new Error(`Database error: ${error.message}`)
+        }
+        segmentsData = data || [];
+    } else {
+        // Random mode: keep existing logic for random pool
+        const countQuery = supabase
+            .from('segments')
+            .select('*', { count: 'exact', head: true })
+            .neq('status', 'validated')
+            .neq('status', 'archived')
 
-    const segmentQuery = supabase
-        .from('segments')
-        .select(`
-            id,
-            image_url,
-            order_index,
-            polygon,
-            manuscript_id,
-            page_id,
-            manuscripts(id, title, description, reference_text_url),
-            pages(id, image_url, label)
-        `)
-        .neq('status', 'validated')
-        .neq('status', 'archived')
+        const { count: totalActive } = await countQuery
 
-    const pagedQuery = manuscriptId
-        ? segmentQuery.eq('manuscript_id', manuscriptId).range(randomOffset, randomOffset + poolSize - 1)
-        : segmentQuery.range(randomOffset, randomOffset + poolSize - 1)
+        const poolSize = 300
+        const maxOffset = totalActive ? Math.max(0, totalActive - poolSize) : 0
+        const randomOffset = Math.floor(Math.random() * (maxOffset + 1))
 
-    const { data: segments, error: segmentsError } = await pagedQuery
+        const { data, error } = await supabase
+            .from('segments')
+            .select(`
+                id,
+                image_url,
+                order_index,
+                polygon,
+                manuscript_id,
+                page_id,
+                manuscripts(id, title, description, reference_text_url),
+                pages(id, image_url, label)
+            `)
+            .neq('status', 'validated')
+            .neq('status', 'archived')
+            .range(randomOffset, randomOffset + poolSize - 1)
 
-    if (segmentsError) {
-        console.error('Error fetching segments pool:', segmentsError)
-        throw new Error(`Database error: ${segmentsError.message}`)
+        if (error) {
+            console.error('Error fetching random segments pool:', error)
+            throw new Error(`Database error: ${error.message}`)
+        }
+        segmentsData = data || [];
     }
 
-    if (!segments || segments.length === 0) {
+    if (!segmentsData || segmentsData.length === 0) {
         console.warn('No pending segments found in DB for user', user.id)
         return null
     }
 
-    const availableSegments = segments.filter((seg: any) => !transcribedSegmentIds.has(seg.id))
+    let availableSegments = segmentsData.filter((seg: any) => !transcribedSegmentIds.has(seg.id))
 
-    if (availableSegments.length === 0) {
-        console.warn(
-            `User ${user.id} has already transcribed all ${segments.length} segments in pool offset ${randomOffset}.`
-        )
-        return null
+    if (manuscriptId && afterSegmentId) {
+        const currentIndex = segmentsData.findIndex(s => s.id === afterSegmentId);
+        if (currentIndex !== -1) {
+            const nextAvailable = segmentsData.slice(currentIndex + 1).filter((seg: any) => !transcribedSegmentIds.has(seg.id));
+            if (nextAvailable.length > 0) {
+                availableSegments = nextAvailable;
+            }
+        }
     }
 
-    const randomIdx = Math.floor(Math.random() * availableSegments.length)
-    const segment = availableSegments[randomIdx] as any
+    if (availableSegments.length === 0) {
+        if (manuscriptId) {
+             // If we're at the end or all following are done, wrap around to first untranscribed
+             availableSegments = segmentsData.filter((seg: any) => !transcribedSegmentIds.has(seg.id));
+        }
+        
+        if (availableSegments.length === 0) {
+            console.warn(`User ${user.id} has already transcribed all available segments in this manuscript/pool.`)
+            return null
+        }
+    }
+
+    // In sequential mode, we take the first available. 
+    // In random mode, we can still pick a random one from the pool.
+    const segment = manuscriptId ? availableSegments[0] : availableSegments[Math.floor(Math.random() * availableSegments.length)];
 
     // Fetch existing transcriptions for this segment by other users to show as references
     const { data: otherData } = await supabase
@@ -214,16 +255,16 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
 
     return {
         id: segment.id,
-        manuscript_id: segment.manuscripts?.id || '',
-        page_id: segment.pages?.id || '',
+        manuscript_id: (segment.manuscripts as any)?.id || segment.manuscript_id || '',
+        page_id: (segment.pages as any)?.id || segment.page_id || '',
         image_url: segment.image_url,
         order_index: segment.order_index,
         polygon: segment.polygon,
-        manuscript_title: segment.manuscripts?.title || 'Unknown Manuscript',
-        manuscript_description: segment.manuscripts?.description || '',
-        manuscript_reference_text_url: segment.manuscripts?.reference_text_url || '',
-        page_image_url: segment.pages?.image_url || '',
-        page_label: segment.pages?.label || 'Unknown Page',
+        manuscript_title: (segment.manuscripts as any)?.title || 'Unknown Manuscript',
+        manuscript_description: (segment.manuscripts as any)?.description || '',
+        manuscript_reference_text_url: (segment.manuscripts as any)?.reference_text_url || '',
+        page_image_url: (segment.pages as any)?.image_url || '',
+        page_label: (segment.pages as any)?.label || 'Unknown Page',
         other_transcriptions: otherTranscriptions || [],
     }
 }

@@ -161,12 +161,12 @@ function TranscribeContent() {
   const { t } = useLanguage();
   const { toast } = useToast();
 
-  const loadSegment = useCallback(async (targetId?: string) => {
+  const loadSegment = useCallback(async (targetId?: string, afterId?: string) => {
     setLoading(true);
     setErrorObj(null);
     setText("");
     try {
-      const nextSeg = await getNextSegment(manuscriptId, targetId);
+      const nextSeg = await getNextSegment(manuscriptId, targetId, afterId);
       setSegment(nextSeg as any);
       if (nextSeg?.id) {
         const saved = localStorage.getItem(`waraka_autosave_${nextSeg.id}`);
@@ -497,8 +497,9 @@ function TranscribeContent() {
       fetchGamification();
     }
 
+    const currentId = segment.id;
     setIsEditing(null);
-    await loadSegment();
+    await loadSegment(undefined, currentId);
     fetchPendingCount();
     setSubmitting(false);
   };
@@ -530,13 +531,14 @@ function TranscribeContent() {
 
   const handleSkip = async () => {
     setSubmitting(true);
-    await loadSegment();
+    await loadSegment(undefined, segment?.id);
     fetchPendingCount();
     setSubmitting(false);
   };
 
   const handleFlag = async () => {
     if (!segment) return;
+    const currentId = segment.id;
     setSubmitting(true);
     await flagSegment(segment.id);
     localStorage.removeItem(`waraka_autosave_${segment.id}`);
@@ -544,7 +546,7 @@ function TranscribeContent() {
       title: "Segment flagged",
       description: "Admin will review this segment.",
     });
-    await loadSegment();
+    await loadSegment(undefined, currentId);
     fetchPendingCount();
     setSubmitting(false);
   };
