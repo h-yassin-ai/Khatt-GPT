@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { approveTranscription, rejectTranscription, getValidatedSegments } from './actions'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import {
-    Check, X, Edit2, Save, Trash2, AlertCircle, ImageIcon,
+    Check, Edit2, Save, Trash2, AlertCircle, ImageIcon,
     ClipboardCheck, History, ChevronDown, Loader2
 } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
@@ -17,6 +17,8 @@ type Transcription = {
     is_validated: boolean
     contributor_id: string
     image_url?: string | null
+    page_image_url?: string | null
+    polygon?: any
     xp_awarded?: number | null
     profiles?: { display_name?: string; username?: string } | null
 }
@@ -24,13 +26,104 @@ type Transcription = {
 type Segment = {
     id: string
     image_url?: string | null
+    polygon?: any
     status: string
     order_index: number
     transcription_count?: number
     consensus_text?: string | null
     consensus_reached_at?: string | null
     manuscripts?: { title?: string } | null
+    pages?: { image_url?: string | null } | null
     transcriptions: Transcription[]
+}
+
+/** Renders the page image with the polygon highlighted, exactly like the transcription UI */
+function SegmentImageWithPolygon({
+    pageImageUrl,
+    polygon,
+    fallbackImageUrl,
+}: {
+    pageImageUrl?: string | null
+    polygon?: any
+    fallbackImageUrl?: string | null
+}) {
+    const [imgSize, setImgSize] = useState({ width: 0, height: 0 })
+    const containerRef = useRef<HTMLDivElement>(null)
+
+    const hasPolygon = polygon && Array.isArray(polygon) && polygon.length > 0
+
+    const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        const img = e.currentTarget
+        const container = containerRef.current
+        if (!container) return
+        const containerW = container.clientWidth
+        const naturalW = img.naturalWidth
+        const naturalH = img.naturalHeight
+        const renderScale = containerW / naturalW
+        setImgSize({ width: naturalW * renderScale, height: naturalH * renderScale })
+    }
+
+    if (pageImageUrl) {
+        return (
+            <div ref={containerRef} className="relative w-full">
+                <img
+                    src={pageImageUrl}
+                    alt="Page du manuscrit"
+                    className="w-full max-h-[320px] object-contain rounded-sm shadow"
+                    onLoad={handleImageLoad}
+                />
+                {hasPolygon && imgSize.width > 0 && (
+                    <svg
+                        className="absolute inset-0 pointer-events-none"
+                        width={imgSize.width}
+                        height={imgSize.height}
+                        viewBox={`0 0 ${imgSize.width} ${imgSize.height}`}
+                    >
+                        <defs>
+                            <mask id={`mask-${polygon[0]?.x}`}>
+                                <rect width={imgSize.width} height={imgSize.height} fill="black" />
+                                <polygon
+                                    points={polygon.map((p: any) => `${p.x},${p.y}`).join(' ')}
+                                    fill="white"
+                                />
+                            </mask>
+                        </defs>
+                        {/* Darken everything outside polygon */}
+                        <rect
+                            width={imgSize.width}
+                            height={imgSize.height}
+                            fill="rgba(0,0,0,0.55)"
+                            mask={`url(#mask-${polygon[0]?.x})`}
+                        />
+                        {/* Highlight outline */}
+                        <polygon
+                            points={polygon.map((p: any) => `${p.x},${p.y}`).join(' ')}
+                            fill="none"
+                            stroke="rgba(255,200,0,0.9)"
+                            strokeWidth="2"
+                        />
+                    </svg>
+                )}
+            </div>
+        )
+    }
+
+    if (fallbackImageUrl) {
+        return (
+            <img
+                src={fallbackImageUrl}
+                alt="Segment"
+                className="w-full max-h-[320px] object-contain rounded-sm shadow"
+            />
+        )
+    }
+
+    return (
+        <div className="flex flex-col items-center gap-2 text-muted-foreground opacity-30 py-8">
+            <ImageIcon className="w-10 h-10" />
+            <span className="text-xs">Pas d'image</span>
+        </div>
+    )
 }
 
 function TranscriptionCard({
@@ -58,40 +151,41 @@ function TranscriptionCard({
     onSaveEdit: () => void
     onEditTextChange: (v: string) => void
 }) {
-    // Use the image captured at submission time; fall back to segment's current image
-    const displayImage = t.image_url || seg.image_url
-    const imageDiffers = t.image_url && seg.image_url && t.image_url !== seg.image_url
+    // Priority: use the page_image_url + polygon stored at submission time (exact same view as contributor)
+    // Fall back to: current segment page, then segment crop
+    const pageImage = t.page_image_url || seg.pages?.image_url || null
+    const polygon = t.polygon || seg.polygon || null
+    const fallback = t.image_url || seg.image_url || null
+
+    // If the image shown to contributor differs from current segment image, warn admin
+    const imageChanged = (t.page_image_url && seg.pages?.image_url && t.page_image_url !== seg.pages?.image_url)
 
     return (
         <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm flex flex-col lg:flex-row group hover:border-primary/30 transition-colors">
-            {/* Image columsn */}
-            <div className="lg:w-1/3 bg-black/5 flex flex-col items-center justify-center p-3 min-h-[160px] border-b lg:border-b-0 lg:border-r border-border relative">
-                {displayImage ? (
-                    <img
-                        src={displayImage}
-                        alt="Segment"
-                        className="max-w-full max-h-[260px] object-contain shadow rounded-sm"
-                    />
-                ) : (
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground opacity-30">
-                        <ImageIcon className="w-10 h-10" />
-                        <span className="text-xs">Pas d'image</span>
-                    </div>
-                )}
+            {/* Image column — same view as contributor */}
+            <div className="lg:w-2/5 bg-black/5 flex flex-col items-start justify-start p-3 border-b lg:border-b-0 lg:border-r border-border relative gap-2">
+                <SegmentImageWithPolygon
+                    pageImageUrl={pageImage}
+                    polygon={polygon}
+                    fallbackImageUrl={fallback}
+                />
                 <div className="absolute top-2 left-2 bg-background/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold border border-border shadow-sm">
                     {seg.manuscripts?.title} – #{seg.order_index}
                 </div>
-                {imageDiffers && (
-                    <div className="absolute bottom-2 left-2 right-2 bg-amber-500/90 text-white text-[10px] px-2 py-1 rounded text-center font-medium">
-                        Image au moment de la soumission
+                {imageChanged && (
+                    <div className="w-full bg-amber-500/90 text-white text-[10px] px-2 py-1 rounded text-center font-medium">
+                        ⚠️ Image modifiée depuis la soumission
                     </div>
                 )}
+                <p className="text-[10px] text-muted-foreground text-center w-full opacity-60">
+                    Vue identique à celle du contributeur
+                </p>
             </div>
 
             {/* Content column */}
             <div className="flex-1 p-5 flex flex-col gap-3">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
                             {t.profiles?.display_name?.charAt(0) || t.profiles?.username?.charAt(0) || '?'}
@@ -103,21 +197,19 @@ function TranscriptionCard({
                             {new Date(t.submitted_at).toLocaleDateString('fr-FR')}
                         </span>
                     </div>
-                    {t.xp_awarded ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20">
-                            +{t.xp_awarded} XP
+                    <div className="flex items-center gap-2">
+                        {t.xp_awarded ? (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20">
+                                +{t.xp_awarded} XP
+                            </span>
+                        ) : null}
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${seg.status === 'conflict'
+                            ? 'bg-destructive/10 text-destructive border-destructive/20 animate-pulse'
+                            : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                            }`}>
+                            {seg.status === 'conflict' ? 'CONFLIT' : 'EN ATTENTE'}
                         </span>
-                    ) : null}
-                </div>
-
-                {/* Status badge */}
-                <div className="flex gap-2">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${seg.status === 'conflict'
-                        ? 'bg-destructive/10 text-destructive border-destructive/20 animate-pulse'
-                        : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                        }`}>
-                        {seg.status === 'conflict' ? 'CONFLIT' : 'EN ATTENTE'}
-                    </span>
+                    </div>
                 </div>
 
                 {/* Text / edit area */}
@@ -231,7 +323,7 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
         )
     }
 
-    // Flatten: one card per transcription (not per segment)
+    // One card per transcription
     const allCards = segments.flatMap(seg =>
         seg.transcriptions.map(t => ({ t, seg }))
     )
@@ -239,7 +331,7 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
     return (
         <div className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">
-                {allCards.length} proposition{allCards.length > 1 ? 's' : ''} à vérifier
+                {allCards.length} proposition{allCards.length > 1 ? 's' : ''} à vérifier (sur {segments.length} segment{segments.length > 1 ? 's' : ''})
             </p>
             {allCards.map(({ t, seg }) => (
                 <TranscriptionCard
@@ -321,19 +413,18 @@ function ValidatedTab() {
             <p className="text-sm text-muted-foreground">{segments.length} segment{segments.length > 1 ? 's' : ''} validé{segments.length > 1 ? 's' : ''} (chargés)</p>
             {segments.map(seg => {
                 const approvedT = seg.transcriptions.find(t => t.is_validated) || seg.transcriptions[0]
-                const displayImage = (approvedT?.image_url) || seg.image_url
+                const pageImage = approvedT?.page_image_url || seg.pages?.image_url || null
+                const polygon = approvedT?.polygon || seg.polygon || null
+                const fallback = approvedT?.image_url || seg.image_url || null
                 return (
                     <div key={seg.id} className="bg-card border border-green-500/20 shadow-sm rounded-xl overflow-hidden flex flex-col lg:flex-row">
                         {/* Image */}
-                        <div className="lg:w-1/3 bg-black/5 flex items-center justify-center p-3 min-h-[140px] border-b lg:border-b-0 lg:border-r border-border relative">
-                            {displayImage ? (
-                                <img src={displayImage} alt="Segment" className="max-w-full max-h-[240px] object-contain shadow rounded-sm" />
-                            ) : (
-                                <div className="flex flex-col items-center gap-2 text-muted-foreground opacity-30">
-                                    <ImageIcon className="w-8 h-8" />
-                                    <span className="text-xs">Pas d'image</span>
-                                </div>
-                            )}
+                        <div className="lg:w-2/5 bg-black/5 flex flex-col items-start p-3 border-b lg:border-b-0 lg:border-r border-border relative gap-2">
+                            <SegmentImageWithPolygon
+                                pageImageUrl={pageImage}
+                                polygon={polygon}
+                                fallbackImageUrl={fallback}
+                            />
                             <div className="absolute top-2 left-2 bg-background/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold border border-border shadow-sm">
                                 {seg.manuscripts?.title} – #{seg.order_index}
                             </div>

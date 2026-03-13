@@ -326,10 +326,10 @@ export async function submitTranscription(segmentId: string, text: string) {
         return { error: 'Submission rejected: Text exceeds maximum length for a given segment.' }
     }
 
-    // Fetch segment image_url at submission time
+    // Fetch segment image_url, polygon and page image at submission time
     const { data: segmentData } = await supabase
         .from('segments')
-        .select('image_url, transcription_count')
+        .select('image_url, transcription_count, polygon, page_id, pages(image_url)')
         .eq('id', segmentId)
         .single()
 
@@ -352,6 +352,8 @@ export async function submitTranscription(segmentId: string, text: string) {
         reward = computeTranscriptionReward(profileForReward)
     }
 
+    const pageImageUrl = (segmentData?.pages as any)?.image_url || null
+
     const { error: insertError } = await supabase
         .from('transcriptions')
         .insert({
@@ -359,6 +361,8 @@ export async function submitTranscription(segmentId: string, text: string) {
             contributor_id: user.id,
             text: text.trim(),
             image_url: segmentData?.image_url || null,
+            page_image_url: pageImageUrl,
+            polygon: segmentData?.polygon || null,
             xp_awarded: reward.finalXp,
         })
 

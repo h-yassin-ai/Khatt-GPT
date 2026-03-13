@@ -55,10 +55,12 @@ export async function getSegmentsToVerify() {
         .select(`
             id,
             image_url,
+            polygon,
             status,
             order_index,
             transcription_count,
             manuscripts ( title ),
+            pages ( image_url ),
             transcriptions (
                 id,
                 text,
@@ -66,11 +68,14 @@ export async function getSegmentsToVerify() {
                 is_validated,
                 contributor_id,
                 image_url,
+                page_image_url,
+                polygon,
                 xp_awarded
             )
         `)
         .neq('status', 'validated')
         .order('created_at', { ascending: false })
+        .limit(1000)
 
     if (error) {
         console.error('[admin.verify] Error fetching segments:', error)
@@ -132,11 +137,13 @@ export async function getValidatedSegments(page = 0, limit = 20) {
         .select(`
             id,
             image_url,
+            polygon,
             status,
             order_index,
             consensus_text,
             consensus_reached_at,
             manuscripts ( title ),
+            pages ( image_url ),
             transcriptions (
                 id,
                 text,
@@ -144,6 +151,8 @@ export async function getValidatedSegments(page = 0, limit = 20) {
                 is_validated,
                 contributor_id,
                 image_url,
+                page_image_url,
+                polygon,
                 xp_awarded
             )
         `)
