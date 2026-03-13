@@ -79,3 +79,15 @@ export async function updateManuscriptReferenceText(manuscriptId: string, url: s
     return { success: true }
 }
 
+export async function updateManuscriptTitle(id: string, title: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthenticated' }
+
+    const { error } = await supabase.from('manuscripts').update({ title }).eq('id', id)
+    if (error) return { error: error.message }
+
+    revalidatePath('/admin/manuscripts')
+    revalidatePath(`/admin/manuscripts/${id}`)
+    return { success: true }
+}

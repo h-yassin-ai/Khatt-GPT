@@ -797,144 +797,87 @@ function TranscribeContent() {
       </AnimatePresence>
 
       {/* Sub-header */}
-      <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-2 border-b border-border/50 shrink-0 bg-background/50 backdrop-blur-sm z-30 gap-2">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-          <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-700 text-[10px] font-bold px-3 py-1 rounded-full border border-amber-500/20">
-            <Highlighter className="w-3.5 h-3.5" />
-            {t("transcribe.instruction")}
-          </div>
-          <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-lg border border-border/50 relative group cursor-default">
-            <span className="text-primary/70 shrink-0">
+      <div className="w-full flex flex-col sm:flex-row justify-between items-center px-4 py-2 border-b border-border/50 shrink-0 bg-background/50 backdrop-blur-sm z-30 gap-2 min-h-[52px]">
+        <div className="flex items-center gap-3">
+          {/* Combined Segment & Manuscript Info */}
+          <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground bg-muted/30 px-2.5 py-1.5 rounded-full border border-border/50 group relative">
+            <span className="text-primary px-1.5 py-0.5 rounded-full bg-primary/10">
               #{segment?.order_index || "..."}
             </span>
-            <span className="w-[1px] h-3 bg-border shrink-0" />
-            <span className="max-w-[120px] sm:max-w-[200px] md:max-w-[300px] truncate">
+            <span className="max-w-[120px] sm:max-w-[300px] truncate-2-lines leading-tight">
               {title}
             </span>
             {segment?.page_label && (
-              <>
-                <span className="w-[1px] h-3 bg-border shrink-0" />
-                <span className="text-primary font-bold shrink-0">
-                  {segment.page_label}
-                </span>
-              </>
+              <span className="text-primary/70 font-bold border-l border-border/50 pl-2">
+                {segment.page_label}
+              </span>
             )}
-            {/* Tooltip personnalisé pour afficher le titre complet au survol */}
-            <div className="absolute top-full left-0 mt-2 hidden group-hover:block z-[100] bg-popover text-popover-foreground text-xs p-2.5 rounded-md shadow-xl border border-border/50 whitespace-normal w-max max-w-[280px] pointer-events-none animate-in fade-in zoom-in-95 duration-200">
+            {/* Full title on hover */}
+            <div className="absolute top-full left-0 mt-2 hidden group-hover:block z-[100] bg-popover text-popover-foreground text-[11px] p-2.5 rounded-lg shadow-xl border border-border/40 whitespace-normal w-max max-w-[320px] pointer-events-none animate-in fade-in zoom-in-95 duration-200">
               {title}
             </div>
           </div>
 
           {segment?.manuscript_id && (
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => setIsNavOpen(true)}
-              className="gap-2 rounded-full h-8 px-3 border-primary/40 text-primary bg-primary/5 hover:bg-primary/10 transition-colors"
+              className="h-8 w-8 p-0 rounded-full hover:bg-primary/5 text-primary/60 hover:text-primary transition-colors border border-transparent hover:border-primary/20"
+              title="Naviguer"
             >
-              <List className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-bold uppercase tracking-tight">Naviguer</span>
+              <List className="w-4 h-4" />
             </Button>
           )}
-        </div>
-        <div className="flex items-center gap-4">
-          <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <span
-              className={`w-2 h-2 rounded-full ${isOffline ? "bg-amber-500" : "bg-primary animate-pulse"}`}
-            ></span>
-            {t("transcribe.session")} : {sessionCount}{" "}
-            {t("transcribe.segments")}
-          </p>
-          {isOffline && (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
-              {t("transcribe.offline")}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          {gamification && (
-            <div className="hidden lg:flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-700 px-2.5 py-1 rounded-full border border-amber-500/20 shadow-sm">
-                <Zap className="w-3 h-3" />
-                <span className="text-xs font-bold leading-none">
-                  {gamification.points} XP
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowGamification(!showGamification)}
-                className={`w-6 h-6 p-0 rounded-full transition-all border ${showGamification ? "bg-primary text-primary-foreground border-primary shadow-md scale-110" : "bg-background text-muted-foreground border-border hover:bg-muted"}`}
-                title="Toggle XP boosts and levels"
-              >
-                <ChevronRight
-                  className={`w-3 h-3 transition-transform duration-300 ${showGamification ? "rotate-90" : ""}`}
-                />
-              </Button>
-            </div>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={centerOnSegment}
-            className="gap-2 rounded-full h-8 px-3 border-primary/30 text-primary hover:bg-primary/5"
-            title={t("transcribe.center_line")}
-          >
-            <Highlighter className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">
-              {t("transcribe.center_line")}
-            </span>
-          </Button>
-          {segment?.manuscript_pdf_url && (
-            <Button
-              variant={activeTab === "pdf" ? "default" : "outline"}
-              size="sm"
-              onClick={() => {
-                setActiveTab("pdf");
-              }}
-              className="gap-2 rounded-full h-8 px-3 border-red-500/30 text-red-600 hover:bg-red-50 hidden sm:flex"
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              PDF
-            </Button>
-          )}
-          <div className="hidden md:flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/30 px-2 py-1 rounded-md border border-border/50">
-            <kbd className="font-mono bg-background border border-border px-1 rounded">
-              Ctrl
-            </kbd>{" "}
-            +{" "}
-            <kbd className="font-mono bg-background border border-border px-1 rounded">
-              Enter
-            </kbd>{" "}
-            {t("transcribe.submit_hint") || "pour valider"}
-          </div>
-        </div>
-      </div>
 
-      {gamification && (
-        <div className="w-full border-b border-border/50 bg-background/50 backdrop-blur-sm px-4 py-2 flex items-center justify-between lg:hidden z-20">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-full border border-primary/20">
-              <Zap className="w-3.5 h-3.5" />
-              <span className="text-xs font-bold">
-                {gamification.points} XP
-              </span>
-            </div>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              Niveau {gamification.level.level}
-            </span>
+          <div className="hidden sm:flex items-center gap-2 text-[10px] text-muted-foreground ml-2">
+             <div className={`w-1.5 h-1.5 rounded-full ${isOffline ? "bg-amber-500" : "bg-emerald-500 animate-pulse"}`} />
+             <span>{sessionCount} segments</span>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {gamification && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-700 px-2.5 py-1 rounded-full border border-amber-500/20 shadow-sm cursor-pointer hover:bg-amber-500/20 transition-colors"
+                   onClick={() => setShowGamification(!showGamification)}>
+                <Zap className="w-3 h-3" />
+                <span className="text-[10px] font-bold leading-none">
+                  {gamification.points}
+                </span>
+                <ChevronRight className={`w-2.5 h-2.5 transition-transform duration-300 ${showGamification ? "rotate-90" : ""}`} />
+              </div>
+            </div>
+          )}
+          
+          <div className="h-4 w-[1px] bg-border mx-1 hidden sm:block" />
+
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setShowGamification(!showGamification)}
-            className={`w-8 h-8 p-0 rounded-full transition-all ${showGamification ? "bg-primary text-primary-foreground rotate-180" : "bg-muted text-muted-foreground"}`}
+            onClick={centerOnSegment}
+            className="h-8 p-1.5 rounded-full text-primary hover:bg-primary/5 border border-transparent hover:border-primary/10"
+            title={t("transcribe.center_line")}
           >
-            <ChevronRight className="w-4 h-4" />
+            <Highlighter className="w-4 h-4" />
           </Button>
-        </div>
-      )}
 
+          {segment?.manuscript_pdf_url && (
+            <Button
+              variant={activeTab === "pdf" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("pdf")}
+              className="h-8 w-8 p-0 rounded-full text-red-600 hover:bg-red-50 hidden sm:flex border border-transparent hover:border-red-200"
+              title="Ouvrir le PDF"
+            >
+              <BookOpen className="w-4 h-4" />
+            </Button>
+          )}
+
+          <div className="hidden xl:flex items-center gap-1 text-[9px] text-muted-foreground/60 bg-muted/20 px-2 py-1 rounded-full border border-border/30">
+            <kbd className="font-mono opacity-70">Ctrl</kbd>+<kbd className="font-mono opacity-70">Enter</kbd>
+          </div>
+        </div>
+      </div>
       <AnimatePresence>
         {gamification && showGamification && (
           <motion.div
@@ -942,120 +885,55 @@ function TranscribeContent() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="w-full border-b border-border/50 bg-gradient-to-r from-primary/5 via-amber-500/5 to-secondary/5 px-4 py-3 shrink-0 overflow-hidden"
+            className="w-full border-b border-border/50 bg-muted/20 px-4 py-3 shrink-0 overflow-hidden"
           >
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
-              <div className="rounded-xl border border-primary/20 bg-background/80 p-3">
-                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                  <span className="flex items-center gap-2">
-                    <Trophy className="w-3.5 h-3.5 text-primary" /> Niveau{" "}
-                    {gamification.level.level}
-                  </span>
-                  <span className="text-primary">
-                    {gamification.level.levelName}
-                  </span>
+            <div className="flex flex-col md:flex-row gap-4 max-w-7xl mx-auto">
+              {/* Level Progress */}
+              <div className="flex-1 min-w-[200px]">
+                <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
+                   <span>Niveau {gamification.level.level} — {gamification.level.levelName}</span>
+                   <span>{gamification.level.progressPct}%</span>
                 </div>
-                <div className="w-full h-2 rounded-full bg-muted overflow-hidden mb-2">
+                <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full bg-primary transition-all"
                     style={{ width: `${gamification.level.progressPct}%` }}
                   />
                 </div>
-                <div className="text-xs text-muted-foreground flex items-center justify-between">
-                  <span>{gamification.points} XP</span>
-                  <span>
-                    {gamification.level.nextLevelXp
-                      ? `${gamification.level.xpIntoLevel}/${gamification.level.xpForNextLevel} vers le prochain palier`
-                      : "Niveau max atteint"}
-                  </span>
-                </div>
               </div>
 
-              <div className="rounded-xl border border-amber-500/20 bg-background/80 p-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                  <Zap className="w-3.5 h-3.5 text-amber-600" /> Boosts actifs
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {gamification.boosts.length > 0 ? (
-                    gamification.boosts.map((boost) => (
-                      <span
-                        key={boost.slug}
-                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold ${boost.isDoubleXp ? "border-amber-500/40 bg-amber-500/10 text-amber-700" : "border-primary/30 bg-primary/10 text-primary"}`}
-                      >
-                        <Flame className="w-3 h-3" /> {boost.label}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      Aucun boost actif. Serie de 3 jours = premier
-                      multiplicateur.
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-secondary/20 bg-background/80 p-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                  <Star className="w-3.5 h-3.5 text-secondary" /> Prochain badge
-                </div>
+              {/* Next Badge or Boosts */}
+              <div className="flex-1 min-w-[200px] border-l border-border/50 pl-4 hidden md:block">
                 {gamification.nextBadge ? (
-                  <>
-                    <div className="text-sm font-semibold text-foreground mb-1">
-                      {gamification.nextBadge.name}
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center shrink-0">
+                      <Star className="w-4 h-4 text-secondary" />
                     </div>
-                    <div className="text-xs text-muted-foreground mb-2">
-                      {gamification.nextBadge.description}
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold truncate">{gamification.nextBadge.name}</p>
+                      <p className="text-[9px] text-muted-foreground truncate">{gamification.nextBadge.description}</p>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-muted overflow-hidden mb-2">
-                      <div
-                        className="h-full bg-secondary transition-all"
-                        style={{
-                          width: `${gamification.nextBadge.progressPct}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="text-xs text-muted-foreground flex justify-between">
-                      <span>
-                        {gamification.nextBadge.currentValue}/
-                        {gamification.nextBadge.target}
-                      </span>
-                      <span>+{gamification.nextBadge.xpReward} XP</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-xs text-muted-foreground">
-                    Tous les badges disponibles sont debloques.
                   </div>
+                ) : (
+                   <p className="text-[10px] text-muted-foreground">Tous les badges débloqués !</p>
                 )}
               </div>
-            </div>
 
-            {topBadges.length > 0 && (
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                {topBadges.map((badge) => (
-                  <div
-                    key={badge.slug}
-                    className={`min-w-[180px] rounded-lg border px-3 py-2 ${badge.unlocked ? "border-emerald-500/30 bg-emerald-500/10" : "border-border bg-background/70"}`}
-                  >
-                    <div className="text-xs font-bold truncate flex items-center justify-between gap-2">
-                      <span>{badge.name}</span>
-                      <span className="text-[10px] text-muted-foreground">
-                        +{badge.xpReward} XP
-                      </span>
-                    </div>
-                    <div className="mt-1 text-[11px] text-muted-foreground">
-                      {badge.currentValue}/{badge.target}
-                    </div>
-                    <div className="mt-1 w-full h-1.5 rounded bg-muted overflow-hidden">
-                      <div
-                        className={`h-full ${badge.unlocked ? "bg-emerald-500" : "bg-primary"}`}
-                        style={{ width: `${badge.progressPct}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+              {/* Active Boosts */}
+              <div className="flex-1 min-w-[200px] border-l border-border/50 pl-4 hidden lg:block">
+                 <div className="flex flex-wrap gap-2">
+                    {gamification.boosts.length > 0 ? (
+                      gamification.boosts.map((boost) => (
+                        <span key={boost.slug} className="text-[9px] font-bold bg-amber-500/10 text-amber-700 px-2 py-0.5 rounded-full border border-amber-500/20">
+                           {boost.label}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">Aucun boost actif</span>
+                    )}
+                 </div>
               </div>
-            )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1172,9 +1050,9 @@ function TranscribeContent() {
 
           {/* Transcription Area */}
           <div className="flex-[3] lg:flex-auto lg:w-1/2 flex flex-col p-4 lg:px-8 lg:pb-8 lg:pt-6 gap-4 overflow-hidden relative z-10 bg-background">
-            <div className="flex justify-between items-center shrink-0">
+            <div className="flex justify-between items-center shrink-0 border-b border-border/40 pb-3">
               <h2
-                className="text-xl font-heading font-semibold text-primary"
+                className="text-lg font-heading font-bold text-foreground/80 tracking-tight"
                 dir="rtl"
               >
                 {t("transcribe.transcription_header")}

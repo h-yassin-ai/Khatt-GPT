@@ -70,10 +70,12 @@ export async function getSegmentsToVerify() {
                 image_url,
                 page_image_url,
                 polygon,
-                xp_awarded
+                xp_awarded,
+                status
             )
         `)
         .neq('status', 'validated')
+        .gt('transcription_count', 0)
         .order('created_at', { ascending: false })
         .limit(1000)
 
@@ -153,7 +155,8 @@ export async function getValidatedSegments(page = 0, limit = 20) {
                 image_url,
                 page_image_url,
                 polygon,
-                xp_awarded
+                xp_awarded,
+                status
             )
         `)
         .eq('status', 'validated')
@@ -208,18 +211,37 @@ export async function approveTranscription(segmentId: string, transcriptionId: s
         .single()
 
     const wasModified = original && original.text.trim() !== sanitizedText
+    const newStatus = wasModified ? 'modified' : 'validated'
 
     const { error: tError } = await adminSupabase
         .from('transcriptions')
-        .update({ is_validated: true, text: sanitizedText })
+        .update({ 
+            is_validated: true, 
+            text: sanitizedText,
+            status: newStatus 
+        })
         .eq('id', transcriptionId)
 
     if (tError) return { error: tError.message }
 
+    // Create notification for the contributor
+    if (original?.contributor_id) {
+        await adminSupabase
+            .from('notifications')
+            .insert({
+                user_id: original.contributor_id,
+                transcription_id: transcriptionId,
+                type: newStatus,
+                message: wasModified 
+                    ? `Votre transcription a été modifiée par un administrateur pour plus de précision.`
+                    : `Votre transcription a été validée ! Merci pour votre contribution.`
+            })
+    }
+
     // Reset validation flag for alternatives from the same segment.
     await adminSupabase
         .from('transcriptions')
-        .update({ is_validated: false })
+        .update({ is_validated: false, status: 'pending' }) // Reset others to pending if they were something else
         .eq('segment_id', segmentId)
         .neq('id', transcriptionId)
 
@@ -276,12 +298,28 @@ export async function rejectTranscription(transcriptionId: string) {
 
     if (fetchError || !transcription) return { error: 'Transcription not found' }
 
-    const { error: deleteError } = await adminSupabase
+    // Soft delete: mark as rejected instead of deleting
+    const { error: updateError } = await adminSupabase
         .from('transcriptions')
-        .delete()
+        .update({ 
+            status: 'rejected',
+            is_validated: false 
+        })
         .eq('id', transcriptionId)
 
-    if (deleteError) return { error: deleteError.message }
+    if (updateError) return { error: updateError.message }
+
+    // Create notification for the contributor
+    if (transcription.contributor_id) {
+        await adminSupabase
+            .from('notifications')
+            .insert({
+                user_id: transcription.contributor_id,
+                transcription_id: transcriptionId,
+                type: 'rejected',
+                message: `Votre transcription a été rejetée car elle ne correspondait pas aux critères de qualité.`
+            })
+    }
 
     const { count: remaining } = await adminSupabase
         .from('transcriptions')

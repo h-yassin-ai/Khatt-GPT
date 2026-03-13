@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react"
 
 // Simple custom toast hook since shadcn toast is complex to paste

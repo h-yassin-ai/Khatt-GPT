@@ -16,8 +16,10 @@ export default async function ManuscriptsListPage() {
       created_at,
       cover_image_url,
       total_segments,
-      segments ( id, status )
+      segments ( id, status, transcription_count )
     `)
+        .filter('segments.status', 'eq', 'validated')
+
         .order('created_at', { ascending: false })
 
     return (
@@ -47,10 +49,9 @@ export default async function ManuscriptsListPage() {
                     <tbody className="divide-y divide-border/50">
                         {manuscripts?.map((ms: any) => {
                             // calculate rough completion % based on status 'validated'
-                            const validatedCount = ms.segments?.filter((s: any) => s.status === 'validated').length || 0
-                            const flaggedCount = ms.segments?.filter((s: any) => s.status === 'conflict' || s.status === 'flagged').length || 0
-                            const total = ms.total_segments || 1
-                            const pct = Math.round((validatedCount / total) * 100)
+                             const validatedCount = ms.segments?.length || 0
+                             const total = ms.total_segments || 1
+                             const pct = Math.round((validatedCount / total) * 100)
 
                             let healthColor = 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]'
                             let healthTitle = 'In Progress'
@@ -111,7 +112,7 @@ export default async function ManuscriptsListPage() {
                                             >
                                                 View
                                             </Link>
-                                            <ManuscriptListActions id={ms.id} />
+                                            <ManuscriptListActions id={ms.id} currentTitle={ms.title} />
                                         </div>
                                     </td>
                                 </tr>

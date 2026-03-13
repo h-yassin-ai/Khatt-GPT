@@ -38,15 +38,17 @@ type Segment = {
 }
 
 /** Renders the page image with the polygon highlighted, exactly like the transcription UI */
-function SegmentImageWithPolygon({
+const SegmentImageWithPolygon = ({
     pageImageUrl,
     polygon,
     fallbackImageUrl,
+    showContext = true, // Default to true if not specified, but we'll control it
 }: {
     pageImageUrl?: string | null
     polygon?: any
     fallbackImageUrl?: string | null
-}) {
+    showContext?: boolean
+}) => {
     const [imgSize, setImgSize] = useState({ width: 0, height: 0 })
     const containerRef = useRef<HTMLDivElement>(null)
 
@@ -63,13 +65,25 @@ function SegmentImageWithPolygon({
         setImgSize({ width: naturalW * renderScale, height: naturalH * renderScale })
     }
 
+    // If context is OFF and we have a crop, show the crop
+    if (!showContext && fallbackImageUrl) {
+        return (
+            <img
+                src={fallbackImageUrl}
+                alt="Segment crop"
+                className="w-full max-h-[320px] object-contain rounded-sm shadow-md bg-white/5"
+            />
+        )
+    }
+
+    // Normal full page view with polygon
     if (pageImageUrl) {
         return (
-            <div ref={containerRef} className="relative w-full">
+            <div ref={containerRef} className="relative w-full overflow-hidden rounded-sm shadow-md bg-black/5">
                 <img
                     src={pageImageUrl}
                     alt="Page du manuscrit"
-                    className="w-full max-h-[320px] object-contain rounded-sm shadow"
+                    className="w-full max-h-[400px] object-contain"
                     onLoad={handleImageLoad}
                 />
                 {hasPolygon && imgSize.width > 0 && (
@@ -88,19 +102,17 @@ function SegmentImageWithPolygon({
                                 />
                             </mask>
                         </defs>
-                        {/* Darken everything outside polygon */}
                         <rect
                             width={imgSize.width}
                             height={imgSize.height}
-                            fill="rgba(0,0,0,0.55)"
+                            fill="rgba(0,0,0,0.6)"
                             mask={`url(#mask-${polygon[0]?.x})`}
                         />
-                        {/* Highlight outline */}
                         <polygon
                             points={polygon.map((p: any) => `${p.x},${p.y}`).join(' ')}
                             fill="none"
-                            stroke="rgba(255,200,0,0.9)"
-                            strokeWidth="2"
+                            stroke="rgba(255,200,0,1)"
+                            strokeWidth="2.5"
                         />
                     </svg>
                 )}
@@ -125,6 +137,8 @@ function SegmentImageWithPolygon({
         </div>
     )
 }
+
+
 
 function TranscriptionCard({
     t,
@@ -151,6 +165,8 @@ function TranscriptionCard({
     onSaveEdit: () => void
     onEditTextChange: (v: string) => void
 }) {
+    const [showContext, setShowContext] = useState(false)
+
     // Priority: use the page_image_url + polygon stored at submission time (exact same view as contributor)
     // Fall back to: current segment page, then segment crop
     const pageImage = t.page_image_url || seg.pages?.image_url || null
@@ -162,24 +178,35 @@ function TranscriptionCard({
 
     return (
         <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm flex flex-col lg:flex-row group hover:border-primary/30 transition-colors">
-            {/* Image column — same view as contributor */}
-            <div className="lg:w-2/5 bg-black/5 flex flex-col items-start justify-start p-3 border-b lg:border-b-0 lg:border-r border-border relative gap-2">
+            {/* Image column */}
+            <div className="lg:w-1/2 bg-black/5 flex flex-col items-center justify-start p-3 border-b lg:border-b-0 lg:border-r border-border relative gap-2">
                 <SegmentImageWithPolygon
                     pageImageUrl={pageImage}
                     polygon={polygon}
                     fallbackImageUrl={fallback}
+                    showContext={showContext}
                 />
-                <div className="absolute top-2 left-2 bg-background/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold border border-border shadow-sm">
-                    {seg.manuscripts?.title} – #{seg.order_index}
+                
+                <div className="flex w-full items-center justify-between px-1">
+                    <div className="bg-background/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold border border-border shadow-sm">
+                        {seg.manuscripts?.title} – #{seg.order_index}
+                    </div>
+                    {pageImage && fallback && (
+                        <button
+                            onClick={() => setShowContext(!showContext)}
+                            className="flex items-center gap-1.5 text-[10px] font-medium text-primary hover:underline"
+                        >
+                            <ImageIcon className="w-3 h-3" />
+                            {showContext ? "Voir le segment" : "Voir le contexte page"}
+                        </button>
+                    )}
                 </div>
+
                 {imageChanged && (
                     <div className="w-full bg-amber-500/90 text-white text-[10px] px-2 py-1 rounded text-center font-medium">
                         ⚠️ Image modifiée depuis la soumission
                     </div>
                 )}
-                <p className="text-[10px] text-muted-foreground text-center w-full opacity-60">
-                    Vue identique à celle du contributeur
-                </p>
             </div>
 
             {/* Content column */}
@@ -357,6 +384,134 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
     )
 }
 
+function ValidatedTranscriptionCard({
+    seg,
+    onUpdate
+}: {
+    seg: Segment,
+    onUpdate: (updatedSeg: Segment) => void
+}) {
+    const [showContext, setShowContext] = useState(false)
+    const [isEditing, setIsEditing] = useState(false)
+    const [editText, setEditText] = useState(seg.consensus_text || '')
+    const [loading, setLoading] = useState(false)
+    const { toast } = useToast()
+
+    const approvedT = seg.transcriptions.find(t => t.is_validated) || seg.transcriptions[0]
+    const pageImage = approvedT?.page_image_url || seg.pages?.image_url || null
+    const polygon = approvedT?.polygon || seg.polygon || null
+    const fallback = approvedT?.image_url || seg.image_url || null
+
+    const handleSave = async () => {
+        if (!editText.trim()) return
+        setLoading(true)
+        const result = await approveTranscription(seg.id, approvedT.id, editText)
+        if (result.success) {
+            toast({ title: "Modifié !", description: "La transcription officielle a été mise à jour." })
+            onUpdate({ ...seg, consensus_text: editText })
+            setIsEditing(false)
+        } else {
+            toast({ title: "Erreur", description: (result as any).error, variant: "destructive" })
+        }
+        setLoading(false)
+    }
+
+    return (
+        <div className="bg-card border border-green-500/20 shadow-sm rounded-xl overflow-hidden flex flex-col lg:flex-row group transition-all hover:border-green-500/40">
+            {/* Image */}
+            <div className="lg:w-2/5 bg-black/5 flex flex-col items-start p-3 border-b lg:border-b-0 lg:border-r border-border relative gap-2">
+                <SegmentImageWithPolygon
+                    pageImageUrl={pageImage}
+                    polygon={polygon}
+                    fallbackImageUrl={fallback}
+                    showContext={showContext}
+                />
+                <div className="flex w-full items-center justify-between px-1">
+                    <div className="bg-background/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold border border-border shadow-sm">
+                        {seg.manuscripts?.title} – #{seg.order_index}
+                    </div>
+                    {pageImage && fallback && (
+                        <button
+                            onClick={() => setShowContext(!showContext)}
+                            className="flex items-center gap-1.5 text-[10px] font-medium text-primary hover:underline"
+                        >
+                            <ImageIcon className="w-3 h-3" />
+                            {showContext ? "Voir le segment" : "Voir le contexte page"}
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 p-5 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 border border-green-500/20">
+                        ✓ VALIDÉ
+                    </span>
+                    {seg.consensus_reached_at && (
+                        <span className="text-[10px] text-muted-foreground">
+                            {new Date(seg.consensus_reached_at).toLocaleDateString('fr-FR')}
+                        </span>
+                    )}
+                </div>
+
+                {isEditing ? (
+                    <div className="flex flex-col gap-3">
+                        <Textarea
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            dir="rtl"
+                            className="font-arabic text-xl leading-loose p-4 resize-none min-h-[100px]"
+                        />
+                        <div className="flex gap-2 justify-end">
+                            <Button size="sm" variant="outline" onClick={() => setIsEditing(false)} disabled={loading}>
+                                Annuler
+                            </Button>
+                            <Button size="sm" onClick={handleSave} disabled={loading}>
+                                {loading ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-2" />}
+                                Enregistrer
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <p className="font-arabic text-2xl leading-loose text-right text-foreground" dir="rtl">
+                            {seg.consensus_text}
+                        </p>
+                        <div className="flex gap-2 justify-end mt-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-xs gap-1.5"
+                                onClick={() => { setIsEditing(true); setEditText(seg.consensus_text || '') }}
+                                disabled={loading}
+                            >
+                                <Edit2 className="w-3 h-3" /> Modifier
+                            </Button>
+                        </div>
+                    </>
+                )}
+
+                {approvedT && !isEditing && (
+                    <div className="flex items-center gap-2 mt-1 py-1 border-t border-border/50">
+                        <div className="w-4 h-4 rounded-full bg-green-500/10 flex items-center justify-center text-[8px] font-bold text-green-700">
+                            {approvedT.profiles?.display_name?.charAt(0) || approvedT.profiles?.username?.charAt(0) || '?'}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">
+                            Transcription de {approvedT.profiles?.display_name || approvedT.profiles?.username || 'Inconnu'}
+                        </span>
+                        {approvedT.xp_awarded ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/5 text-primary/70 border border-primary/10 ml-auto">
+                                +{approvedT.xp_awarded} XP
+                            </span>
+                        ) : null}
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
 function ValidatedTab() {
     const [loaded, setLoaded] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -386,6 +541,10 @@ function ValidatedTab() {
         loadPage(next)
     }
 
+    const handleUpdateSegment = (updatedSeg: Segment) => {
+        setSegments(prev => prev.map(s => s.id === updatedSeg.id ? updatedSeg : s))
+    }
+
     if (!loaded) {
         return (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center bg-muted/10 rounded-xl border border-dashed border-border">
@@ -411,59 +570,13 @@ function ValidatedTab() {
     return (
         <div className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">{segments.length} segment{segments.length > 1 ? 's' : ''} validé{segments.length > 1 ? 's' : ''} (chargés)</p>
-            {segments.map(seg => {
-                const approvedT = seg.transcriptions.find(t => t.is_validated) || seg.transcriptions[0]
-                const pageImage = approvedT?.page_image_url || seg.pages?.image_url || null
-                const polygon = approvedT?.polygon || seg.polygon || null
-                const fallback = approvedT?.image_url || seg.image_url || null
-                return (
-                    <div key={seg.id} className="bg-card border border-green-500/20 shadow-sm rounded-xl overflow-hidden flex flex-col lg:flex-row">
-                        {/* Image */}
-                        <div className="lg:w-2/5 bg-black/5 flex flex-col items-start p-3 border-b lg:border-b-0 lg:border-r border-border relative gap-2">
-                            <SegmentImageWithPolygon
-                                pageImageUrl={pageImage}
-                                polygon={polygon}
-                                fallbackImageUrl={fallback}
-                            />
-                            <div className="absolute top-2 left-2 bg-background/80 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold border border-border shadow-sm">
-                                {seg.manuscripts?.title} – #{seg.order_index}
-                            </div>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 p-5 flex flex-col gap-3">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 border border-green-500/20">
-                                    ✓ VALIDÉ
-                                </span>
-                                {seg.consensus_reached_at && (
-                                    <span className="text-[10px] text-muted-foreground">
-                                        {new Date(seg.consensus_reached_at).toLocaleDateString('fr-FR')}
-                                    </span>
-                                )}
-                            </div>
-                            <p className="font-arabic text-2xl leading-loose text-right text-foreground" dir="rtl">
-                                {seg.consensus_text}
-                            </p>
-                            {approvedT && (
-                                <div className="flex items-center gap-2 mt-1">
-                                    <div className="w-5 h-5 rounded-full bg-green-500/10 flex items-center justify-center text-[10px] font-bold text-green-700">
-                                        {approvedT.profiles?.display_name?.charAt(0) || approvedT.profiles?.username?.charAt(0) || '?'}
-                                    </div>
-                                    <span className="text-xs text-muted-foreground">
-                                        {approvedT.profiles?.display_name || approvedT.profiles?.username || 'Inconnu'}
-                                    </span>
-                                    {approvedT.xp_awarded ? (
-                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20 ml-auto">
-                                            +{approvedT.xp_awarded} XP
-                                        </span>
-                                    ) : null}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )
-            })}
+            {segments.map(seg => (
+                <ValidatedTranscriptionCard
+                    key={seg.id}
+                    seg={seg}
+                    onUpdate={handleUpdateSegment}
+                />
+            ))}
             {hasMore && (
                 <div className="flex justify-center pt-2">
                     <Button variant="outline" onClick={handleLoadMore} disabled={loading}>
