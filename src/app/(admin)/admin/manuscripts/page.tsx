@@ -18,8 +18,8 @@ export default async function ManuscriptsListPage() {
       total_segments,
       segments ( id, status, transcription_count )
     `)
-        .filter('segments.status', 'eq', 'validated')
-
+        // Filter out segments in the count that are not validated to get accurate progress
+        .eq('segments.status', 'validated')
         .order('created_at', { ascending: false })
 
     return (
@@ -55,10 +55,8 @@ export default async function ManuscriptsListPage() {
 
                             let healthColor = 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]'
                             let healthTitle = 'In Progress'
-                            if (flaggedCount > 0) {
-                                healthColor = 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]'
-                                healthTitle = `${flaggedCount} segment(s) need attention`
-                            } else if (validatedCount === total && total > 0) {
+                            
+                            if (validatedCount === total && total > 0) {
                                 healthColor = 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'
                                 healthTitle = 'Fully Validated'
                             } else if (validatedCount === 0) {
