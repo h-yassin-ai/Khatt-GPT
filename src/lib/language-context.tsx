@@ -73,7 +73,7 @@ const translations: Record<string, Record<Language, string>> = {
     'transcribe.instruction': { en: 'Transcribe only the highlighted line', fr: 'Transcrivez uniquement la ligne en surbrillance' },
     'transcribe.submit_hint': { en: 'to validate', fr: 'pour valider' },
     'transcribe.placeholder': { en: 'Type text here...', fr: 'اكتب النص هنا...' },
-    'transcribe.skip_title': { en: 'Skip to next (Ctrl+Right)', fr: 'Passer au suivant (Ctrl+Right)' },
+    'transcribe.skip_title': { en: 'Skip to next', fr: 'Passer au suivant' },
     'transcribe.prev_title': { en: 'Previous segment', fr: 'Segment précédent' },
     'transcribe.auto_zoom': { en: 'Auto-zoom', fr: 'Auto-zoom' },
     'transcribe.transcription_header': { en: 'Transcription', fr: 'نص النسخ' },
@@ -111,39 +111,39 @@ const translations: Record<string, Record<Language, string>> = {
     },
     'guide.fa.title': { en: 'The letter Faa (ڢ)', fr: 'La lettre Faa (ڢ)' },
     'guide.fa.desc': {
-        en: 'Unlike the common Faa, the Maghrebi Faa has its dot BELOW the circle.',
-        fr: 'Contrairement au Faa commun, le Faa maghrébin a son point EN DESSOUS de la boucle.'
+        en: 'In Maghrebi script, the Faa has its single dot BELOW the circle, unlike the Eastern system.',
+        fr: 'Dans le système maghrébin, le Faa a son point unique EN DESSOUS de la boucle, contrairement au système oriental.'
     },
     'guide.qaf.title': { en: 'The letter Qaf (ڧ)', fr: 'La lettre Qaf (ڧ)' },
     'guide.qaf.desc': {
-        en: 'The Maghrebi Qaf has only ONE dot ABOVE, resembling a standard Faa.',
-        fr: 'Le Qaf maghrébin n\'a qu\'UN SEUL point AU-DESSUS, ressemblant à un Faa standard.'
+        en: 'The Maghrebi Qaf has only ONE dot ABOVE (resembling a standard Faa). Double dots are rare.',
+        fr: 'Le Qaf maghrébin n\'a qu\'UN SEUL point AU-DESSUS (ressemblant à un Faa standard). Les deux points sont rares.'
     },
-    'guide.nun.title': { en: 'The letter Nun (ن)', fr: 'La lettre Nun (ن)' },
+    'guide.nun.title': { en: 'Omitted Dots (Nun, etc.)', fr: 'Points omis (Nun, etc.)' },
     'guide.nun.desc': {
-        en: 'In final or isolated positions, the Nun often has NO dot, as the shape is sufficient.',
-        fr: 'En position finale ou isolée, le Nun n\'a souvent AUCUN point, sa forme suffisant à le reconnaître.'
+        en: 'In final or isolated positions, the Nun, Qaf, and other letters often have NO point. The shape alone identifies them.',
+        fr: 'En position finale ou isolée, le Nun, le Qaf et d\'autres lettres n\'ont souvent AUCUN point. La forme seule suffit à les identifier.'
     },
     'guide.styles.title': { en: 'Calligraphic Styles', fr: 'Styles Calligraphiques' },
     'guide.styles.mabsut': {
-        en: 'Mabsut is the readable, clear style used for main texts and Qur\'ans. It values clarity and horizontal extension.',
-        fr: 'Le Mabsut est le style lisible et clair utilisé pour les textes principaux et les Corans. Il privilégie la clarté et l\'extension horizontale.'
+        en: 'Mabsut is the balanced, clear style used for main texts and Qurans. It features open curves and horizontal extension.',
+        fr: 'Le Mabsut est le style équilibré et clair utilisé pour les textes principaux et les Corans. Il se caractérise par des courbes aérées et une extension horizontale.'
     },
     'guide.styles.mujawhar': {
-        en: 'Mujawhar is a flowing, cursive style often used for administrative documents and rapid copying.',
-        fr: 'Le Mujawhar est un style cursif et fluide, souvent utilisé pour les documents administratifs et la copie rapide.'
+        en: 'Mujawhar is a dense, cursive style favored by scribes for administrative and scientific manuscripts due to its speed.',
+        fr: 'Le Mujawhar est un style cursif et dense, favorisé par les copistes pour les manuscrits administratifs et scientifiques pour sa rapidité.'
     },
     'guide.styles.thuluth': {
-        en: 'Thuluth Maghrebi is an ornamental, large script used for titles, architecture, and decorative elements.',
-        fr: 'Le Thuluth Maghrébin est une écriture ornementale et large, utilisée pour les titres, l\'architecture et les éléments décoratifs.'
+        en: 'Thuluth Maghrebi is a majestic, ornamental script used for chapter headings, architecture, and noble titles.',
+        fr: 'Le Thuluth Maghrébin est une écriture majestueuse et ornementale, utilisée pour les titres de chapitres, l\'architecture et les titres de noblesse.'
     },
     'guide.styles.koufi': {
-        en: 'Kufic is an angular, historic script frequently used in early Quranic manuscripts and architectural inscriptions.',
-        fr: 'Le Koufi est une écriture angulaire historique, fréquemment utilisée dans les premiers manuscrits coraniques et les inscriptions architecturales.'
+        en: 'Kufic is an angular, prehistoric script used in early Quranic manuscripts and monumental inscriptions for its geometric beauty.',
+        fr: 'Le Koufi est une écriture angulaire historique, utilisée dans les premiers manuscrits coraniques et les inscriptions monumentales pour sa beauté géométrique.'
     },
     'guide.styles.musnad': {
-        en: 'Musnad is an ancient script native to the Arabian Peninsula, also known as Epigraphic South Arabian.',
-        fr: 'Le Musnad est une écriture ancienne originaire de la péninsule arabique, également connue sous le nom de sudarabique épigraphique.'
+        en: 'Musnad is the ancient South Arabian script, a monumental and geometric precursor to classical Arabic styles.',
+        fr: 'Le Musnad est l\'écriture antique de l\'Arabie du Sud, un précurseur monumental et géométrique des styles arabes classiques.'
     },
 }
 

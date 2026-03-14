@@ -52,9 +52,10 @@ export async function signup(formData: FormData) {
 
     if (error) {
         let errorMessage = error.message
-        if (errorMessage.toLowerCase().includes('database error') || errorMessage.toLowerCase().includes('plugin')) {
+        if (errorMessage.toLowerCase().includes('database error') || errorMessage.toLowerCase().includes('plugin') || errorMessage.toLowerCase().includes('function')) {
             errorMessage = "Database configuration error. Please ensure Supabase triggers are set up (see docs/supabase_setup.sql)."
         }
+        console.error('Signup error:', error)
         redirect(`/auth/register?error=${encodeURIComponent(errorMessage)}`)
     }
 

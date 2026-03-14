@@ -147,7 +147,6 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
                 manuscripts(id, title, description, reference_text_url),
                 pages!inner(id, image_url, label, order_index)
             `)
-            .neq('status', 'validated')
             .neq('status', 'archived')
             .eq('manuscript_id', manuscriptId)
             .order('order_index', { referencedTable: 'pages', ascending: true })

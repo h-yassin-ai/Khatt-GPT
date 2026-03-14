@@ -221,24 +221,10 @@ function TranscribeContent() {
     }
   }, [segment]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts removed as per user request (clic c tout)
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === "Enter") {
-        if (text.trim() && !submitting && segment) {
-          handleSubmit();
-        }
-      }
-      if (e.ctrlKey && e.key === "ArrowRight") {
-        if (!submitting) {
-          handleSkip();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [text, submitting, segment]);
+    // Shortcuts were interfering with text editing
+  }, []);
 
   // Online/Offline sync listener
   useEffect(() => {

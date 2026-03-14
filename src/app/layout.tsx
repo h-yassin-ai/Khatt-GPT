@@ -25,6 +25,9 @@ const amiri = Amiri({
 export const metadata: Metadata = {
   title: 'Khatt-GPT | Collaborative Arabic Manuscript Transcription',
   description: 'A platform connecting a community of contributors to transcribe segmented Maghrebi Arabic manuscripts into text, preserving history.',
+  icons: {
+    icon: '/logo.png',
+  },
 };
 
 export default function RootLayout({
