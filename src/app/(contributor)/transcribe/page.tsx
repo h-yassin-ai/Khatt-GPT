@@ -971,10 +971,6 @@ function TranscribeContent() {
             onWheel={handleSegmentWheel}
             onMouseDown={handleSegmentMouseDown}
           >
-            {/* Same image content remains... */}
-            {/* (Omitted for brevity in this chunk, but keeping the structure) */}
-        onMouseDown={handleSegmentMouseDown}
-      >
         <div
           className="w-full h-full flex items-center justify-center transition-transform duration-75 ease-out select-none"
           style={{
@@ -1091,10 +1087,6 @@ function TranscribeContent() {
             <div className="absolute bottom-3 right-3 text-[9px] text-muted-foreground opacity-40 select-none flex items-center gap-2 pointer-events-none">
               <Search className="w-3 h-3" />
               {t("transcribe.zoom_hint")}
-            </div>
-          </div>
-
-              </div>
             </div>
           </div>
 
