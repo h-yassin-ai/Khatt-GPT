@@ -91,3 +91,40 @@ export async function updateManuscriptTitle(id: string, title: string) {
     revalidatePath(`/admin/manuscripts/${id}`)
     return { success: true }
 }
+
+export async function updateManuscriptPdfUrl(manuscriptId: string, url: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthenticated' }
+
+    const { error } = await supabase.from('manuscripts').update({ pdf_url: url }).eq('id', manuscriptId)
+    if (error) return { error: error.message }
+
+    revalidatePath(`/admin/manuscripts/${manuscriptId}`)
+    return { success: true }
+}
+
+export async function uploadManuscriptPdf(manuscriptId: string, formData: FormData) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthenticated' }
+
+    const file = formData.get('file') as File
+    if (!file) return { error: 'No file provided' }
+
+    const fileExt = file.name.split('.').pop()
+    const fileName = `manuscript_${Date.now()}.${fileExt}`
+    const filePath = `${manuscriptId}/${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+        .from('manuscripts')
+        .upload(filePath, file)
+
+    if (uploadError) return { error: uploadError.message }
+
+    const { data: { publicUrl } } = supabase.storage
+        .from('manuscripts')
+        .getPublicUrl(filePath)
+
+    return await updateManuscriptPdfUrl(manuscriptId, publicUrl)
+}

@@ -35,8 +35,8 @@ const translations: Record<string, Record<Language, string>> = {
     },
     'onboarding.step2.title': { en: '2. Type Exactly What You See', fr: '2. Tapez exactement ce que vous voyez' },
     'onboarding.step2.desc': {
-        en: "Transcribe the segment character-by-character. No vocalization is needed, write exactly what you see (e.g., ءاله instead of آله). Accuracy is more important than speed.",
-        fr: 'Il ne faut aucune vocalisation et écrire exactement ce qu\'on voit comme ءاله au lieu de آله etc. La précision est plus importante que la vitesse.'
+        en: "Transcribe character-by-character. No diacritics (vowels) are required — write exactly what you see. If you include them, it's not a problem, but focus on the letters.",
+        fr: 'Transcrivez caractère par caractère. Il ne faut pas de diacritiques (voyelles) — écrivez exactement ce que vous voyez. Si vous en mettez, ce n\'est pas grave, mais privilégiez les lettres.'
     },
     'onboarding.step3.title': { en: '3. Use "Open Panel" to Help You', fr: '3. Utilisez "Ouvrir le panneau" pour vous aider' },
     'onboarding.step3.desc': {
@@ -70,7 +70,7 @@ const translations: Record<string, Record<Language, string>> = {
     'transcribe.zoom_hint': { en: 'Scroll to zoom • Drag to pan', fr: 'Molette pour zoomer • Glisser pour déplacer' },
     'transcribe.reset_zoom': { en: 'Reset', fr: 'Réinitialiser' },
     'transcribe.center_line': { en: 'Center on Line', fr: 'Centrer la ligne' },
-    'transcribe.instruction': { en: 'Transcribe only the highlighted line', fr: 'Transcrivez uniquement la ligne en surbrillance' },
+    'transcribe.instruction': { en: 'Transcribe only the highlighted line. (No diacritics required, but accepted).', fr: 'Transcrivez uniquement la ligne en surbrillance. (Sans voyelles de préférence, mais acceptées).' },
     'transcribe.submit_hint': { en: 'to validate', fr: 'pour valider' },
     'transcribe.placeholder': { en: 'Type text here...', fr: 'اكتب النص هنا...' },
     'transcribe.skip_title': { en: 'Skip to next', fr: 'Passer au suivant' },
@@ -126,24 +126,24 @@ const translations: Record<string, Record<Language, string>> = {
     },
     'guide.styles.title': { en: 'Calligraphic Styles', fr: 'Styles Calligraphiques' },
     'guide.styles.mabsut': {
-        en: 'Mabsut is the balanced, clear style used for main texts and Qurans. It features open curves and horizontal extension.',
-        fr: 'Le Mabsut est le style équilibré et clair utilisé pour les textes principaux et les Corans. Il se caractérise par des courbes aérées et une extension horizontale.'
+        en: 'Mabsut is a ceremonial and clear script used for main texts and fine Qurans. It features readable, regular curves and dynamic horizontal extension.',
+        fr: 'Le Mabsut est un style cérémoniel et clair utilisé pour les textes principaux et les beaux Corans. Il se caractérise par des courbes régulières et une extension dynamique.'
     },
     'guide.styles.mujawhar': {
-        en: 'Mujawhar is a dense, cursive style favored by scribes for administrative and scientific manuscripts due to its speed.',
-        fr: 'Le Mujawhar est un style cursif et dense, favorisé par les copistes pour les manuscrits administratifs et scientifiques pour sa rapidité.'
+        en: 'Mujawhar ("Jeweled") is a cursive and dense Maghrebi script preferred for administrative documents, scientific books, and official correspondence.',
+        fr: 'Le Mujawhar ("Bijou") est un style maghrébin cursif et dense, favorisé pour les documents administratifs, les ouvrages scientifiques et la correspondance officielle.'
     },
     'guide.styles.thuluth': {
-        en: 'Thuluth Maghrebi is a majestic, ornamental script used for chapter headings, architecture, and noble titles.',
-        fr: 'Le Thuluth Maghrébin est une écriture majestueuse et ornementale, utilisée pour les titres de chapitres, l\'architecture et les titres de noblesse.'
+        en: 'Thuluth Maghrebi is a majestic, large ornamental script used for chapter headings, architectural inscriptions, and noble titles.',
+        fr: 'Le Thuluth Maghrébin est une écriture majestueuse et ornementale de grande taille, utilisée pour les titres de chapitres, l\'architecture et les titres de noblesse.'
     },
     'guide.styles.koufi': {
-        en: 'Kufic is an angular, prehistoric script used in early Quranic manuscripts and monumental inscriptions for its geometric beauty.',
-        fr: 'Le Koufi est une écriture angulaire historique, utilisée dans les premiers manuscrits coraniques et les inscriptions monumentales pour sa beauté géométrique.'
+        en: 'Maghrebi Kufic is the angular ancestor of Western styles, often incorporating unique curves. It was foundational for early Quranic manuscripts.',
+        fr: 'Le Koufi Maghrébin est l\'ancêtre angulaire des styles occidentaux, intégrant des courbes uniques. Il fut le socle des premiers manuscrits coraniques.'
     },
     'guide.styles.musnad': {
-        en: 'Musnad is the ancient South Arabian script, a monumental and geometric precursor to classical Arabic styles.',
-        fr: 'Le Musnad est l\'écriture antique de l\'Arabie du Sud, un précurseur monumental et géométrique des styles arabes classiques.'
+        en: 'Musnad is an ancient South Arabian monumental script, a geometric precursor to Arabic styles, though historically distinct from Maghrebi scripts.',
+        fr: 'Le Musnad est une écriture monumentale antique de l\'Arabie du Sud, précurseur géométrique des styles arabes, bien que distinct du Maghrébin classique.'
     },
 }
 

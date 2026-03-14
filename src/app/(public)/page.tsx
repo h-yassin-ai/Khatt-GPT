@@ -156,6 +156,77 @@ export default function LandingPage() {
                 <div className="z-10 max-w-2xl space-y-8">
                     <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary bg-primary/8 border border-primary/20 px-4 py-2 rounded-full">
                         <Sparkles className="w-3.5 h-3.5" />
+            if (!isMounted) return;
+
+            if (transcribedData) setTranscribed(transcribedData as any);
+            if (pendingData) setPending(pendingData as any);
+            if (topProfiles) setLeaderboard(topProfiles as LeaderboardUser[]);
+
+            const targets = {
+                manuscripts: mCount || 0,
+                segments: sCount || 0,
+                contributors: pCount || 0
+            };
+            targetCounts.current = targets;
+
+            const duration = 2000;
+            const steps = 50;
+            const stepTime = duration / steps;
+            let currentStep = 0;
+
+            const timer = setInterval(() => {
+                currentStep++;
+                setCounts({
+                    manuscripts: Math.floor((targets.manuscripts / steps) * currentStep),
+                    segments: Math.floor((targets.segments / steps) * currentStep),
+                    contributors: Math.floor((targets.contributors / steps) * currentStep),
+                });
+                if (currentStep >= steps) {
+                    clearInterval(timer);
+                    setCounts(targets);
+                }
+            }, stepTime);
+        };
+
+        fetchData();
+
+        const channel = supabase.channel('public_stats')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transcriptions' }, () => {
+                setCounts(prev => ({ ...prev, segments: prev.segments + 1 }));
+            })
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, () => {
+                setCounts(prev => ({ ...prev, contributors: prev.contributors + 1 }));
+            })
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'manuscripts' }, () => {
+                setCounts(prev => ({ ...prev, manuscripts: prev.manuscripts + 1 }));
+            })
+            .subscribe();
+
+        return () => {
+            isMounted = false;
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
+    const currentSlide = transcribed[carouselIdx];
+    const slideTitle = currentSlide
+        ? (Array.isArray(currentSlide.manuscripts)
+            ? (currentSlide.manuscripts as any[])[0]?.title
+            : (currentSlide.manuscripts as any)?.title) ?? 'Manuscrit'
+        : '';
+
+    return (
+        <div className="flex flex-col min-h-screen">
+
+            {/* ═══ HERO ═══ */}
+            <section className="relative w-full py-24 md:py-36 flex flex-col lg:flex-row items-center justify-between px-6 lg:px-16 gap-16 overflow-hidden max-w-7xl mx-auto">
+                {/* Ambient blobs */}
+                <div className="absolute top-[15%] right-[-5%] w-[550px] h-[550px] bg-[#C4622D] rounded-full blur-[160px] opacity-[0.08] pointer-events-none" />
+                <div className="absolute bottom-[5%] left-[-10%] w-[450px] h-[450px] bg-[#1B4E52] rounded-full blur-[160px] opacity-[0.08] pointer-events-none" />
+
+                <div className="z-10 max-w-2xl space-y-8">
+                    <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary bg-primary/8 border border-primary/20 px-4 py-2 rounded-full">
+                        <Sparkles className="w-3.5 h-3.5" />
                         Projet de transcription collaborative
                     </div>
                     <h1 className="font-heading text-6xl md:text-7xl lg:text-8xl leading-tight text-foreground font-semibold">
@@ -163,7 +234,7 @@ export default function LandingPage() {
                         <span className="text-primary italic">qui fut écrit.</span>
                     </h1>
                     <p className="font-sans text-xl text-muted-foreground leading-relaxed max-w-xl">
-                        Khatt-GPT est un effort collaboratif spécialisé dans le <span className="text-primary font-medium">Khatt Maghribi</span> pour numériser et transcrire les manuscrits anciens. Rejoignez notre communauté et préservez l'histoire.
+                        Khatt-GPT est un effort collaboratif visant à construire un dataset robuste pour l'entraînement de modèles <span className="text-primary font-medium">HTR (Handwritten Text Recognition)</span> spécialisés dans le style Maghribi.
                     </p>
                     <div className="flex flex-wrap items-center gap-4 pt-2">
                         <Link
@@ -425,7 +496,7 @@ export default function LandingPage() {
                     <div className="text-center mb-16">
                         <h2 className="font-heading text-4xl font-semibold mb-4">Comment ça fonctionne ?</h2>
                         <p className="text-muted-foreground font-sans max-w-2xl mx-auto">
-                            Un processus simple en 3 étapes pour transformer des images en histoire lisible.
+                            Un processus simple en 3 étapes pour transformer des images en texte exploitable par l'IA.
                         </p>
                     </div>
 
@@ -443,18 +514,18 @@ export default function LandingPage() {
                             <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
                                 <PenTool className="w-10 h-10" />
                             </div>
-                            <h3 className="font-heading text-2xl font-semibold mb-3">2. Transcrire ce que vous lisez</h3>
+                            <h3 className="font-heading text-2xl font-semibold mb-3">2. Transcrire sans voyelles</h3>
                             <p className="text-muted-foreground text-sm font-sans leading-relaxed">
-                                Utilisez notre éditeur arabe spécialisé avec clavier de diacritiques pour transcrire exactement ce qui est écrit.
+                                Utilisez notre éditeur pour transcrire les lettres. Inutile de mettre les diacritiques (voyelles), sauf si vous le souhaitez.
                             </p>
                         </div>
                         <div className="flex flex-col items-center text-center group">
                             <div className="w-20 h-20 bg-success/10 rounded-2xl flex items-center justify-center mb-6 text-success group-hover:scale-110 transition-transform">
                                 <Database className="w-10 h-10" />
                             </div>
-                            <h3 className="font-heading text-2xl font-semibold mb-3">3. Construire l'histoire</h3>
+                            <h3 className="font-heading text-2xl font-semibold mb-3">3. Entraîner l'IA</h3>
                             <p className="text-muted-foreground text-sm font-sans leading-relaxed">
-                                Vos transcriptions alimentent un dataset académique vérifiable, accessible à tous les chercheurs du monde.
+                                Vos transcriptions alimentent un dataset qui servira à entraîner un modèle HTR pour la lecture automatique des manuscrits.
                             </p>
                         </div>
                     </div>
@@ -468,7 +539,7 @@ export default function LandingPage() {
                 </div>
                 <h2 className="font-heading text-4xl font-semibold mb-4">Prêt à contribuer ?</h2>
                 <p className="text-muted-foreground font-sans max-w-lg mx-auto mb-8 text-lg leading-relaxed">
-                    Chaque ligne que vous transcrivez ramène un manuscrit ancien à la vie. Rejoignez-nous dès aujourd'hui.
+                    Chaque ligne que vous transcrivez aide à construire le futur de la reconnaissance automatique de manuscrits arabes.
                 </p>
                 <Link
                     href="/auth/register"
@@ -494,4 +565,3 @@ export default function LandingPage() {
         </div>
     );
 }
-

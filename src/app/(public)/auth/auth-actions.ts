@@ -27,6 +27,13 @@ export async function login(formData: FormData) {
 export async function signup(formData: FormData) {
     const supabase = await createClient()
 
+    // Honeypot check
+    const honeypot = formData.get('website')
+    if (honeypot) {
+        console.warn('Honeypot filled - potential bot detected')
+        redirect('/auth/register?error=Spam detected')
+    }
+
     const data = {
         email: formData.get('email') as string,
         password: formData.get('password') as string,

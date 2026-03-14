@@ -76,6 +76,7 @@ export async function getSegmentsToVerify() {
         `)
         .neq('status', 'validated')
         .gt('transcription_count', 0)
+        .filter('transcriptions.status', 'in', '("pending","modified")')
         .order('created_at', { ascending: false })
         .limit(1000)
 
@@ -118,8 +119,9 @@ export async function getSegmentsToVerify() {
                 ),
         }))
         .filter((segment: any) => {
-            const hasDrafts = segment.transcriptions.length > 0
-            return hasDrafts
+            // Only show segments that have non-rejected transcriptions
+            const hasValidDrafts = segment.transcriptions && segment.transcriptions.length > 0
+            return hasValidDrafts
         })
 
     console.log(`[admin.verify] Returning ${withTranscriptions.length} segments with transcriptions to UI`)

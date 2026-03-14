@@ -1,10 +1,14 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { ContributorNav } from '@/components/ContributorNav'
+import { headers } from 'next/headers'
 
 export default async function ContributorLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
+    const headersList = await headers()
+    const pathname = headersList.get('x-pathname') || ''
+    const isTranscribePage = pathname.includes('/transcribe')
 
     if (!user) {
         redirect('/auth/login')
@@ -19,7 +23,7 @@ export default async function ContributorLayout({ children }: { children: React.
                 <ContributorNav email={user.email ?? ''} isAdmin={isAdmin} />
             </header>
 
-            <main className="flex-1 w-full max-w-7xl mx-auto p-6">
+            <main className={`flex-1 w-full p-6 ${isTranscribePage ? 'max-w-none' : 'max-w-7xl mx-auto'}`}>
                 {children}
             </main>
         </div>
