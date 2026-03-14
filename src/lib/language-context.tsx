@@ -74,6 +74,8 @@ const translations: Record<string, Record<Language, string>> = {
     'transcribe.submit_hint': { en: 'to validate', fr: 'pour valider' },
     'transcribe.placeholder': { en: 'Type text here...', fr: 'اكتب النص هنا...' },
     'transcribe.skip_title': { en: 'Skip to next (Ctrl+Right)', fr: 'Passer au suivant (Ctrl+Right)' },
+    'transcribe.prev_title': { en: 'Previous segment', fr: 'Segment précédent' },
+    'transcribe.auto_zoom': { en: 'Auto-zoom', fr: 'Auto-zoom' },
     'transcribe.transcription_header': { en: 'Transcription', fr: 'نص النسخ' },
 
     // Browse page

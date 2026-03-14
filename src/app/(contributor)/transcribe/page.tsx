@@ -17,6 +17,8 @@ import "react-medium-image-zoom/dist/styles.css";
 import {
   Flag,
   SkipForward,
+  SkipBack,
+  Maximize,
   Send,
   AlertCircle,
   Sparkles,
@@ -138,6 +140,7 @@ function TranscribeContent() {
   const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
   const [zoomScale, setZoomScale] = useState(1);
   const [zoomPos, setZoomPos] = useState({ x: 0, y: 0 });
+  const [isAutoZoomEnabled, setIsAutoZoomEnabled] = useState(true);
   const [isDraggingZoom, setIsDraggingZoom] = useState(false);
   const [gamification, setGamification] = useState<GamificationSnapshot | null>(
     null,
@@ -161,12 +164,12 @@ function TranscribeContent() {
   const { t } = useLanguage();
   const { toast } = useToast();
 
-  const loadSegment = useCallback(async (targetId?: string, afterId?: string) => {
+  const loadSegment = useCallback(async (targetId?: string, afterId?: string, direction: 'next' | 'prev' = 'next') => {
     setLoading(true);
     setErrorObj(null);
     setText("");
     try {
-      const nextSeg = await getNextSegment(manuscriptId, targetId, afterId);
+      const nextSeg = await getNextSegment(manuscriptId, targetId, afterId, direction);
       setSegment(nextSeg as any);
       if (nextSeg?.id) {
         const saved = localStorage.getItem(`waraka_autosave_${nextSeg.id}`);
@@ -380,6 +383,10 @@ function TranscribeContent() {
     const maxZoom = window.innerWidth < 768 ? 2.8 : 2.5;
     targetZoom = Math.min(Math.max(targetZoom, 1.0), maxZoom);
 
+    if (!isAutoZoomEnabled) {
+      targetZoom = 1.0;
+    }
+
     // Pan so polygon center = container center
     const panX = (imgSize.width / 2 - polyCenterX) * renderScale;
     const panY = (imgSize.height / 2 - polyCenterY) * renderScale;
@@ -499,7 +506,7 @@ function TranscribeContent() {
 
     const currentId = segment.id;
     setIsEditing(null);
-    await loadSegment(undefined, currentId);
+    await loadSegment(undefined, currentId, 'next');
     fetchPendingCount();
     setSubmitting(false);
   };
@@ -531,7 +538,14 @@ function TranscribeContent() {
 
   const handleSkip = async () => {
     setSubmitting(true);
-    await loadSegment(undefined, segment?.id);
+    await loadSegment(undefined, segment?.id, 'next');
+    fetchPendingCount();
+    setSubmitting(false);
+  };
+
+  const handlePrevious = async () => {
+    setSubmitting(true);
+    await loadSegment(undefined, segment?.id, 'prev');
     fetchPendingCount();
     setSubmitting(false);
   };
@@ -546,7 +560,7 @@ function TranscribeContent() {
       title: "Segment flagged",
       description: "Admin will review this segment.",
     });
-    await loadSegment(undefined, currentId);
+    await loadSegment(undefined, currentId, 'next');
     fetchPendingCount();
     setSubmitting(false);
   };
@@ -1033,6 +1047,15 @@ function TranscribeContent() {
                 >
                   <ImageIcon className="w-3 h-3 mr-1" /> Voir la page
                 </Button>
+                <Button
+                  variant={isAutoZoomEnabled ? "default" : "outline"}
+                  size="sm"
+                  className={`h-6 px-2 text-[9px] font-bold rounded-full flex items-center gap-1 transition-all ${isAutoZoomEnabled ? 'bg-primary text-primary-foreground' : 'text-primary bg-background hover:bg-primary/5'}`}
+                  onClick={() => setIsAutoZoomEnabled(!isAutoZoomEnabled)}
+                  title={t("transcribe.auto_zoom")}
+                >
+                  <Maximize className="w-3 h-3" /> {t("transcribe.auto_zoom")}
+                </Button>
                 {zoomScale !== 1 && (
                   <button
                     onClick={resetZoom}
@@ -1159,15 +1182,26 @@ function TranscribeContent() {
                   </Button>
                 )}
                 {!isEditing && (
-                  <Button
-                    variant="outline"
-                    onClick={handleSkip}
-                    disabled={submitting}
-                    className="h-12 px-4 font-medium"
-                    title={t("transcribe.skip_title")}
-                  >
-                    <SkipForward className="w-4 h-4" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      onClick={handlePrevious}
+                      disabled={submitting}
+                      className="h-12 px-4 font-medium"
+                      title={t("transcribe.prev_title") || "Précédent"}
+                    >
+                      <SkipBack className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleSkip}
+                      disabled={submitting}
+                      className="h-12 px-4 font-medium"
+                      title={t("transcribe.skip_title")}
+                    >
+                      <SkipForward className="w-4 h-4" />
+                    </Button>
+                  </div>
                 )}
               </div>
 

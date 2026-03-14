@@ -98,7 +98,7 @@ export function ManuscriptNavigation({
 
                 <div className="flex-1 flex overflow-hidden">
                     {/* Pages List */}
-                    <div className="w-1/3 border-r border-border/50 bg-muted/5 flex flex-col">
+                    <div className="w-1/4 min-w-[100px] border-r border-border/50 bg-muted/5 flex flex-col">
                         <div className="p-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/50 bg-background/50">
                             Pages
                         </div>
@@ -108,21 +108,21 @@ export function ManuscriptNavigation({
                                     <Loader2 className="w-5 h-5 animate-spin text-primary/50" />
                                 </div>
                             ) : (
-                                <div className="p-2 flex flex-col gap-1">
+                                <div className="p-2 grid grid-cols-1 gap-1">
                                     {pages.map((page) => (
                                         <button
                                             key={page.id}
                                             onClick={() => setSelectedPageId(page.id)}
-                                            className={`w-full flex flex-col items-center gap-2 p-3 rounded-lg transition-all border ${selectedPageId === page.id ? 'bg-primary text-primary-foreground border-primary shadow-md' : 'hover:bg-muted border-transparent text-muted-foreground'}`}
+                                            className={`w-full flex items-center gap-2 p-2 rounded-lg transition-all border ${selectedPageId === page.id ? 'bg-primary/10 border-primary text-primary shadow-sm' : 'hover:bg-muted border-transparent text-muted-foreground'}`}
                                         >
-                                            <div className="w-12 h-16 rounded border border-current/20 bg-background/50 overflow-hidden flex items-center justify-center shrink-0">
+                                            <div className="w-8 h-10 rounded border border-current/20 bg-background/50 overflow-hidden flex items-center justify-center shrink-0">
                                                 {page.image_url ? (
                                                     <img src={page.image_url} alt={`P${page.order_index}`} className="w-full h-full object-cover opacity-80" />
                                                 ) : (
-                                                    <FileText className="w-6 h-6 opacity-30" />
+                                                    <FileText className="w-4 h-4 opacity-30" />
                                                 )}
                                             </div>
-                                            <span className="text-xs font-bold">Page {page.order_index}</span>
+                                            <span className="text-[10px] font-bold">P{page.order_index}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -156,13 +156,13 @@ export function ManuscriptNavigation({
                                         <button
                                             key={seg.id}
                                             onClick={() => onSelectSegment(seg.id)}
-                                            className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-right group ${currentSegmentId === seg.id ? 'bg-primary/10 border-primary ring-1 ring-primary/20' : 'bg-card hover:bg-muted/50 border-border/50 shadow-sm'}`}
+                                            className={`w-full flex items-center justify-between p-2 rounded-lg border transition-all text-right group ${currentSegmentId === seg.id ? 'bg-primary/10 border-primary shadow-sm' : 'bg-card hover:bg-muted border-border/50 shadow-inner'}`}
                                         >
-                                            <div className="flex flex-col items-start gap-1">
-                                                <span className={`text-[10px] font-bold uppercase tracking-tighter ${currentSegmentId === seg.id ? 'text-primary' : 'text-muted-foreground'}`}>
+                                            <div className="flex flex-col items-start gap-0.5">
+                                                <span className={`text-[9px] font-bold uppercase tracking-tighter ${currentSegmentId === seg.id ? 'text-primary' : 'text-muted-foreground'}`}>
                                                     Ligne {seg.order_index}
                                                 </span>
-                                                <div className="flex gap-1.5 flex-wrap">
+                                                <div className="flex gap-1 flex-wrap">
                                                     {seg.status === 'validated' && (
                                                         <Badge variant="secondary" className="bg-success/10 text-success border-success/20 text-[9px] h-4">
                                                             Validé
@@ -180,8 +180,8 @@ export function ManuscriptNavigation({
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className={`p-2 rounded-full transition-transform group-hover:translate-x-1 ${currentSegmentId === seg.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                                                <ChevronRight className="w-4 h-4" />
+                                            <div className={`p-1 rounded-full transition-transform group-hover:translate-x-0.5 ${currentSegmentId === seg.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                                                <ChevronRight className="w-3 h-3" />
                                             </div>
                                         </button>
                                     ))}

@@ -109,7 +109,7 @@ export async function getPageSegments(pageId: string) {
     }))
 }
 
-export async function getNextSegment(manuscriptId?: string, targetSegmentId?: string, afterSegmentId?: string) {
+export async function getNextSegment(manuscriptId?: string, targetSegmentId?: string, afterSegmentId?: string, direction: 'next' | 'prev' = 'next') {
     const supabase = await createClient()
     const {
         data: { user },
@@ -206,16 +206,29 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
     if (manuscriptId && afterSegmentId) {
         const currentIndex = segmentsData.findIndex(s => s.id === afterSegmentId);
         if (currentIndex !== -1) {
-            const nextAvailable = segmentsData.slice(currentIndex + 1).filter((seg: any) => !transcribedSegmentIds.has(seg.id));
-            if (nextAvailable.length > 0) {
-                availableSegments = nextAvailable;
+            if (direction === 'next') {
+                const nextAvailable = segmentsData.slice(currentIndex + 1).filter((seg: any) => !transcribedSegmentIds.has(seg.id));
+                if (nextAvailable.length > 0) {
+                    availableSegments = nextAvailable;
+                } else if (manuscriptId) {
+                    // Wrap around to the beginning if we reached the end
+                    availableSegments = segmentsData.filter((seg: any) => !transcribedSegmentIds.has(seg.id));
+                }
+            } else {
+                // Prev logic: Find the first untranscribed segment BEFORE the current index, reversed
+                const prevAvailable = segmentsData.slice(0, currentIndex).reverse().filter((seg: any) => !transcribedSegmentIds.has(seg.id));
+                if (prevAvailable.length > 0) {
+                    availableSegments = prevAvailable;
+                } else if (manuscriptId) {
+                    // Wrap around to the end
+                    availableSegments = segmentsData.slice().reverse().filter((seg: any) => !transcribedSegmentIds.has(seg.id));
+                }
             }
         }
     }
 
     if (availableSegments.length === 0) {
         if (manuscriptId) {
-             // If we're at the end or all following are done, wrap around to first untranscribed
              availableSegments = segmentsData.filter((seg: any) => !transcribedSegmentIds.has(seg.id));
         }
         
@@ -225,8 +238,7 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
         }
     }
 
-    // In sequential mode, we take the first available. 
-    // In random mode, we can still pick a random one from the pool.
+    // In sequential mode, we take the FIRST available in the filtered list (which is already ordered correctly for the direction)
     const segment = manuscriptId ? availableSegments[0] : availableSegments[Math.floor(Math.random() * availableSegments.length)];
 
     // Fetch existing transcriptions for this segment by other users to show as references
