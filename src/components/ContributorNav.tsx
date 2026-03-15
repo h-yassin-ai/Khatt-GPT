@@ -77,7 +77,7 @@ export function ContributorNav({ email, isAdmin }: { email: string; isAdmin: boo
     )
 
     return (
-        <div className="container flex h-16 items-center justify-between px-6 max-w-7xl mx-auto">
+        <div className={`container flex h-16 items-center justify-between px-6 mx-auto ${typeof window !== 'undefined' && window.location.pathname.includes('/transcribe') ? 'max-w-none' : 'max-w-7xl'}`}>
             <div className="flex items-center gap-2 lg:gap-6">
                 <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0">
                     <span className="font-heading text-xl lg:text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-primary via-primary/90 to-amber-600 drop-shadow-sm">Khatt-GPT</span>

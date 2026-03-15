@@ -967,10 +967,18 @@ function TranscribeContent() {
           {/* Image Area — 65% width on large screens */}
           <div
             ref={imageContainerRef}
-            className="flex-[1.5] lg:flex-[1.8] flex flex-col relative justify-center items-center bg-[#F3EFE9] border-b lg:border-b-0 lg:border-r border-border/50 overflow-hidden cursor-crosshair shadow-inner min-h-[200px]"
+            className="flex-1 lg:flex-[2.5] flex flex-col relative justify-center items-center bg-[#F3EFE9] border-b lg:border-b-0 lg:border-r border-border/50 overflow-hidden cursor-crosshair shadow-inner min-h-[200px]"
             onWheel={handleSegmentWheel}
             onMouseDown={handleSegmentMouseDown}
           >
+            {loading && (
+              <div className="absolute inset-0 z-50 bg-background/40 backdrop-blur-[2px] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2 bg-background/80 px-6 py-4 rounded-2xl shadow-xl border border-border/50">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <span className="text-xs font-bold text-primary uppercase tracking-widest">{t("transcribe.loading") || "Chargement..."}</span>
+                </div>
+              </div>
+            )}
         <div
           className="w-full h-full flex items-center justify-center transition-transform duration-75 ease-out select-none"
           style={{
@@ -1090,8 +1098,8 @@ function TranscribeContent() {
             </div>
           </div>
 
-          {/* Transcription Area — 35% width on large screens */}
-          <div className="flex-[3] lg:flex-[1] flex flex-col p-4 lg:px-6 lg:pb-8 lg:pt-6 gap-4 overflow-hidden relative z-10 bg-background">
+          {/* Transcription Area — Smaller width on large screens to give space to manuscript */}
+          <div className="flex-1 lg:flex-[1] flex flex-col p-4 lg:px-6 lg:pb-8 lg:pt-6 gap-4 overflow-hidden relative z-10 bg-background">
             <div className="flex justify-between items-center shrink-0 border-b border-border/40 pb-3">
               <h2
                 className="text-lg font-heading font-bold text-foreground/80 tracking-tight"
@@ -1138,6 +1146,12 @@ function TranscribeContent() {
             )}
 
             <div className="flex-1 w-full relative min-h-0 flex flex-col gap-2">
+              <div className="flex items-center gap-2 px-1">
+                 <div className="h-1.5 w-1.5 rounded-full bg-primary/40" />
+                 <p className="text-[10px] font-medium text-muted-foreground italic">
+                    Note: Pas besoin de diacritiques (voyelles), mais ce n'est pas grave si vous en mettez.
+                 </p>
+              </div>
               <Textarea
                 ref={textareaRef}
                 value={text}
@@ -1145,7 +1159,7 @@ function TranscribeContent() {
                 placeholder={t("transcribe.placeholder")}
                 dir="rtl"
                 lang="ar"
-                disabled={submitting}
+                disabled={submitting || loading}
                 className="resize-none h-32 min-h-[120px] shrink-0 font-arabic text-2xl leading-[2] bg-[#FAF7F2] border-border shadow-inner focus-visible:ring-primary p-4 rounded-xl text-foreground !outline-none focus:border-primary/50"
               />
 
@@ -1163,7 +1177,7 @@ function TranscribeContent() {
               <div className="flex gap-2 shrink-0">
                 <Button
                   onClick={handleSubmit}
-                  disabled={submitting || !text.trim()}
+                  disabled={submitting || loading || !text.trim()}
                   className={`flex-1 h-12 text-sm font-bold tracking-wide shadow-md ${isEditing ? "bg-amber-600 hover:bg-amber-700" : ""}`}
                 >
                   {submitting ? (

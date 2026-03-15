@@ -327,6 +327,7 @@ export async function rejectTranscription(transcriptionId: string) {
         .from('transcriptions')
         .select('*', { count: 'exact', head: true })
         .eq('segment_id', transcription.segment_id)
+        .neq('status', 'rejected')
 
     await adminSupabase
         .from('segments')
