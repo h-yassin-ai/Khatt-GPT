@@ -20,10 +20,10 @@ export default async function ContributorLayout({ children }: { children: React.
     return (
         <div className="min-h-screen bg-background flex flex-col">
             <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur">
-                <ContributorNav email={user.email ?? ''} isAdmin={isAdmin} />
+                <ContributorNav email={user.email ?? ''} isAdmin={isAdmin} isFullWidth={isTranscribePage} />
             </header>
 
-            <main className={`flex-1 w-full p-6 ${isTranscribePage ? 'max-w-none' : 'max-w-7xl mx-auto'}`}>
+            <main className={`flex-1 w-full ${isTranscribePage ? 'p-0 max-w-none' : 'p-6 max-w-7xl mx-auto'}`}>
                 {children}
             </main>
         </div>

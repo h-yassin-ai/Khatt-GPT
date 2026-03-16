@@ -15,7 +15,7 @@ export default async function ExportPage() {
     const { count: pendingCount } = await supabase
         .from('transcriptions')
         .select('*', { count: 'exact', head: true })
-        .eq('is_validated', false)
+        .in('status', ['pending', 'modified'])
 
     return (
         <div className="max-w-4xl mx-auto flex flex-col gap-8 py-6">

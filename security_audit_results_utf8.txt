@@ -1,0 +1,22 @@
+﻿--- SECURITY AUDIT: TABLE ACCESS & RLS ---
+Checking [profiles]... OK (Accessible via Service Role)
+Checking [transcriptions]... OK (Accessible via Service Role)
+Checking [segments]... OK (Accessible via Service Role)
+Checking [pages]... OK (Accessible via Service Role)
+Checking [manuscripts]... OK (Accessible via Service Role)
+Checking [notifications]... OK (Accessible via Service Role)
+Checking [export_logs]... OK (Accessible via Service Role)
+Checking [achievements]... OK (Accessible via Service Role)
+Checking [contributor_achievements]... FAIL (42703: column contributor_achievements.id does not exist)
+Checking [authors]... FAIL (PGRST205: Could not find the table 'public.authors' in the schema cache)
+Checking [series]... FAIL (PGRST205: Could not find the table 'public.series' in the schema cache)
+Checking [languages]... FAIL (PGRST205: Could not find the table 'public.languages' in the schema cache)
+Checking [books]... FAIL (PGRST205: Could not find the table 'public.books' in the schema cache)
+Checking [articles]... FAIL (PGRST205: Could not find the table 'public.articles' in the schema cache)
+
+--- ATTEMPTING TO FETCH POLICIES ---
+
+--- ANON ACCESS TEST (Simulating Public Access) ---
+[profiles] PUBLICLY READABLE (Found 1 rows)
+[transcriptions] WARN: PUBLICLY READABLE!
+[notifications] !! CRITICAL WARN: Notifications are publicly readable !!

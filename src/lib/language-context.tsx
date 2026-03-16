@@ -77,6 +77,8 @@ const translations: Record<string, Record<Language, string>> = {
     'transcribe.prev_title': { en: 'Previous segment', fr: 'Segment précédent' },
     'transcribe.auto_zoom': { en: 'Auto-zoom', fr: 'Auto-zoom' },
     'transcribe.transcription_header': { en: 'Transcription', fr: 'نص النسخ' },
+    'transcribe.navigation_title': { en: 'Manuscript Navigation', fr: 'Navigation Manuscrit' },
+    'transcribe.navigation_desc': { en: 'Choose a page and a segment to transcribe.', fr: 'Choisissez une page et une ligne à transcrire.' },
 
     // Browse page
     'browse.title': { en: 'Segment Browser', fr: 'Explorateur de segments' },
