@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { approveTranscription, rejectTranscription, getValidatedSegments } from './actions'
+import { approveTranscription, rejectTranscription, getValidatedSegments, bulkRejectTranscriptions } from './actions'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import {
@@ -340,6 +340,34 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
         setLoading(null)
     }
 
+    const [selectedIds, setSelectedIds] = useState<string[]>([])
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+    }
+
+    const handleBulkReject = async () => {
+        if (selectedIds.length === 0) return
+        if (!confirm(`Voulez-vous vraiment rejeter ces ${selectedIds.length} transcriptions ?`)) return
+
+        setLoading('bulk')
+        const result = await bulkRejectTranscriptions(selectedIds)
+        if (result.success) {
+            toast({ title: "Succès", description: `${selectedIds.length} transcriptions ont été rejetées.` })
+            setSegments(prev => prev
+                .map(s => ({
+                    ...s,
+                    transcriptions: s.transcriptions.filter((t) => !selectedIds.includes(t.id))
+                }))
+                .filter(s => s.transcriptions.length > 0)
+            )
+            setSelectedIds([])
+        } else {
+            toast({ title: "Erreur", description: (result as any).error, variant: "destructive" })
+        }
+        setLoading(null)
+    }
+
     if (segments.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center bg-muted/20 rounded-xl border border-dashed border-border">
@@ -357,28 +385,59 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
 
     return (
         <div className="flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground">
-                {allCards.length} proposition{allCards.length > 1 ? 's' : ''} à vérifier (sur {segments.length} segment{segments.length > 1 ? 's' : ''})
-            </p>
+            <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                <p className="text-sm text-muted-foreground">
+                    {allCards.length} proposition{allCards.length > 1 ? 's' : ''} à vérifier (sur {segments.length} segment{segments.length > 1 ? 's' : ''})
+                </p>
+                {selectedIds.length > 0 && (
+                    <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                        <span className="text-xs font-semibold text-primary">{selectedIds.length} sélectionné(s)</span>
+                        <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            className="h-8 gap-2" 
+                            onClick={handleBulkReject}
+                            disabled={loading === 'bulk'}
+                        >
+                            {loading === 'bulk' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            Rejeter la sélection
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8" onClick={() => setSelectedIds([])}>
+                            Annuler
+                        </Button>
+                    </div>
+                )}
+            </div>
             {allCards.map(({ t, seg }) => (
-                <TranscriptionCard
-                    key={t.id}
-                    t={t}
-                    seg={seg}
-                    loading={loading}
-                    editingId={editingId}
-                    editText={editText}
-                    onApprove={() => handleApprove(seg.id, t.id, t.text)}
-                    onReject={() => handleReject(t.id)}
-                    onStartEdit={() => { setEditingId(t.id); setEditText(t.text) }}
-                    onCancelEdit={() => setEditingId(null)}
-                    onSaveEdit={() => {
-                        if (!editText.trim()) return
-                        handleApprove(seg.id, t.id, editText)
-                        setEditingId(null)
-                    }}
-                    onEditTextChange={setEditText}
-                />
+                <div key={t.id} className="relative flex items-start gap-4">
+                    <div className="pt-8 pl-1">
+                        <input 
+                            type="checkbox" 
+                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                            checked={selectedIds.includes(t.id)}
+                            onChange={() => toggleSelect(t.id)}
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <TranscriptionCard
+                            t={t}
+                            seg={seg}
+                            loading={loading}
+                            editingId={editingId}
+                            editText={editText}
+                            onApprove={() => handleApprove(seg.id, t.id, t.text)}
+                            onReject={() => handleReject(t.id)}
+                            onStartEdit={() => { setEditingId(t.id); setEditText(t.text) }}
+                            onCancelEdit={() => setEditingId(null)}
+                            onSaveEdit={() => {
+                                if (!editText.trim()) return
+                                handleApprove(seg.id, t.id, editText)
+                                setEditingId(null)
+                            }}
+                            onEditTextChange={setEditText}
+                        />
+                    </div>
+                </div>
             ))}
         </div>
     )

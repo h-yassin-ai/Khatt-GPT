@@ -362,3 +362,22 @@ export async function rejectTranscription(transcriptionId: string) {
     revalidatePath('/admin/verify')
     return { success: true }
 }
+export async function bulkRejectTranscriptions(transcriptionIds: string[]) {
+    const supabase = await createClient()
+
+    const adminCheck = await assertAdmin(supabase)
+    if (!adminCheck.ok) return { error: adminCheck.error }
+
+    const adminSupabase = await getAdminClient()
+
+    // Process each rejection
+    const results = await Promise.all(transcriptionIds.map(id => rejectTranscription(id)))
+    
+    const errors = results.filter(r => r.error).map(r => r.error)
+    
+    if (errors.length > 0) {
+        return { error: `Completed with some errors: ${errors.join(', ')}` }
+    }
+
+    return { success: true }
+}

@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card" 
 import { Library, Users, FileText, CheckCircle } from 'lucide-react'
 
 // Manual Card Components if shadcn cards are missing
-function SimpleCard({ title, value, subtitle, icon: Icon }: any) {
-    return (
-        <div className="bg-card border border-border shadow-sm rounded-xl p-6 flex flex-col">
+function SimpleCard({ title, value, subtitle, icon: Icon, href }: any) {
+    const content = (
+        <div className="bg-card border border-border shadow-sm rounded-xl p-6 flex flex-col h-full hover:border-primary/50 transition-colors">
             <div className="flex justify-between items-start mb-4">
                 <h3 className="text-sm font-medium text-muted-foreground tracking-tight">{title}</h3>
                 <Icon className="w-4 h-4 text-muted-foreground" />
@@ -14,6 +14,16 @@ function SimpleCard({ title, value, subtitle, icon: Icon }: any) {
             <p className="text-xs text-muted-foreground">{subtitle}</p>
         </div>
     )
+
+    if (href) {
+        return (
+            <a href={href} className="block no-underline">
+                {content}
+            </a>
+        )
+    }
+
+    return content
 }
 
 export default async function AdminOverviewPage() {
@@ -53,6 +63,7 @@ export default async function AdminOverviewPage() {
                     value={manuscriptsCount || 0}
                     subtitle="Uploaded volumes"
                     icon={Library}
+                    href="/admin/manuscripts"
                 />
                 <SimpleCard
                     title="Total Segments"
@@ -65,12 +76,14 @@ export default async function AdminOverviewPage() {
                     value={transcriptionsCount || 0}
                     subtitle={`${pctTranscribed}% coverage est.`}
                     icon={CheckCircle}
+                    href="/admin/verify"
                 />
                 <SimpleCard
                     title="Contributors"
                     value={contributorsCount || 0}
                     subtitle="Registered users"
                     icon={Users}
+                    href="/admin/users"
                 />
             </div>
 
