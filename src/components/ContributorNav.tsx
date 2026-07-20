@@ -90,14 +90,23 @@ export function ContributorNav({ email, isAdmin, isFullWidth = false }: { email:
                 <div className="text-sm text-muted-foreground hidden lg:block">
                     {email}
                 </div>
-                <button
-                    onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
-                    className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-md border border-border hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                    title={lang === 'fr' ? 'Switch to English' : 'Passer en français'}
-                >
-                    <Languages className="w-3.5 h-3.5" />
-                    <span className="whitespace-nowrap">{t('nav.lang_toggle')}</span>
-                </button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-md border border-border hover:bg-muted transition-colors text-muted-foreground hover:text-foreground outline-none">
+                        <Languages className="w-3.5 h-3.5" />
+                        <span className="whitespace-nowrap uppercase">{lang}</span>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-32">
+                        <DropdownMenuItem onClick={() => setLang('fr')} className="cursor-pointer">
+                            Français
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setLang('en')} className="cursor-pointer">
+                            English
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setLang('ar')} className="cursor-pointer font-arabic">
+                            العربية
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
                 <div className="hidden md:block">
                     <form action="/auth/signout" method="post">
                         <button type="submit" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 text-sm font-medium">

@@ -1,6 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card" // Assuming manual Card exists, I'll build a simple wrapper next if missing
-import { Library, Users, FileText, CheckCircle } from 'lucide-react'
+import { AlertTriangle, Library, FileText, CheckCircle } from 'lucide-react'
 
 // Manual Card Components if shadcn cards are missing
 function SimpleCard({ title, value, subtitle, icon: Icon, href }: any) {
@@ -32,6 +31,9 @@ export default async function AdminOverviewPage() {
     // KPIs
     const { count: manuscriptsCount } = await supabase.from('manuscripts').select('*', { count: 'exact', head: true })
     const { count: segmentsCount } = await supabase.from('segments').select('*', { count: 'exact', head: true })
+    const { count: validatedSegmentsCount } = await supabase.from('segments').select('*', { count: 'exact', head: true }).eq('status', 'validated')
+    const { count: reviewSegmentsCount } = await supabase.from('segments').select('*', { count: 'exact', head: true }).neq('status', 'validated').gt('transcription_count', 0)
+    const { count: conflictSegmentsCount } = await supabase.from('segments').select('*', { count: 'exact', head: true }).in('status', ['conflict', 'flagged'])
     const { count: transcriptionsCount } = await supabase.from('transcriptions').select('*', { count: 'exact', head: true })
     const { count: contributorsCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true })
 
@@ -49,13 +51,16 @@ export default async function AdminOverviewPage() {
         .order('created_at', { ascending: false })
         .limit(5)
 
-    const pctTranscribed = segmentsCount && segmentsCount > 0
-        ? Math.round((transcriptionsCount || 0) / segmentsCount * 100)
+    const pctValidated = segmentsCount && segmentsCount > 0
+        ? Math.round((validatedSegmentsCount || 0) / segmentsCount * 100)
         : 0
 
     return (
         <div className="flex flex-col gap-8">
-            <h1 className="text-3xl font-heading font-semibold text-foreground">Platform Overview</h1>
+            <div>
+                <h1 className="text-3xl font-heading font-semibold text-foreground">Vue d'ensemble admin</h1>
+                <p className="mt-1 text-sm text-muted-foreground">Suivi des corpus, des contributeurs et des validations à traiter.</p>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <SimpleCard
@@ -68,22 +73,22 @@ export default async function AdminOverviewPage() {
                 <SimpleCard
                     title="Total Segments"
                     value={segmentsCount || 0}
-                    subtitle="Image slices available"
+                    subtitle={`${(transcriptionsCount || 0).toLocaleString('fr-FR')} transcription(s) soumise(s)`}
                     icon={FileText}
                 />
                 <SimpleCard
-                    title="Transcriptions"
-                    value={transcriptionsCount || 0}
-                    subtitle={`${pctTranscribed}% coverage est.`}
+                    title="Validated Lines"
+                    value={validatedSegmentsCount || 0}
+                    subtitle={`${pctValidated}% du corpus validé`}
                     icon={CheckCircle}
                     href="/admin/verify"
                 />
                 <SimpleCard
-                    title="Contributors"
-                    value={contributorsCount || 0}
-                    subtitle="Registered users"
-                    icon={Users}
-                    href="/admin/users"
+                    title="Review Queue"
+                    value={reviewSegmentsCount || 0}
+                    subtitle={`${conflictSegmentsCount || 0} conflit(s) ou signalement(s)`}
+                    icon={AlertTriangle}
+                    href="/admin/verify"
                 />
             </div>
 
@@ -91,7 +96,9 @@ export default async function AdminOverviewPage() {
 
                 {/* Top Contributors Table */}
                 <div className="bg-card border border-border shadow-sm rounded-xl p-6">
-                    <h2 className="text-lg font-semibold mb-4 text-foreground tracking-tight">Top Contributors</h2>
+                    <h2 className="text-lg font-semibold mb-4 text-foreground tracking-tight">
+                        Top Contributors <span className="text-sm font-normal text-muted-foreground">({contributorsCount || 0} inscrits)</span>
+                    </h2>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
                             <thead className="text-muted-foreground border-b border-border/50">

@@ -205,15 +205,17 @@ export async function approveTranscription(segmentId: string, transcriptionId: s
     const sanitizedText = text.trim()
     if (!sanitizedText) return { error: 'Transcription text cannot be empty.' }
 
-    // Fetch original transcription to detect modification and get xp_awarded
+    // Fetch original transcription to detect modification and get xp_awarded.
+    // A transcription already marked as "modified" has already received its admin-edit adjustment.
     const { data: original } = await adminSupabase
         .from('transcriptions')
-        .select('text, contributor_id, xp_awarded')
+        .select('text, contributor_id, xp_awarded, status')
         .eq('id', transcriptionId)
         .single()
 
     const wasModified = original && original.text.trim() !== sanitizedText
     const newStatus = wasModified ? 'modified' : 'validated'
+    const shouldApplyModificationPenalty = wasModified && original?.status !== 'modified'
 
     const { error: tError } = await adminSupabase
         .from('transcriptions')
@@ -243,9 +245,10 @@ export async function approveTranscription(segmentId: string, transcriptionId: s
     // Reset validation flag for alternatives from the same segment.
     await adminSupabase
         .from('transcriptions')
-        .update({ is_validated: false, status: 'pending' }) // Reset others to pending if they were something else
+        .update({ is_validated: false })
         .eq('segment_id', segmentId)
         .neq('id', transcriptionId)
+        .neq('status', 'rejected')
 
     const { error: sError } = await adminSupabase
         .from('segments')
@@ -258,8 +261,8 @@ export async function approveTranscription(segmentId: string, transcriptionId: s
 
     if (sError) return { error: sError.message }
 
-    // If text was modified by admin: deduct 1/4 of xp_awarded from the contributor
-    if (wasModified && original?.contributor_id && original?.xp_awarded) {
+    // If text was modified by admin: deduct 1/4 of xp_awarded from the contributor, once.
+    if (shouldApplyModificationPenalty && original?.contributor_id && original?.xp_awarded) {
         const deduction = Math.round(original.xp_awarded / 4)
         if (deduction > 0) {
             const { data: profile } = await adminSupabase
@@ -274,6 +277,11 @@ export async function approveTranscription(segmentId: string, transcriptionId: s
                     .from('profiles')
                     .update({ points: newPoints })
                     .eq('id', original.contributor_id)
+
+                await adminSupabase
+                    .from('transcriptions')
+                    .update({ xp_awarded: Math.max(0, original.xp_awarded - deduction) })
+                    .eq('id', transcriptionId)
             }
         }
     }
@@ -294,11 +302,12 @@ export async function rejectTranscription(transcriptionId: string) {
 
     const { data: transcription, error: fetchError } = await adminSupabase
         .from('transcriptions')
-        .select('id, segment_id, contributor_id, xp_awarded')
+        .select('id, segment_id, contributor_id, xp_awarded, status')
         .eq('id', transcriptionId)
         .single()
 
     if (fetchError || !transcription) return { error: 'Transcription not found' }
+    if (transcription.status === 'rejected') return { success: true, alreadyRejected: true }
 
     // Soft delete: mark as rejected instead of deleting
     const { error: updateError } = await adminSupabase

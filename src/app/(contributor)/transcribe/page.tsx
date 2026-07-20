@@ -698,7 +698,7 @@ function TranscribeContent() {
   const topBadges = gamification?.badges?.slice(0, 6) || [];
 
   return (
-    <div className="flex flex-col w-full h-[calc(100vh-64px)] animate-in fade-in duration-500 overflow-hidden bg-background">
+    <div className="flex flex-col w-full h-auto lg:h-[calc(100vh-64px)] animate-in fade-in duration-500 overflow-visible lg:overflow-hidden bg-background">
       <OnboardingModal />
 
       <AnimatePresence>
@@ -935,7 +935,7 @@ function TranscribeContent() {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="flex flex-1 gap-0 pt-0 min-h-0 relative overflow-hidden">
+      <div className="flex flex-1 gap-0 pt-0 min-h-0 relative overflow-visible lg:overflow-hidden">
         {/* Sidebar Navigation */}
         <AnimatePresence>
           {isSidebarOpen && segment?.manuscript_id && (
@@ -963,11 +963,11 @@ function TranscribeContent() {
         </AnimatePresence>
 
         {/* Main Content: Image Left, Transcription Right */}
-        <div className="flex-1 flex flex-col lg:flex-row min-w-0 bg-background overflow-hidden relative">
+        <div className="flex-1 flex flex-col lg:flex-row min-w-0 bg-background overflow-visible lg:overflow-hidden relative">
           {/* Image Area — 65% width on large screens */}
           <div
             ref={imageContainerRef}
-            className="flex-1 lg:flex-[2.5] flex flex-col relative justify-center items-center bg-[#F3EFE9] border-b lg:border-b-0 lg:border-r border-border/50 overflow-hidden cursor-crosshair shadow-inner min-h-[200px]"
+            className="w-full h-44 sm:h-52 lg:h-full lg:flex-[2.5] sticky top-16 lg:relative lg:top-auto z-20 flex flex-col justify-center items-center bg-[#F3EFE9] border-b lg:border-b-0 lg:border-r border-border/50 overflow-hidden cursor-crosshair shadow-md lg:shadow-inner shrink-0"
             onWheel={handleSegmentWheel}
             onMouseDown={handleSegmentMouseDown}
           >
@@ -986,16 +986,19 @@ function TranscribeContent() {
             transformOrigin: "center",
           }}
         >
-          {/* Mobile: use segment crop | Desktop: use full page or segment crop */}
-          {segment?.image_url && (typeof window !== 'undefined' && window.innerWidth < 1024) ? (
-             <img
-               src={segment.image_url}
-               alt="Segment Crop"
-               className="max-h-[85%] max-w-[95%] object-contain drop-shadow-xl rounded-sm"
-               draggable={false}
-             />
-          ) : segment?.page_image_url ? (
-            <div className="relative">
+          {/* Mobile view: crop segment only */}
+          {segment?.image_url && (
+            <img
+              src={segment.image_url}
+              alt="Segment Crop"
+              className="lg:hidden max-h-[90%] max-w-[95%] object-contain drop-shadow-xl rounded-sm"
+              draggable={false}
+            />
+          )}
+
+          {/* Desktop view: full page manuscript with polygon overlay */}
+          {segment?.page_image_url ? (
+            <div className="hidden lg:block relative">
               <img
                 src={segment.page_image_url || undefined}
                 alt="Page du manuscrit"
@@ -1044,12 +1047,12 @@ function TranscribeContent() {
                 )}
             </div>
           ) : segment?.image_url ? (
-             <img
-               src={segment.image_url}
-               alt="Segment"
-               className="max-h-full max-w-full object-contain drop-shadow-2xl rounded-sm"
-               draggable={false}
-             />
+            <img
+              src={segment.image_url}
+              alt="Segment"
+              className="hidden lg:block max-h-full max-w-full object-contain drop-shadow-2xl rounded-sm"
+              draggable={false}
+            />
           ) : null}
         </div>
 
@@ -1099,7 +1102,7 @@ function TranscribeContent() {
           </div>
 
           {/* Transcription Area — Smaller width on large screens to give space to manuscript */}
-          <div className="flex-1 lg:flex-[1] flex flex-col p-4 lg:px-6 lg:pb-8 lg:pt-6 gap-4 overflow-hidden relative z-10 bg-background">
+          <div className="flex-1 lg:flex-[1] flex flex-col p-4 lg:px-6 lg:pb-8 lg:pt-6 gap-4 overflow-visible lg:overflow-hidden relative z-10 bg-background">
             <div className="flex justify-between items-center shrink-0 border-b border-border/40 pb-3">
               <h2
                 className="text-lg font-heading font-bold text-foreground/80 tracking-tight"

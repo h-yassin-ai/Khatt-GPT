@@ -3,16 +3,22 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+function isAdminEmail(email?: string | null) {
+    const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()).filter(Boolean) || []
+    return !!email && adminEmails.includes(email)
+}
+
 export async function validateTranscription(transcriptionId: string, isValid: boolean) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) return { error: "Unauthenticated" }
+    if (!isAdminEmail(user.email)) return { error: "Unauthorized" }
 
     // 1. Update transcription validation status
     const { error: tError } = await supabase
         .from('transcriptions')
-        .update({ is_validated: isValid })
+        .update({ is_validated: isValid, status: isValid ? 'validated' : 'pending' })
         .eq('id', transcriptionId)
 
     if (tError) return { error: tError.message }

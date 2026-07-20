@@ -378,6 +378,19 @@ export async function submitTranscription(segmentId: string, text: string) {
         return { error: 'Submission rejected: Text exceeds maximum length for a given segment.' }
     }
 
+    // Check if the user has already submitted an active transcription for this segment
+    const { data: existing } = await supabase
+        .from('transcriptions')
+        .select('id')
+        .eq('segment_id', segmentId)
+        .eq('contributor_id', user.id)
+        .in('status', ['pending', 'validated', 'modified'])
+        .limit(1)
+
+    if (existing && existing.length > 0) {
+        return { error: 'Vous avez déjà soumis une transcription pour ce segment. Veuillez modifier votre transcription existante depuis votre profil.' }
+    }
+
     // Fetch segment image_url, polygon and page image at submission time
     const { data: segmentData } = await supabase
         .from('segments')

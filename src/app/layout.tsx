@@ -1,25 +1,19 @@
 import type { Metadata } from 'next';
-import { Cormorant_Garamond, DM_Sans, Amiri } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import { PWARegister } from '@/components/PWARegister'
 import { LanguageProvider } from '@/lib/language-context'
 
-const cormorantGaramond = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-cormorant-garamond',
+const geistSans = localFont({
+  src: './fonts/GeistVF.woff',
+  variable: '--font-geist-sans',
+  weight: '100 900',
 });
 
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-dm-sans',
-});
-
-const amiri = Amiri({
-  subsets: ['arabic', 'latin'],
-  weight: ['400', '700'],
-  variable: '--font-amiri',
+const geistMono = localFont({
+  src: './fonts/GeistMonoVF.woff',
+  variable: '--font-geist-mono',
+  weight: '100 900',
 });
 
 export const metadata: Metadata = {
@@ -30,15 +24,21 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+import { cookies } from 'next/headers';
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const lang = (cookieStore.get('waraka_lang')?.value || 'fr') as 'en' | 'fr' | 'ar';
+  const dir = lang === 'ar' ? 'rtl' : 'ltr';
+
   return (
-    <html lang="en">
+    <html lang={lang} dir={dir}>
       <body
-        className={`${cormorantGaramond.variable} ${dmSans.variable} ${amiri.variable} font-sans antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <PWARegister />
         <LanguageProvider>

@@ -20,6 +20,7 @@ type Transcription = {
     page_image_url?: string | null
     polygon?: any
     xp_awarded?: number | null
+    status?: string | null
     profiles?: { display_name?: string; username?: string } | null
 }
 
@@ -249,7 +250,9 @@ function TranscriptionCard({
                             className="font-arabic text-xl leading-loose p-4 resize-none min-h-[100px]"
                         />
                         <div className="text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded border border-amber-200 dark:border-amber-700">
-                            Modifier le texte retirera 1/4 des XP attribués au contributeur.
+                            {t.status === 'modified'
+                                ? "Cette contribution a déjà reçu son ajustement XP de correction."
+                                : "Modifier le texte retirera 1/4 des XP attribués au contributeur, une seule fois."}
                         </div>
                         <div className="flex gap-2 justify-end">
                             <Button size="sm" variant="outline" onClick={onCancelEdit} disabled={loading === t.id}>
@@ -378,16 +381,20 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
         )
     }
 
-    // One card per transcription
-    const allCards = segments.flatMap(seg =>
-        seg.transcriptions.map(t => ({ t, seg }))
-    )
+    const pendingCount = segments.reduce((sum, seg) => sum + seg.transcriptions.length, 0)
+    const multiUserCount = segments.filter(seg => seg.transcriptions.length > 1).length
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-2 border-b border-border/50">
+            <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
                 <p className="text-sm text-muted-foreground">
-                    {allCards.length} proposition{allCards.length > 1 ? 's' : ''} à vérifier (sur {segments.length} segment{segments.length > 1 ? 's' : ''})
+                    <span className="font-semibold text-foreground">{pendingCount}</span> proposition{pendingCount > 1 ? 's' : ''} à vérifier sur{' '}
+                    <span className="font-semibold text-foreground">{segments.length}</span> segment{segments.length > 1 ? 's' : ''}.
+                    {multiUserCount > 0 && (
+                        <span className="ml-2 text-amber-700">
+                            {multiUserCount} segment{multiUserCount > 1 ? 's' : ''} avec plusieurs contributeurs.
+                        </span>
+                    )}
                 </p>
                 {selectedIds.length > 0 && (
                     <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
@@ -408,34 +415,64 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
                     </div>
                 )}
             </div>
-            {allCards.map(({ t, seg }) => (
-                <div key={t.id} className="relative flex items-start gap-4">
-                    <div className="pt-8 pl-1">
-                        <input 
-                            type="checkbox" 
-                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                            checked={selectedIds.includes(t.id)}
-                            onChange={() => toggleSelect(t.id)}
-                        />
+            {segments.map((seg) => (
+                <div key={seg.id} className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                    <div className="flex flex-col gap-3 border-b border-border bg-muted/30 p-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="rounded-md border border-border bg-background px-2 py-1 text-xs font-bold">
+                                    {seg.manuscripts?.title || 'Manuscrit inconnu'} · ligne #{seg.order_index}
+                                </span>
+                                <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${seg.status === 'conflict'
+                                    ? 'border-destructive/20 bg-destructive/10 text-destructive'
+                                    : 'border-amber-500/20 bg-amber-500/10 text-amber-700'
+                                    }`}>
+                                    {seg.status === 'conflict' ? 'Conflit' : 'À vérifier'}
+                                </span>
+                                {seg.transcriptions.length > 1 && (
+                                    <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+                                        {seg.transcriptions.length} propositions
+                                    </span>
+                                )}
+                            </div>
+                            <p className="mt-2 text-xs text-muted-foreground">
+                                Comparez les propositions du même segment avant de choisir la version officielle.
+                            </p>
+                        </div>
                     </div>
-                    <div className="flex-1">
-                        <TranscriptionCard
-                            t={t}
-                            seg={seg}
-                            loading={loading}
-                            editingId={editingId}
-                            editText={editText}
-                            onApprove={() => handleApprove(seg.id, t.id, t.text)}
-                            onReject={() => handleReject(t.id)}
-                            onStartEdit={() => { setEditingId(t.id); setEditText(t.text) }}
-                            onCancelEdit={() => setEditingId(null)}
-                            onSaveEdit={() => {
-                                if (!editText.trim()) return
-                                handleApprove(seg.id, t.id, editText)
-                                setEditingId(null)
-                            }}
-                            onEditTextChange={setEditText}
-                        />
+                    <div className="flex flex-col gap-3 p-4">
+                        {seg.transcriptions.map((t) => (
+                            <div key={t.id} className="relative flex items-start gap-4">
+                                <div className="pt-8 pl-1">
+                                    <input
+                                        type="checkbox"
+                                        className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary"
+                                        checked={selectedIds.includes(t.id)}
+                                        onChange={() => toggleSelect(t.id)}
+                                        aria-label="Sélectionner cette transcription"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <TranscriptionCard
+                                        t={t}
+                                        seg={seg}
+                                        loading={loading}
+                                        editingId={editingId}
+                                        editText={editText}
+                                        onApprove={() => handleApprove(seg.id, t.id, t.text)}
+                                        onReject={() => handleReject(t.id)}
+                                        onStartEdit={() => { setEditingId(t.id); setEditText(t.text) }}
+                                        onCancelEdit={() => setEditingId(null)}
+                                        onSaveEdit={() => {
+                                            if (!editText.trim()) return
+                                            handleApprove(seg.id, t.id, editText)
+                                            setEditingId(null)
+                                        }}
+                                        onEditTextChange={setEditText}
+                                    />
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             ))}

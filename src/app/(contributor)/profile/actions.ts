@@ -31,7 +31,7 @@ export async function deleteTranscription(transcriptionId: string) {
     if (!user) return { error: "Unauthenticated" }
 
     // Check if transcription belongs to user
-    const { data: t } = await supabase.from('transcriptions').select('contributor_id, segment_id').eq('id', transcriptionId).single()
+    const { data: t } = await supabase.from('transcriptions').select('contributor_id, segment_id, xp_awarded').eq('id', transcriptionId).single()
 
     if (!t || t.contributor_id !== user.id) {
         return { error: "Unauthorized" }
@@ -47,10 +47,15 @@ export async function deleteTranscription(transcriptionId: string) {
         await supabase.from('segments').update({ transcription_count: seg.transcription_count - 1 }).eq('id', t.segment_id)
     }
 
-    // Decrement profile contributions
-    const { data: profile } = await supabase.from('profiles').select('total_contributions').eq('id', user.id).single()
-    if (profile && profile.total_contributions > 0) {
-        await supabase.from('profiles').update({ total_contributions: profile.total_contributions - 1 }).eq('id', user.id)
+    // Decrement profile contributions and points
+    const { data: profile } = await supabase.from('profiles').select('total_contributions, points').eq('id', user.id).single()
+    if (profile) {
+        const newPoints = Math.max(0, (profile.points || 0) - (t.xp_awarded || 0))
+        const newContributions = Math.max(0, (profile.total_contributions || 0) - 1)
+        await supabase.from('profiles').update({
+            total_contributions: newContributions,
+            points: newPoints
+        }).eq('id', user.id)
     }
 
     revalidatePath('/profile')

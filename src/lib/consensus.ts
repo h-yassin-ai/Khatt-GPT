@@ -122,8 +122,18 @@ export async function computeConsensus(segmentId: string) {
 
         // Mark that winning transcription as validated
         await supabase.from('transcriptions')
-            .update({ is_validated: true })
+            .update({ is_validated: true, status: 'validated' })
             .eq('id', bestTranscription.id)
+
+        // Insert automatic consensus notification for the contributor
+        if (bestTranscription.contributor_id) {
+            await supabase.from('notifications').insert({
+                user_id: bestTranscription.contributor_id,
+                transcription_id: bestTranscription.id,
+                type: 'validated',
+                message: `Votre transcription a atteint un consensus automatique et a été validée par le système !`
+            })
+        }
 
         return { success: true, result: 'validated' }
     } else {

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { updateDisplayName, deleteTranscription, updateTranscription } from './actions'
 import { Trash2, Edit3, Check, ImageIcon, X, Save, Trophy, Flame, Star, Lock } from 'lucide-react'
 import { buildBadgeProgress, getActiveBoosts, getLevelProgress } from '@/lib/gamification'
+import { useLanguage } from '@/lib/language-context'
 
 export default function ProfileInteractive({
     profile,
@@ -17,6 +18,7 @@ export default function ProfileInteractive({
     accuracyRate: number | null
     achievements: any[]
 }) {
+    const { lang, t } = useLanguage()
     const [isEditing, setIsEditing] = useState(false)
     const [editingTId, setEditingTId] = useState<string | null>(null)
     const [editingText, setEditingText] = useState('')
@@ -41,7 +43,7 @@ export default function ProfileInteractive({
     }
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this transcription?')) return
+        if (!confirm(t('profile.delete_confirm'))) return
 
         setTList((prev) => prev.filter((t) => t.id !== id))
 
@@ -67,15 +69,15 @@ export default function ProfileInteractive({
     }
 
     return (
-        <div className="flex flex-col gap-8 w-full max-w-6xl mx-auto py-8">
+        <div className="flex flex-col gap-8 w-full max-w-6xl mx-auto py-8 px-4 sm:px-6">
             <div className="bg-card border border-border rounded-xl p-8 shadow-sm">
-                <h2 className="text-2xl font-heading font-semibold mb-6">Profil et progression</h2>
+                <h2 className="text-2xl font-heading font-semibold mb-6">{t('profile.title')}</h2>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-4">
                         <div>
                             <div className="flex items-center gap-3 mb-1">
-                                <p className="text-sm text-muted-foreground">Username public</p>
+                                <p className="text-sm text-muted-foreground">{t('profile.username')}</p>
                                 <span className="bg-primary/20 text-primary px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-primary/30">
                                     {level.levelName}
                                 </span>
@@ -84,12 +86,12 @@ export default function ProfileInteractive({
                         </div>
 
                         <div className="space-y-2">
-                            <p className="text-sm text-muted-foreground">Display Name</p>
+                            <p className="text-sm text-muted-foreground">{t('profile.display_name')}</p>
                             {!isEditing ? (
                                 <div className="flex items-center gap-4">
                                     <p className="text-lg font-medium">{profile.display_name || profile.username}</p>
                                     <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
-                                        <Edit3 className="w-4 h-4 mr-2" /> Edit
+                                        <Edit3 className="w-4 h-4 mr-2" /> {t('profile.edit')}
                                     </Button>
                                 </div>
                             ) : (
@@ -105,7 +107,7 @@ export default function ProfileInteractive({
                                         {isPending ? '...' : <Check className="w-4 h-4" />}
                                     </Button>
                                     <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>
-                                        Cancel
+                                        {t('profile.cancel')}
                                     </Button>
                                 </form>
                             )}
@@ -115,7 +117,9 @@ export default function ProfileInteractive({
                     <div className="space-y-4">
                         <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
                             <div className="flex items-center justify-between text-sm mb-2">
-                                <span className="font-semibold flex items-center gap-2"><Trophy className="w-4 h-4 text-primary" /> Niveau {level.level}</span>
+                                <span className="font-semibold flex items-center gap-2">
+                                    <Trophy className="w-4 h-4 text-primary" /> {t('profile.level')} {level.level}
+                                </span>
                                 <span className="text-primary font-semibold">{profile.points || 0} XP</span>
                             </div>
                             <div className="w-full h-2 rounded-full bg-muted overflow-hidden mb-2">
@@ -123,19 +127,19 @@ export default function ProfileInteractive({
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 {level.nextLevelXp
-                                    ? `${level.xpIntoLevel}/${level.xpForNextLevel} XP vers le niveau suivant.`
-                                    : 'Niveau max atteint.'}
+                                    ? `${level.xpIntoLevel}/${level.xpForNextLevel} ${t('profile.xp_needed')}`
+                                    : t('profile.max_level')}
                             </p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                             <div className="p-4 bg-secondary/10 rounded-xl border border-secondary/20 text-center">
-                                <span className="text-xs uppercase tracking-widest font-bold text-secondary-foreground">Lignes</span>
+                                <span className="text-xs uppercase tracking-widest font-bold text-secondary-foreground">{t('profile.lines')}</span>
                                 <div className="text-3xl font-bold mt-1">{profile.total_contributions || 0}</div>
                             </div>
                             <div className="p-4 bg-amber-500/10 rounded-xl border border-amber-500/20 text-center">
                                 <span className="text-xs uppercase tracking-widest font-bold text-amber-700 inline-flex items-center gap-1">
-                                    <Flame className="w-3.5 h-3.5" /> Streak
+                                    <Flame className="w-3.5 h-3.5" /> {t('profile.streak')}
                                 </span>
                                 <div className="text-3xl font-bold mt-1 text-amber-700">{profile.current_streak || 0}</div>
                             </div>
@@ -145,23 +149,23 @@ export default function ProfileInteractive({
             </div>
 
             <div className="bg-card border border-border rounded-xl p-8 shadow-sm">
-                <h2 className="text-2xl font-heading font-semibold mb-2">Boosts et badges a debloquer</h2>
-                <p className="text-sm text-muted-foreground mb-6">Double XP, paliers, badges verrouilles et progression en direct.</p>
+                <h2 className="text-2xl font-heading font-semibold mb-2">{t('profile.boosts_badges_desc')}</h2>
+                <p className="text-sm text-muted-foreground mb-6">{t('profile.boosts_badges_desc')}</p>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
                     <div className="rounded-xl border border-amber-500/20 p-4 bg-amber-500/5">
-                        <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">Boosts actifs</p>
+                        <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t('profile.boosts_title')}</p>
                         <div className="flex flex-wrap gap-2">
                             {boosts.length > 0 ? boosts.map((boost) => (
                                 <span key={boost.slug} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold ${boost.isDoubleXp ? 'border-amber-500/40 bg-amber-500/10 text-amber-700' : 'border-primary/30 bg-primary/10 text-primary'}`}>
                                     <Flame className="w-3 h-3" /> {boost.label}
                                 </span>
-                            )) : <span className="text-xs text-muted-foreground">Aucun boost actif pour le moment.</span>}
+                            )) : <span className="text-xs text-muted-foreground">{t('profile.no_boosts')}</span>}
                         </div>
                     </div>
 
                     <div className="rounded-xl border border-secondary/20 p-4 bg-secondary/5 lg:col-span-2">
-                        <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">Prochain objectif</p>
+                        <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t('profile.next_goal')}</p>
                         {nextBadge ? (
                             <>
                                 <div className="flex items-center justify-between mb-1">
@@ -175,7 +179,7 @@ export default function ProfileInteractive({
                                 <div className="mt-2 text-xs text-muted-foreground">{nextBadge.currentValue}/{nextBadge.target}</div>
                             </>
                         ) : (
-                            <p className="text-sm text-muted-foreground">Tous les badges disponibles sont debloques.</p>
+                            <p className="text-sm text-muted-foreground">{t('profile.all_badges_unlocked')}</p>
                         )}
                     </div>
                 </div>
@@ -203,7 +207,7 @@ export default function ProfileInteractive({
             {achievements && achievements.length > 0 && (
                 <div className="bg-card border border-border rounded-xl p-8 shadow-sm">
                     <h2 className="text-2xl font-heading font-semibold mb-6 flex items-center gap-2">
-                        Badges debloques <span className="text-sm font-normal text-muted-foreground">({achievements.length})</span>
+                        {t('profile.unlocked_badges')} <span className="text-sm font-normal text-muted-foreground">({achievements.length})</span>
                     </h2>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {achievements.map((a, i) => (
@@ -221,30 +225,30 @@ export default function ProfileInteractive({
             )}
 
             <div className="bg-card border border-border rounded-xl p-8 shadow-sm">
-                <h2 className="text-2xl font-heading font-semibold mb-6">Historique des transcriptions</h2>
+                <h2 className="text-2xl font-heading font-semibold mb-6">{t('profile.history')}</h2>
 
                 {tList.length === 0 ? (
-                    <p className="text-muted-foreground">You haven&apos;t made any transcriptions yet.</p>
+                    <p className="text-muted-foreground">{t('profile.no_history')}</p>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left border-collapse">
                             <thead className="bg-muted/50 text-muted-foreground border-b border-border">
                                 <tr>
-                                    <th className="px-4 py-3 font-medium">Segment</th>
-                                    <th className="px-4 py-3 font-medium">Text</th>
-                                    <th className="px-4 py-3 font-medium">Date</th>
-                                    <th className="px-4 py-3 font-medium">Status</th>
-                                    <th className="px-4 py-3 font-medium text-right">Actions</th>
+                                    <th className="px-4 py-3 font-medium">{t('profile.table_segment')}</th>
+                                    <th className="px-4 py-3 font-medium">{t('profile.table_text')}</th>
+                                    <th className="px-4 py-3 font-medium">{t('profile.table_date')}</th>
+                                    <th className="px-4 py-3 font-medium">{t('profile.table_status')}</th>
+                                    <th className="px-4 py-3 font-medium text-right">{t('profile.table_actions')}</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {tList.map((t) => (
-                                    <tr key={t.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+                                {tList.map((tItem) => (
+                                    <tr key={tItem.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                                         <td className="px-4 py-3 align-top min-w-[200px]">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-12 h-12 rounded border border-border overflow-hidden flex-shrink-0 bg-muted">
-                                                    {t.segments?.image_url ? (
-                                                        <img src={t.segments.image_url || undefined} alt="segment" className="w-full h-full object-cover" />
+                                                    {tItem.segments?.image_url ? (
+                                                        <img src={tItem.segments.image_url || undefined} alt="segment" className="w-full h-full object-cover" />
                                                     ) : (
                                                         <div className="w-full h-full flex items-center justify-center">
                                                             <ImageIcon className="w-5 h-5 text-muted-foreground opacity-30" />
@@ -252,13 +256,13 @@ export default function ProfileInteractive({
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="font-semibold text-xs text-primary">{t.segments?.manuscripts?.title || 'Unknown'}</span>
-                                                    <span className="text-xs text-muted-foreground">Order: #{t.segments?.order_index || 0}</span>
+                                                    <span className="font-semibold text-xs text-primary">{tItem.segments?.manuscripts?.title || 'Unknown'}</span>
+                                                    <span className="text-xs text-muted-foreground">Order: #{tItem.segments?.order_index || 0}</span>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 align-top w-full max-w-[300px]">
-                                            {editingTId === t.id ? (
+                                            {editingTId === tItem.id ? (
                                                 <div className="flex flex-col gap-2">
                                                     <textarea
                                                         value={editingText}
@@ -268,7 +272,7 @@ export default function ProfileInteractive({
                                                     />
                                                     <div className="flex gap-2 justify-end">
                                                         <Button size="sm" onClick={handleSaveEdit} disabled={isPending}>
-                                                            <Save className="w-3.5 h-3.5 mr-1" /> Enregistrer
+                                                            <Save className="w-3.5 h-3.5 mr-1" /> {t('transcribe.save_edit')}
                                                         </Button>
                                                         <Button size="sm" variant="ghost" onClick={() => setEditingTId(null)}>
                                                             <X className="w-3.5 h-3.5" />
@@ -276,33 +280,33 @@ export default function ProfileInteractive({
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <p className="font-arabic text-lg" dir="rtl">{t.text}</p>
+                                                <p className="font-arabic text-lg" dir="rtl">{tItem.text}</p>
                                             )}
                                         </td>
                                         <td className="px-4 py-3 align-top text-muted-foreground whitespace-nowrap">
-                                            {new Date(t.submitted_at).toLocaleDateString()}
+                                            {new Date(tItem.submitted_at).toLocaleDateString()}
                                         </td>
                                         <td className="px-4 py-3 align-top">
-                                            {t.is_validated ? (
+                                            {tItem.is_validated ? (
                                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/20 text-success">
-                                                    Validated
+                                                    {t('profile.status_validated')}
                                                 </span>
                                             ) : (
                                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
-                                                    Pending
+                                                    {t('profile.status_pending')}
                                                 </span>
                                             )}
                                         </td>
                                         <td className="px-4 py-3 align-top text-right whitespace-nowrap">
-                                            {!t.is_validated && editingTId !== t.id && (
+                                            {!tItem.is_validated && editingTId !== tItem.id && (
                                                 <div className="flex justify-end gap-1">
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
                                                         className="text-primary hover:bg-primary/10"
                                                         onClick={() => {
-                                                            setEditingTId(t.id)
-                                                            setEditingText(t.text)
+                                                            setEditingTId(tItem.id)
+                                                            setEditingText(tItem.text)
                                                         }}
                                                     >
                                                         <Edit3 className="w-4 h-4" />
@@ -311,7 +315,7 @@ export default function ProfileInteractive({
                                                         variant="ghost"
                                                         size="sm"
                                                         className="text-destructive hover:bg-destructive/10"
-                                                        onClick={() => handleDelete(t.id)}
+                                                        onClick={() => handleDelete(tItem.id)}
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </Button>
@@ -328,4 +332,3 @@ export default function ProfileInteractive({
         </div>
     )
 }
-

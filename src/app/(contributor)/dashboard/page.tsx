@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import { Flame, Hexagon, BookOpen, PenTool, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getLevelProgress } from '@/lib/gamification'
+import { cookies } from 'next/headers'
+import { translate } from '@/lib/language-context'
 
 // Simple hash utility to generate consistent colors for avatars based on username
 function getAvatarColor(str: string) {
@@ -22,6 +24,9 @@ export default async function DashboardPage() {
     if (!user) {
         redirect('/auth/login')
     }
+
+    const cookieStore = await cookies()
+    const lang = (cookieStore.get('waraka_lang')?.value || 'fr') as 'en' | 'fr' | 'ar'
 
     // Fetch user profile stats
     const { data: profile, error: profileError } = await supabase
@@ -63,9 +68,11 @@ export default async function DashboardPage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] text-center gap-4">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <h2 className="text-xl font-semibold">Setting up your profile...</h2>
-                <p className="text-muted-foreground">This usually takes a few seconds after signing up.</p>
-                <Button onClick={() => window.location.reload()} variant="outline">Refresh Page</Button>
+                <h2 className="text-xl font-semibold">{translate('dashboard.setting_up', lang)}</h2>
+                <p className="text-muted-foreground">{translate('dashboard.setting_up_desc', lang)}</p>
+                <Button asChild variant="outline">
+                    <Link href="/dashboard">{translate('dashboard.refresh', lang)}</Link>
+                </Button>
             </div>
         )
     }
@@ -74,7 +81,7 @@ export default async function DashboardPage() {
     const initials = profile.display_name?.substring(0, 2).toUpperCase() || profile.username.substring(0, 2).toUpperCase()
 
     return (
-        <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto py-8">
+        <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto py-8 px-4 sm:px-6">
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 w-full">
 
@@ -108,9 +115,12 @@ export default async function DashboardPage() {
                             </div>
                             <div className="flex flex-col items-center p-4 bg-secondary/10 rounded-lg border border-secondary/20">
                                 <span className="text-sm text-secondary-foreground mb-1 flex items-center gap-1 uppercase tracking-wider font-semibold">
-                                    <Flame className="w-4 h-4 text-orange-500" /> Streak
+                                    <Flame className="w-4 h-4 text-orange-500" /> {translate('profile.streak', lang)}
                                 </span>
-                                <span className="text-3xl font-bold font-sans text-secondary-foreground">{profile.current_streak} <span className="text-lg opacity-70">days</span></span>
+                                <span className="text-3xl font-bold font-sans text-secondary-foreground">
+                                    {profile.current_streak}{' '}
+                                    <span className="text-lg opacity-70">{translate('dashboard.streak_days', lang)}</span>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -119,7 +129,7 @@ export default async function DashboardPage() {
                     <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
                         <div className="flex items-center gap-2 mb-4">
                             <Hexagon className="w-5 h-5 text-primary" />
-                            <h3 className="font-heading text-xl font-semibold">Top Scholars</h3>
+                            <h3 className="font-heading text-xl font-semibold">{translate('dashboard.top_scholars', lang)}</h3>
                         </div>
                         <div className="flex flex-col gap-2">
                             {leaderboard?.map((u, i) => (
@@ -145,22 +155,22 @@ export default async function DashboardPage() {
                         <div className="absolute opacity-5 pointer-events-none inset-0 bg-[url('https://www.transparenttextures.com/patterns/arabesque.png')] mix-blend-multiply"></div>
 
                         <BookOpen className="w-16 h-16 text-primary mb-6 opacity-80" />
-                        <h2 className="font-heading text-4xl text-foreground font-semibold mb-2">Resume Translation</h2>
+                        <h2 className="font-heading text-4xl text-foreground font-semibold mb-2">{translate('dashboard.resume', lang)}</h2>
                         <p className="text-muted-foreground mb-8 text-lg">
-                            There are currently <span className="font-bold text-foreground">{pendingCount?.toLocaleString() || 0}</span> segments waiting to be transcribed.
+                            {translate('dashboard.pending_desc', lang, { count: pendingCount?.toLocaleString() || '0' })}
                         </p>
                         <Link
                             href="/transcribe"
                             className="bg-primary text-primary-foreground px-10 py-5 rounded-md font-bold text-xl hover:bg-primary/90 transition-all shadow-md flex items-center gap-3 hover:scale-105"
                         >
-                            <PenTool className="w-6 h-6" /> Start Transcribing
+                            <PenTool className="w-6 h-6" /> {translate('dashboard.start_button', lang)}
                         </Link>
                     </div>
 
                     {/* Recent Contributions */}
                     <div className="bg-card border border-border rounded-xl p-6 shadow-sm flex-1">
                         <h3 className="font-heading text-xl font-semibold mb-6 flex items-center gap-2">
-                            Recent Contributions
+                            {translate('dashboard.recent_contributions', lang)}
                         </h3>
 
                         {recentTranscriptions && recentTranscriptions.length > 0 ? (
@@ -168,7 +178,6 @@ export default async function DashboardPage() {
                                 {recentTranscriptions.map((t: any) => (
                                     <div key={t.id} className="flex gap-4 p-4 rounded-lg bg-muted/30 border border-border/50">
                                         <div className="w-16 h-16 bg-muted rounded-md border border-border overflow-hidden shrink-0 relative">
-                                            {/* Ideally an actual Next/Image but we use standard img for dynamic URLs */}
                                             {t.segments?.image_url ? (
                                                 <img src={t.segments.image_url || undefined} alt="Segment crop" className="w-full h-full object-cover" />
                                             ) : (
@@ -179,11 +188,11 @@ export default async function DashboardPage() {
                                             <span className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold truncate">
                                                 {t.segments?.manuscripts?.title || 'Unknown Manuscript'}
                                             </span>
-                                            <p className="font-arabic text-lg leading-relaxed truncate text-foreground dir-rtl w-full bg-background rounded px-2 py-1 border border-border/30" dir="rtl">
+                                            <p className="font-arabic text-lg leading-relaxed truncate text-foreground p-2 bg-background rounded border border-border/30 text-right" dir="rtl">
                                                 {t.text}
                                             </p>
                                             <span className="text-xs text-muted-foreground mt-2">
-                                                {new Date(t.submitted_at).toLocaleDateString()}
+                                                {new Date(t.submitted_at).toLocaleDateString(lang === 'fr' ? 'fr-FR' : lang === 'ar' ? 'ar' : 'en-US')}
                                             </span>
                                         </div>
                                     </div>
@@ -191,7 +200,7 @@ export default async function DashboardPage() {
                             </div>
                         ) : (
                             <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                                <p>You haven&apos;t contributed yet.</p>
+                                <p>{translate('dashboard.no_contributions', lang)}</p>
                             </div>
                         )}
                     </div>

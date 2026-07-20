@@ -10,10 +10,10 @@ export default async function VerifyPage() {
                 <div className="flex flex-col gap-2">
                     <h1 className="text-3xl font-heading font-semibold text-foreground flex items-center gap-3">
                         <ShieldCheck className="w-8 h-8 text-primary" />
-                        Vérification des Transcriptions
+                        Vérification des transcriptions
                     </h1>
                     <p className="text-muted-foreground">
-                        Examinez les propositions des contributeurs. Validez la meilleure transcription ou modifiez-la pour définir la version officielle.
+                        Comparez les propositions des contributeurs segment par segment. Validez la meilleure transcription ou modifiez-la pour définir la version officielle.
                     </p>
                 </div>
 

@@ -1,10 +1,10 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
-import { ChevronLeft, Check, X, FileImage, ShieldCheck } from 'lucide-react'
-import ValidationButtons from './ValidationButtons'
+import { ChevronLeft, FileImage } from 'lucide-react'
 import BulkUploadPagesModal from './BulkUploadPagesModal'
 import ReferenceTextUpload from './ReferenceTextUpload'
 import PdfUpload from './PdfUpload'
+import ManuscriptListActions from '../ManuscriptListActions'
 
 export default async function ManuscriptDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
@@ -32,7 +32,10 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
     // Sort pages
     const pages = manuscript.pages?.sort((a: any, b: any) => a.order_index - b.order_index) || []
     const totalLines = pages.reduce((acc: number, p: any) => acc + (p.segments?.length || 0), 0)
+    const validatedLines = pages.reduce((acc: number, p: any) => acc + (p.segments?.filter((s: any) => s.status === 'validated').length || 0), 0)
+    const reviewCount = pages.reduce((acc: number, p: any) => acc + (p.segments?.filter((s: any) => s.status !== 'validated' && s.status !== 'archived').length || 0), 0)
     const conflictCount = pages.reduce((acc: number, p: any) => acc + (p.segments?.filter((s: any) => s.status === 'conflict').length || 0), 0)
+    const progressPct = totalLines > 0 ? Math.round((validatedLines / totalLines) * 100) : 0
 
     return (
         <div className="flex flex-col gap-6">
@@ -48,9 +51,37 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
                         <span className="text-sm font-normal bg-muted/50 px-3 py-1 rounded-full text-muted-foreground border border-border">
                             {pages.length} Pages / {totalLines} Lines
                         </span>
+                        <ManuscriptListActions
+                            id={manuscript.id}
+                            currentTitle={manuscript.title}
+                            currentSource={manuscript.source || ''}
+                            currentDescription={manuscript.description || ''}
+                        />
                     </h1>
-                    <p className="text-muted-foreground">{manuscript.description}</p>
-                    <div className="mt-4 max-w-sm flex flex-col gap-3">
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        <span className="rounded-full border border-border bg-card px-2.5 py-1">
+                            Source: {manuscript.source || 'non renseignée'}
+                        </span>
+                        <span className="rounded-full border border-border bg-card px-2.5 py-1">
+                            Progression: {progressPct}%
+                        </span>
+                    </div>
+                    {manuscript.description && <p className="max-w-3xl text-muted-foreground">{manuscript.description}</p>}
+                    <div className="mt-4 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div className="rounded-xl border border-border bg-card p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Validées</p>
+                            <p className="mt-1 text-2xl font-bold text-green-700">{validatedLines}</p>
+                        </div>
+                        <div className="rounded-xl border border-border bg-card p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">À revoir</p>
+                            <p className="mt-1 text-2xl font-bold text-amber-700">{reviewCount}</p>
+                        </div>
+                        <div className="rounded-xl border border-border bg-card p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conflits</p>
+                            <p className="mt-1 text-2xl font-bold text-destructive">{conflictCount}</p>
+                        </div>
+                    </div>
+                    <div className="mt-2 max-w-sm flex flex-col gap-3">
                         <ReferenceTextUpload manuscriptId={manuscript.id} currentUrl={manuscript.reference_text_url} />
                         <PdfUpload manuscriptId={manuscript.id} currentUrl={manuscript.pdf_url} />
                     </div>
@@ -65,7 +96,7 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
                     </Link>
                     {conflictCount > 0 && (
                         <Link
-                            href={`/admin/manuscripts/${manuscript.id}/conflicts`}
+                            href="/admin/verify"
                             className="inline-flex items-center gap-2 bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20 px-4 py-2 rounded-md transition-colors shadow-sm font-medium"
                         >
                             Review {conflictCount} Conflict{conflictCount !== 1 ? 's' : ''}

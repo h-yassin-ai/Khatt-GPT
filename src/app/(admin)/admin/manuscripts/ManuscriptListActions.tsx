@@ -1,63 +1,149 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trash2, Edit2 } from 'lucide-react'
-import { deleteManuscript, updateManuscriptTitle } from './actions'
+import { Edit2, Loader2, Trash2 } from 'lucide-react'
+import { deleteManuscript, updateManuscriptMetadata } from './actions'
 import { useToast } from '@/hooks/use-toast'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 
-export default function ManuscriptListActions({ id, currentTitle }: { id: string, currentTitle: string }) {
-    const [loading, setLoading] = useState(false)
+export default function ManuscriptListActions({
+    id,
+    currentTitle,
+    currentSource = '',
+    currentDescription = '',
+}: {
+    id: string
+    currentTitle: string
+    currentSource?: string
+    currentDescription?: string
+}) {
+    const [open, setOpen] = useState(false)
+    const [title, setTitle] = useState(currentTitle)
+    const [source, setSource] = useState(currentSource)
+    const [description, setDescription] = useState(currentDescription)
+    const [loadingDelete, setLoadingDelete] = useState(false)
+    const [isPending, startTransition] = useTransition()
     const router = useRouter()
     const { toast } = useToast()
 
-    const handleEditTitle = async () => {
-        const newTitle = prompt('Enter new title for the manuscript:', currentTitle)
-        if (!newTitle || newTitle === currentTitle) return
+    const resetForm = () => {
+        setTitle(currentTitle)
+        setSource(currentSource)
+        setDescription(currentDescription)
+    }
 
-        setLoading(true)
-        const res = await updateManuscriptTitle(id, newTitle)
-        if (res?.error) {
-            toast({ title: 'Error', description: res.error, variant: 'destructive' })
-            setLoading(false)
-        } else {
-            toast({ title: 'Manuscript updated.' })
-            router.refresh()
-            setLoading(false)
+    const handleSave = () => {
+        if (!title.trim()) {
+            toast({ title: 'Titre requis', description: 'Le livre doit avoir un titre.', variant: 'destructive' })
+            return
         }
+
+        startTransition(async () => {
+            const res = await updateManuscriptMetadata(id, {
+                title,
+                source,
+                description,
+            })
+
+            if (res?.error) {
+                toast({ title: 'Erreur', description: res.error, variant: 'destructive' })
+                return
+            }
+
+            toast({ title: 'Livre mis à jour', description: 'Les métadonnées ont été enregistrées.' })
+            setOpen(false)
+            router.refresh()
+        })
     }
 
     const handleDelete = async () => {
-        if (!confirm('Delete this manuscript and ALL its pages and lines? This is irreversible.')) return
-        setLoading(true)
+        if (!confirm('Supprimer ce livre, toutes ses pages et toutes ses lignes ? Cette action est irréversible.')) return
+        setLoadingDelete(true)
         const res = await deleteManuscript(id)
         if (res?.error) {
-            toast({ title: 'Error', description: res.error, variant: 'destructive' })
-            setLoading(false)
+            toast({ title: 'Erreur', description: res.error, variant: 'destructive' })
+            setLoadingDelete(false)
         } else {
-            toast({ title: 'Manuscript deleted.' })
+            toast({ title: 'Livre supprimé' })
             router.refresh()
         }
     }
 
     return (
-        <div className="flex items-center gap-1">
-            <button
-                onClick={handleEditTitle}
-                disabled={loading}
-                title="Edit title"
-                className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors disabled:opacity-40"
-            >
-                <Edit2 className="w-4 h-4" />
-            </button>
-            <button
-                onClick={handleDelete}
-                disabled={loading}
-                title="Delete manuscript"
-                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors disabled:opacity-40"
-            >
-                <Trash2 className="w-4 h-4" />
-            </button>
-        </div>
+        <>
+            <div className="flex items-center gap-1">
+                <button
+                    onClick={() => setOpen(true)}
+                    disabled={isPending || loadingDelete}
+                    title="Modifier les métadonnées"
+                    className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:opacity-40"
+                >
+                    <Edit2 className="h-4 w-4" />
+                </button>
+                <button
+                    onClick={handleDelete}
+                    disabled={isPending || loadingDelete}
+                    title="Supprimer le livre"
+                    className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
+                >
+                    {loadingDelete ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                </button>
+            </div>
+
+            <Dialog open={open} onOpenChange={(next) => {
+                setOpen(next)
+                if (!next) resetForm()
+            }}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Modifier le livre</DialogTitle>
+                        <DialogDescription>
+                            Ces informations aident les contributeurs et les vérificateurs à comprendre le corpus.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Titre</label>
+                            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Source / collection</label>
+                            <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="Bibliothèque, collection, cote..." />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Description</label>
+                            <Textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Contexte, folios, type d'écriture, consignes de transcription..."
+                                className="min-h-28"
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
+                            Annuler
+                        </Button>
+                        <Button onClick={handleSave} disabled={isPending}>
+                            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Enregistrer
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     )
 }

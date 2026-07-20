@@ -86,7 +86,10 @@ export default function BulkUploadPagesModal({ manuscriptId, currentMaxOrder }: 
         try {
             const zip = new JSZip()
             const contents = await zip.loadAsync(file)
-            const allFiles = Object.keys(contents.files)
+            const allFiles = Object.keys(contents.files).filter(name => {
+                const basename = name.split('/').pop() || ''
+                return !basename.startsWith('.') && !name.includes('__MACOSX')
+            })
 
             // Group files by folder
             const folderGroups: Record<string, string[]> = {}
@@ -113,12 +116,16 @@ export default function BulkUploadPagesModal({ manuscriptId, currentMaxOrder }: 
                 const files = folderGroups[folder]
 
                 // 1. Find Page Image (The one not having "line" in name, or the shortest name, or strictly "page.png")
-                const images = files.filter(f => /\.(jpe?g|png|webp)$/i.test(f))
+                const images = files
+                    .filter(f => /\.(jpe?g|png|webp)$/i.test(f))
+                    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
                 if (images.length === 0) continue
 
                 // Heuristic: the shortest name or exactly named folder name .png is the main page
                 const mainPageImage = images.reduce((a, b) => a.split('/').pop()!.length <= b.split('/').pop()!.length ? a : b)
-                const segmentImages = images.filter(f => f !== mainPageImage)
+                const segmentImages = images
+                    .filter(f => f !== mainPageImage)
+                    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
 
                 setStatusText(`Processing ${folder}...`)
 
@@ -126,7 +133,8 @@ export default function BulkUploadPagesModal({ manuscriptId, currentMaxOrder }: 
                 const pageBlob = await contents.files[mainPageImage].async('blob')
                 const pageExt = mainPageImage.split('.').pop()
                 const pagePath = `${manuscriptId}/pages/${uuidv4()}.${pageExt}`
-                await supabase.storage.from('manuscripts').upload(pagePath, pageBlob)
+                const { error: pageUploadError } = await supabase.storage.from('manuscripts').upload(pagePath, pageBlob)
+                if (pageUploadError) throw new Error(`Could not upload ${mainPageImage}: ${pageUploadError.message}`)
                 const { data: { publicUrl: pageUrl } } = supabase.storage.from('manuscripts').getPublicUrl(pagePath)
 
                 currentOrder++
@@ -147,7 +155,8 @@ export default function BulkUploadPagesModal({ manuscriptId, currentMaxOrder }: 
                     const segExt = segImgPath.split('.').pop()
                     const segStoragePath = `${manuscriptId}/segments/${uuidv4()}.${segExt}`
 
-                    await supabase.storage.from('manuscripts').upload(segStoragePath, segBlob)
+                    const { error: segmentUploadError } = await supabase.storage.from('manuscripts').upload(segStoragePath, segBlob)
+                    if (segmentUploadError) throw new Error(`Could not upload ${segImgPath}: ${segmentUploadError.message}`)
                     const { data: { publicUrl: segUrl } } = supabase.storage.from('manuscripts').getPublicUrl(segStoragePath)
 
                     // Try segment-specific XML first, then fall back to a "page" XML from the same folder
