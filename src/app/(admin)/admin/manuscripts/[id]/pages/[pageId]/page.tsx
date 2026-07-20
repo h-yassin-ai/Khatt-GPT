@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid'
 import {
     UploadCloud, ChevronLeft, Trash2, CheckCircle2, Clock,
     GripVertical, Pencil, Check, X, AlertCircle, FileImage,
-    Eye, MoreHorizontal, MessageSquare, Flag
+    Eye, MoreHorizontal, MessageSquare, Flag, AlertTriangle
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
@@ -42,6 +42,9 @@ type Segment = {
     status: string
     polygon?: any
     transcription_count: number
+    segmentation_issue_reported?: boolean
+    segmentation_issue_count?: number
+    segmentation_issue_reported_at?: string
     transcriptions?: { id: string, text: string, submitted_at: string, contributor_id: string, is_validated: boolean }[]
 }
 
@@ -206,6 +209,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
     }
 
     const getStatusColor = (seg: Segment) => {
+        if (seg.segmentation_issue_reported) return 'purple'
         if (seg.status === 'validated') return 'green'
         if (seg.status === 'flagged' || seg.status === 'conflict') return 'red'
         if ((seg.transcriptions?.length || 0) > 1) return 'orange'
@@ -418,16 +422,23 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                                             {(() => {
                                                 const color = getStatusColor(seg)
                                                 return (
-                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${color === 'green' ? 'bg-green-500/10 text-green-600 border border-green-500/20' :
-                                                        color === 'red' ? 'bg-red-500/10 text-red-600 border border-red-500/20' :
-                                                            color === 'orange' ? 'bg-orange-500/10 text-orange-600 border border-orange-500/20' :
-                                                                'bg-muted/70 text-muted-foreground border border-border/50'
-                                                        }`}>
-                                                        {seg.status === 'flagged' ? 'FLAGGED' : seg.status}
+                                                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${color === 'green' ? 'bg-green-500/10 text-green-600 border border-green-500/20' :
+                                                         color === 'red' ? 'bg-red-500/10 text-red-600 border border-red-500/20' :
+                                                             color === 'orange' ? 'bg-orange-500/10 text-orange-600 border border-orange-500/20' :
+                                                                 color === 'purple' ? 'bg-purple-500/10 text-purple-700 border border-purple-500/20' :
+                                                                 'bg-muted/70 text-muted-foreground border border-border/50'
+                                                         }`}>
+                                                        {seg.segmentation_issue_reported ? 'SEGMENTATION' : seg.status === 'flagged' ? 'FLAGGED' : seg.status}
                                                         {color === 'orange' && seg.status !== 'conflict' && ' (MULTIPLE)'}
                                                     </span>
                                                 )
                                             })()}
+                                            {seg.segmentation_issue_reported && (
+                                                <span className="text-[10px] text-purple-700 flex items-center gap-1 font-semibold">
+                                                    <AlertTriangle className="w-2.5 h-2.5" />
+                                                    {seg.segmentation_issue_count || 1} signalement
+                                                </span>
+                                            )}
                                             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                                                 <Clock className="w-2.5 h-2.5" /> {seg.transcriptions?.length || 0} subs
                                             </span>
@@ -504,6 +515,12 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                                         <span className="text-sm text-muted-foreground">
                                             {reviewSegment.transcriptions?.length || 0} transcriptions reçues
                                         </span>
+                                        {reviewSegment.segmentation_issue_reported && (
+                                            <Badge className="bg-purple-500/10 text-purple-700 border-purple-500/20">
+                                                <AlertTriangle className="w-3 h-3 mr-1" />
+                                                Segmentation a revoir ({reviewSegment.segmentation_issue_count || 1})
+                                            </Badge>
+                                        )}
                                     </div>
                                 </div>
                             </div>

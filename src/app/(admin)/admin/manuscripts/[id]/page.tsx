@@ -19,7 +19,7 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
                 image_url,
                 order_index,
                 created_at,
-                segments ( id, status )
+                segments ( id, status, segmentation_issue_reported )
             )
         `)
         .eq('id', id)
@@ -33,8 +33,8 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
     const pages = manuscript.pages?.sort((a: any, b: any) => a.order_index - b.order_index) || []
     const totalLines = pages.reduce((acc: number, p: any) => acc + (p.segments?.length || 0), 0)
     const validatedLines = pages.reduce((acc: number, p: any) => acc + (p.segments?.filter((s: any) => s.status === 'validated').length || 0), 0)
-    const reviewCount = pages.reduce((acc: number, p: any) => acc + (p.segments?.filter((s: any) => s.status !== 'validated' && s.status !== 'archived').length || 0), 0)
-    const conflictCount = pages.reduce((acc: number, p: any) => acc + (p.segments?.filter((s: any) => s.status === 'conflict').length || 0), 0)
+    const reviewCount = pages.reduce((acc: number, p: any) => acc + (p.segments?.filter((s: any) => (s.status !== 'validated' && s.status !== 'archived') || s.segmentation_issue_reported).length || 0), 0)
+    const conflictCount = pages.reduce((acc: number, p: any) => acc + (p.segments?.filter((s: any) => s.status === 'conflict' || s.segmentation_issue_reported).length || 0), 0)
     const progressPct = totalLines > 0 ? Math.round((validatedLines / totalLines) * 100) : 0
 
     return (

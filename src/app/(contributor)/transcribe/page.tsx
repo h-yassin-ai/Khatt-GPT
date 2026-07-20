@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   getNextSegment,
   submitTranscription,
   flagSegment,
+  reportSegmentationIssue,
   updateTranscription,
   getPendingSegmentCount,
   getGamificationSnapshot,
@@ -21,6 +22,7 @@ import {
   Maximize,
   Send,
   AlertCircle,
+  AlertTriangle,
   Sparkles,
   Keyboard,
   BookOpen,
@@ -32,8 +34,8 @@ import {
   ImageIcon,
   CheckCircle2,
   PenLine,
-  Highlighter,
   FileImage,
+  FileText,
   Trophy,
   Zap,
   Flame,
@@ -44,7 +46,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import DraggableKeyboard from "@/components/DraggableKeyboard";
-import { useRef } from "react";
 import { get, set } from "idb-keyval";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/lib/language-context";
@@ -73,6 +74,7 @@ type SegmentData = {
       role: string;
     };
   }[];
+  segmentation_issue_reported?: boolean;
 };
 
 type GamificationSnapshot = {
@@ -109,6 +111,34 @@ type GamificationSnapshot = {
   } | null;
 };
 
+const normalizeArabicForSearch = (value: string) =>
+  value
+    .normalize("NFKD")
+    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "")
+    .replace(/\u0640/g, "")
+    .replace(/[إأآٱ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/ة/g, "ه");
+
+function buildArabicSearchIndex(value: string) {
+  let normalized = "";
+  const normalizedToOriginal: number[] = [];
+
+  for (let i = 0; i < value.length; i++) {
+    const normalizedChar = normalizeArabicForSearch(value[i]);
+    if (!normalizedChar) continue;
+
+    for (let j = 0; j < normalizedChar.length; j++) {
+      normalized += normalizedChar[j];
+      normalizedToOriginal.push(i);
+    }
+  }
+
+  return { normalized, normalizedToOriginal };
+}
+
 export default function TranscribePage() {
   return (
     <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
@@ -132,16 +162,18 @@ function TranscribeContent() {
   const [referenceText, setReferenceText] = useState("");
   const [loadingRef, setLoadingRef] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<
     "reference" | "pdf" | "community"
-  >("community");
+  >("reference");
+  const [activeReferenceMatch, setActiveReferenceMatch] = useState(0);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
   const [zoomScale, setZoomScale] = useState(1);
   const [zoomPos, setZoomPos] = useState({ x: 0, y: 0 });
-  const [isAutoZoomEnabled, setIsAutoZoomEnabled] = useState(true);
   const [isDraggingZoom, setIsDraggingZoom] = useState(false);
+  const [reportingSegmentation, setReportingSegmentation] = useState(false);
   const [gamification, setGamification] = useState<GamificationSnapshot | null>(
     null,
   );
@@ -160,7 +192,7 @@ function TranscribeContent() {
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const rewardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -312,10 +344,10 @@ function TranscribeContent() {
     };
   }, [isDraggingZoom]);
 
-  const resetZoom = () => {
+  const resetZoom = useCallback(() => {
     setZoomScale(1);
     setZoomPos({ x: 0, y: 0 });
-  };
+  }, []);
 
   const centerOnSegment = useCallback(() => {
     if (
@@ -370,20 +402,16 @@ function TranscribeContent() {
     const maxZoom = window.innerWidth < 768 ? 2.8 : 2.5;
     targetZoom = Math.min(Math.max(targetZoom, 1.0), maxZoom);
 
-    if (!isAutoZoomEnabled) {
-      targetZoom = 1.0;
-    }
-
-    // Pan so polygon center = container center
-    const panX = (imgSize.width / 2 - polyCenterX) * renderScale;
-    const panY = (imgSize.height / 2 - polyCenterY) * renderScale;
+    // Pan after scale so the polygon center lands in the container center.
+    const panX = (imgSize.width / 2 - polyCenterX) * renderScale * targetZoom;
+    const panY = (imgSize.height / 2 - polyCenterY) * renderScale * targetZoom;
 
     setZoomScale(targetZoom);
 
     // On mobile, offset slightly up so keyboard doesn't cover if they type
     const yOffset = 0; // We return early on mobile now, so yOffset is 0.
     setZoomPos({ x: panX, y: panY + yOffset });
-  }, [segment, imgSize.width, imgSize.height]);
+  }, [segment?.polygon, imgSize.width, imgSize.height, resetZoom]);
 
   const handlePageImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
@@ -392,15 +420,11 @@ function TranscribeContent() {
     setImgSize({ width: natW, height: natH });
   };
 
-  // Auto-center on desktop, zoom out to fit page on mobile
+  // Start every desktop segment focused on the active line, with corrected centering.
   useEffect(() => {
     if (imgSize.width > 0 && segment?.id) {
-      const isMobile = window.innerWidth < 1024;
-      if (isMobile) {
-        resetZoom();
-      } else {
-        setTimeout(() => centerOnSegment(), 100);
-      }
+      const timer = window.setTimeout(() => centerOnSegment(), 120);
+      return () => window.clearTimeout(timer);
     }
   }, [segment?.id, imgSize.width, centerOnSegment]);
 
@@ -552,6 +576,33 @@ function TranscribeContent() {
     setSubmitting(false);
   };
 
+  const handleReportSegmentationIssue = async () => {
+    if (!segment) return;
+
+    setReportingSegmentation(true);
+    const result = await reportSegmentationIssue(segment.id);
+
+    if (result?.error) {
+      toast({
+        title: t("transcribe.segmentation_report_error"),
+        description: result.error,
+        variant: "destructive",
+      });
+    } else {
+      setSegment((current) =>
+        current?.id === segment.id
+          ? { ...current, segmentation_issue_reported: true }
+          : current,
+      );
+      toast({
+        title: t("transcribe.segmentation_reported_title"),
+        description: t("transcribe.segmentation_reported_desc"),
+      });
+    }
+
+    setReportingSegmentation(false);
+  };
+
   const handleKeyPress = (char: string) => {
     if (!textareaRef.current) {
       setText((prev) => prev + char);
@@ -630,75 +681,141 @@ function TranscribeContent() {
     text.trim() !== "" &&
     /[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\s.,،؟!؛'"]/g.test(text);
 
-  const getHighlightedText = (text: string, highlight: string) => {
-    if (!highlight.trim()) return text;
-    const regex = new RegExp(`(${highlight})`, "gi");
-    const parts = text.split(regex);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 180);
+
+    return () => window.clearTimeout(timer);
+  }, [searchTerm]);
+
+  const referenceSearchIndex = useMemo(
+    () => buildArabicSearchIndex(referenceText),
+    [referenceText],
+  );
+
+  const normalizedSearchTerm = debouncedSearchTerm.trim();
+  const normalizedSearchNeedle = useMemo(
+    () => normalizeArabicForSearch(normalizedSearchTerm).trim(),
+    [normalizedSearchTerm],
+  );
+
+  const referenceMatches = useMemo(() => {
+    if (!normalizedSearchNeedle || !referenceText) return [];
+
+    const matches = [];
+    let fromIndex = 0;
+
+    while (fromIndex < referenceSearchIndex.normalized.length) {
+      const normalizedIndex = referenceSearchIndex.normalized.indexOf(
+        normalizedSearchNeedle,
+        fromIndex,
+      );
+
+      if (normalizedIndex === -1) break;
+
+      const originalStart =
+        referenceSearchIndex.normalizedToOriginal[normalizedIndex] ?? 0;
+      const originalEnd =
+        (referenceSearchIndex.normalizedToOriginal[
+          normalizedIndex + normalizedSearchNeedle.length - 1
+        ] ?? originalStart) + 1;
+      const snippetStart = Math.max(0, originalStart - 90);
+      const snippetEnd = Math.min(referenceText.length, originalEnd + 90);
+
+      matches.push({
+        index: originalStart,
+        id: matches.length,
+        start: originalStart,
+        end: originalEnd,
+        snippet: referenceText.substring(snippetStart, snippetEnd),
+        match: referenceText.substring(originalStart, originalEnd),
+      });
+
+      fromIndex = normalizedIndex + Math.max(1, normalizedSearchNeedle.length);
+      if (matches.length > 250) break;
+    }
+
+    return matches;
+  }, [normalizedSearchNeedle, referenceSearchIndex, referenceText]);
+
+  useEffect(() => {
+    setActiveReferenceMatch(0);
+  }, [normalizedSearchNeedle, referenceText]);
+
+  const activeReferenceIndex =
+    referenceMatches.length > 0
+      ? Math.min(activeReferenceMatch, referenceMatches.length - 1)
+      : 0;
+
+  const getHighlightedText = (sourceText: string) => {
+    if (referenceMatches.length === 0) {
+      return <span id="reference-content">{sourceText}</span>;
+    }
+
+    const parts = [];
+    let lastIndex = 0;
+
+    referenceMatches.forEach((match, matchIndex) => {
+      if (match.start > lastIndex) {
+        parts.push(sourceText.slice(lastIndex, match.start));
+      }
+
+      parts.push(
+        <mark
+          key={`match-${matchIndex}`}
+          id={`reference-match-${matchIndex}`}
+          className={`rounded-sm px-0.5 scroll-mt-24 transition-colors ${
+            activeReferenceIndex === matchIndex
+              ? "bg-primary text-primary-foreground ring-2 ring-primary/30"
+              : "bg-primary/25 text-foreground ring-1 ring-primary/15"
+          }`}
+        >
+          {sourceText.slice(match.start, match.end)}
+        </mark>,
+      );
+
+      lastIndex = match.end;
+    });
+
+    if (lastIndex < sourceText.length) {
+      parts.push(sourceText.slice(lastIndex));
+    }
+
     return (
       <span id="reference-content">
-        {parts.map((part, i) => {
-          const isMatch = part.toLowerCase() === highlight.toLowerCase();
-          return isMatch ? (
-            <mark
-              key={i}
-              id={`match-${i}`}
-              className="bg-primary/30 text-foreground ring-1 ring-primary/20 rounded-sm px-0.5 scroll-mt-20 inline-block"
-            >
-              {part}
-            </mark>
-          ) : (
-            part
-          );
-        })}
+        {parts.map((part, i) =>
+          typeof part === "string" ? <span key={`text-${i}`}>{part}</span> : part,
+        )}
       </span>
     );
   };
 
-  const getSearchResults = () => {
-    if (!searchTerm.trim() || !referenceText) return [];
-    const regex = new RegExp(`(${searchTerm})`, "gi");
-    const matches = [];
-    let match;
-    let matchCounter = 0;
-
-    while ((match = regex.exec(referenceText)) !== null) {
-      const start = Math.max(0, match.index - 60);
-      const end = Math.min(
-        referenceText.length,
-        match.index + match[0].length + 60,
-      );
-      matches.push({
-        index: match.index,
-        id: matchCounter,
-        snippet: referenceText.substring(start, end),
-        match: match[0],
-      });
-      matchCounter++;
-      if (matches.length > 100) break;
-    }
-    return matches;
-  };
-
   const scrollToMatch = (id: number) => {
-    const marks = document.querySelectorAll("#reference-content mark");
-    if (marks[id]) {
-      marks[id].scrollIntoView({ behavior: "smooth", block: "center" });
-      marks[id].classList.add(
-        "ring-4",
-        "ring-primary",
-        "transition-all",
-        "duration-500",
-      );
-      setTimeout(() => {
-        marks[id].classList.remove("ring-4", "ring-primary");
-      }, 2000);
-    }
+    setActiveReferenceMatch(id);
+    requestAnimationFrame(() => {
+      const mark = document.getElementById(`reference-match-${id}`);
+      mark?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   };
+
+  const moveReferenceMatch = (direction: "prev" | "next") => {
+    if (referenceMatches.length === 0) return;
+    const nextIndex =
+      direction === "next"
+        ? (activeReferenceIndex + 1) % referenceMatches.length
+        : (activeReferenceIndex - 1 + referenceMatches.length) %
+          referenceMatches.length;
+    scrollToMatch(nextIndex);
+  };
+
+  const currentReferenceMatch =
+    referenceMatches[activeReferenceIndex] || referenceMatches[0];
 
   const topBadges = gamification?.badges?.slice(0, 6) || [];
 
   return (
-    <div className="flex flex-col w-full h-auto lg:h-[calc(100vh-64px)] animate-in fade-in duration-500 overflow-visible lg:overflow-hidden bg-background">
+    <div className="flex flex-col w-full h-[calc(100dvh-64px)] animate-in fade-in duration-500 overflow-hidden bg-background">
       <OnboardingModal />
 
       <AnimatePresence>
@@ -801,16 +918,25 @@ function TranscribeContent() {
 
       {/* Header Area */}
       <div className="w-full flex flex-col sm:flex-row justify-between items-center px-4 py-2 border-b border-border/50 shrink-0 bg-background/50 backdrop-blur-sm z-30 gap-2 min-h-[52px]">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           {/* Sidebar Toggle */}
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`h-8 w-8 p-0 rounded-lg transition-colors border ${isSidebarOpen ? 'bg-primary/10 text-primary border-primary/20' : 'text-muted-foreground border-transparent hover:bg-muted'}`}
-            title={isSidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
+            onClick={() => {
+              if (window.innerWidth < 1024) {
+                setIsNavOpen(true);
+              } else {
+                setIsSidebarOpen((open) => !open);
+              }
+            }}
+            className={`h-9 px-3 gap-2 rounded-lg transition-colors border shrink-0 ${isSidebarOpen ? 'bg-primary/10 text-primary border-primary/20' : 'text-muted-foreground border-border/50 hover:bg-muted'}`}
+            title={isSidebarOpen ? t("transcribe.close_navigation") : t("transcribe.open_navigation")}
           >
             <List className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs font-semibold">
+              {isSidebarOpen ? t("transcribe.close_navigation") : t("transcribe.open_navigation")}
+            </span>
           </Button>
 
           {/* Combined Segment & Manuscript Info */}
@@ -848,16 +974,6 @@ function TranscribeContent() {
           )}
           
           <div className="h-4 w-[1px] bg-border mx-1 hidden sm:block" />
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={centerOnSegment}
-            className="h-8 p-1.5 rounded-full text-primary hover:bg-primary/5 border border-transparent hover:border-primary/10"
-            title={t("transcribe.center_line")}
-          >
-            <Highlighter className="w-4 h-4" />
-          </Button>
 
           {segment?.manuscript_pdf_url && (
             <Button
@@ -935,7 +1051,7 @@ function TranscribeContent() {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="flex flex-1 gap-0 pt-0 min-h-0 relative overflow-visible lg:overflow-hidden">
+      <div className="flex flex-1 gap-0 pt-0 min-h-0 relative overflow-hidden">
         {/* Sidebar Navigation */}
         <AnimatePresence>
           {isSidebarOpen && segment?.manuscript_id && (
@@ -963,11 +1079,11 @@ function TranscribeContent() {
         </AnimatePresence>
 
         {/* Main Content: Image Left, Transcription Right */}
-        <div className="flex-1 flex flex-col lg:flex-row min-w-0 bg-background overflow-visible lg:overflow-hidden relative">
+        <div className="flex-1 flex flex-col lg:flex-row min-w-0 bg-background overflow-hidden relative">
           {/* Image Area — 65% width on large screens */}
           <div
             ref={imageContainerRef}
-            className="w-full h-44 sm:h-52 lg:h-full lg:flex-[2.5] sticky top-16 lg:relative lg:top-auto z-20 flex flex-col justify-center items-center bg-[#F3EFE9] border-b lg:border-b-0 lg:border-r border-border/50 overflow-hidden cursor-crosshair shadow-md lg:shadow-inner shrink-0"
+            className="w-full h-[38dvh] min-h-[220px] sm:h-[42dvh] lg:h-full lg:flex-1 lg:min-w-0 sticky top-0 lg:relative lg:top-auto z-20 flex flex-col justify-center items-center bg-[#F3EFE9] border-b lg:border-b-0 lg:border-r border-border/50 overflow-hidden cursor-crosshair shadow-md lg:shadow-inner shrink-0"
             onWheel={handleSegmentWheel}
             onMouseDown={handleSegmentMouseDown}
           >
@@ -982,7 +1098,7 @@ function TranscribeContent() {
         <div
           className="w-full h-full flex items-center justify-center transition-transform duration-75 ease-out select-none"
           style={{
-            transform: `scale(${zoomScale}) translate(${zoomPos.x / zoomScale}px, ${zoomPos.y / zoomScale}px)`,
+            transform: `translate(${zoomPos.x}px, ${zoomPos.y}px) scale(${zoomScale})`,
             transformOrigin: "center",
           }}
         >
@@ -1066,15 +1182,17 @@ function TranscribeContent() {
                 >
                   <ImageIcon className="w-3 h-3 mr-1" /> Voir la page
                 </Button>
-                <Button
-                  variant={isAutoZoomEnabled ? "default" : "outline"}
-                  size="sm"
-                  className={`h-6 px-2 text-[9px] font-bold rounded-full flex items-center gap-1 transition-all ${isAutoZoomEnabled ? 'bg-primary text-primary-foreground' : 'text-primary bg-background hover:bg-primary/5'}`}
-                  onClick={() => setIsAutoZoomEnabled(!isAutoZoomEnabled)}
-                  title={t("transcribe.auto_zoom")}
-                >
-                  <Maximize className="w-3 h-3" /> {t("transcribe.auto_zoom")}
-                </Button>
+                {segment?.polygon && Array.isArray(segment.polygon) && (
+                  <Button
+                    variant={zoomScale === 1 ? "default" : "outline"}
+                    size="sm"
+                    className={`h-6 px-2 text-[9px] font-bold rounded-full flex items-center gap-1 transition-all ${zoomScale === 1 ? 'bg-primary text-primary-foreground' : 'text-primary bg-background hover:bg-primary/5'}`}
+                    onClick={centerOnSegment}
+                    title={t("transcribe.zoom_line")}
+                  >
+                    <Maximize className="w-3 h-3" /> {t("transcribe.zoom_line")}
+                  </Button>
+                )}
                 {zoomScale !== 1 && (
                   <button
                     onClick={resetZoom}
@@ -1082,14 +1200,6 @@ function TranscribeContent() {
                   >
                     {Math.round(zoomScale * 100)}% ({t("transcribe.reset_zoom")})
                   </button>
-                )}
-                {zoomScale === 1 && segment?.polygon && Array.isArray(segment.polygon) && (
-                   <button
-                     onClick={centerOnSegment}
-                     className="text-[9px] font-bold text-primary hover:underline px-1 border-l border-border/50 ml-1 hidden lg:flex items-center gap-1"
-                   >
-                     <Search className="w-3 h-3" /> Zoomer
-                   </button>
                 )}
               </div>
             </div>
@@ -1102,7 +1212,7 @@ function TranscribeContent() {
           </div>
 
           {/* Transcription Area — Smaller width on large screens to give space to manuscript */}
-          <div className="flex-1 lg:flex-[1] flex flex-col p-4 lg:px-6 lg:pb-8 lg:pt-6 gap-4 overflow-visible lg:overflow-hidden relative z-10 bg-background">
+          <div className="flex-1 lg:flex-none lg:w-[390px] xl:w-[430px] 2xl:w-[460px] flex flex-col p-4 lg:px-5 xl:px-6 lg:pb-6 lg:pt-6 gap-4 overflow-y-auto lg:overflow-hidden relative z-10 bg-background">
             <div className="flex justify-between items-center shrink-0 border-b border-border/40 pb-3">
               <h2
                 className="text-lg font-heading font-bold text-foreground/80 tracking-tight"
@@ -1165,6 +1275,30 @@ function TranscribeContent() {
                 disabled={submitting || loading}
                 className="resize-none h-32 min-h-[120px] shrink-0 font-arabic text-2xl leading-[2] bg-[#FAF7F2] border-border shadow-inner focus-visible:ring-primary p-4 rounded-xl text-foreground !outline-none focus:border-primary/50"
               />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleReportSegmentationIssue}
+                disabled={
+                  !segment ||
+                  reportingSegmentation ||
+                  segment.segmentation_issue_reported
+                }
+                className="h-9 justify-start gap-2 border-amber-500/30 bg-amber-500/5 text-amber-700 hover:bg-amber-500/10"
+                title={t("transcribe.segmentation_report_title")}
+              >
+                {reportingSegmentation ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4" />
+                )}
+                <span className="truncate">
+                  {segment?.segmentation_issue_reported
+                    ? t("transcribe.segmentation_reported_button")
+                    : t("transcribe.segmentation_report_button")}
+                </span>
+              </Button>
 
               <AnimatePresence>
                 {showKeyboard && (
@@ -1231,14 +1365,14 @@ function TranscribeContent() {
               </div>
 
               {/* Tabs Area Below Textarea */}
-              <div className="flex-1 min-h-[300px] mt-4 border border-border rounded-xl bg-card overflow-hidden flex flex-col shadow-sm">
+              <div className="flex-1 min-h-0 mt-4 border border-border rounded-xl bg-card overflow-hidden flex flex-col shadow-sm">
                 {/* Tabs Header */}
                 <div className="flex border-b border-border shrink-0">
                   <button
                     onClick={() => setActiveTab("reference")}
                     className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === "reference" ? "text-primary bg-primary/5 border-b-2 border-primary" : "text-muted-foreground hover:bg-muted"}`}
                   >
-                    <BookOpen className="w-4 h-4" /> Référence
+                    <BookOpen className="w-4 h-4" /> {t("transcribe.reference_tab")}
                   </button>
                   <button
                     onClick={() => setActiveTab("community")}
@@ -1252,7 +1386,7 @@ function TranscribeContent() {
                         </span>
                       )}
                     </div>
-                    Propositions
+                    {t("transcribe.community_tab")}
                   </button>
                   {segment?.manuscript_pdf_url && (
                     <button
@@ -1268,88 +1402,96 @@ function TranscribeContent() {
                 <div className="flex-1 overflow-hidden flex flex-col">
                   {activeTab === "reference" && (
                     <>
-                      <div className="p-4 border-b border-border flex flex-col gap-3 shrink-0">
+                      <div className="p-4 border-b border-border flex flex-col gap-3 shrink-0 bg-muted/10">
+                        <div className="flex items-start gap-2">
+                          <div className="mt-0.5 h-8 w-8 rounded-lg border border-primary/20 bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                            <BookOpen className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-foreground">
+                              {t("transcribe.reference_title")}
+                            </p>
+                            <p className="text-[11px] leading-snug text-muted-foreground">
+                              {t("transcribe.reference_desc")}
+                            </p>
+                          </div>
+                        </div>
                         <div className="relative">
                           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                           <input
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Search in reference..."
-                            className="w-full bg-muted/50 border border-border rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                            placeholder={t("transcribe.reference_search_placeholder")}
+                            dir="auto"
+                            className="w-full bg-background border border-border rounded-md pl-9 pr-9 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                           />
-
-                          {/* Floating Search Results */}
-                          <AnimatePresence>
-                            {searchTerm.trim() && (
-                              <motion.div
-                                initial={{ opacity: 0, y: 5 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 5 }}
-                                className="absolute left-0 right-0 top-full mt-2 bg-popover border border-border shadow-2xl rounded-lg z-[60] max-h-80 overflow-y-auto overflow-x-hidden flex flex-col p-1 gap-1 custom-scrollbar"
-                              >
-                                <div className="flex items-center justify-between px-3 py-2 border-b border-border/50 sticky top-0 bg-popover z-10">
-                                  <span className="text-[10px] font-bold text-muted-foreground uppercase">
-                                    {getSearchResults().length} matches found
-                                  </span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setSearchTerm("")}
-                                    className="h-4 w-4 p-0"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                                {getSearchResults().length === 0 ? (
-                                  <div className="py-8 text-center text-xs text-muted-foreground italic">
-                                    No matches found
-                                  </div>
-                                ) : (
-                                  getSearchResults().map((s, idx) => (
-                                    <button
-                                      key={idx}
-                                      onClick={() => {
-                                        scrollToMatch(s.id);
-                                      }}
-                                      className="w-full text-right p-3 rounded hover:bg-muted transition-colors border-b border-border/20 last:border-0"
-                                    >
-                                      <div className="flex justify-between items-center mb-1">
-                                        <span className="text-[9px] font-bold text-primary uppercase bg-primary/10 px-1.5 rounded">
-                                          Res {idx + 1}
-                                        </span>
-                                        <span className="text-[9px] text-muted-foreground opacity-50">
-                                          Pos: {s.index}
-                                        </span>
-                                      </div>
-                                      <span
-                                        dir="rtl"
-                                        className="font-arabic leading-relaxed block text-sm"
-                                      >
-                                        {s.snippet
-                                          .split(
-                                            new RegExp(`(${searchTerm})`, "gi"),
-                                          )
-                                          .map((part, i) =>
-                                            part.toLowerCase() ===
-                                            searchTerm.toLowerCase() ? (
-                                              <mark
-                                                key={i}
-                                                className="bg-primary/20 rounded-sm px-0.5"
-                                              >
-                                                {part}
-                                              </mark>
-                                            ) : (
-                                              part
-                                            ),
-                                          )}
-                                      </span>
-                                    </button>
-                                  ))
-                                )}
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
+                          {searchTerm && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSearchTerm("")}
+                              className="absolute right-1.5 top-1.5 h-7 w-7 p-0"
+                              title={t("transcribe.reference_clear")}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
                         </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                            {normalizedSearchTerm
+                              ? t("transcribe.reference_matches", {
+                                  count: referenceMatches.length,
+                                })
+                              : t("transcribe.reference_ready")}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => moveReferenceMatch("prev")}
+                              disabled={referenceMatches.length === 0}
+                              className="h-7 w-7 p-0"
+                              title={t("transcribe.reference_prev")}
+                            >
+                              <SkipBack className="w-3.5 h-3.5" />
+                            </Button>
+                            <span className="min-w-12 text-center text-[10px] font-bold text-primary">
+                              {referenceMatches.length > 0
+                                ? `${activeReferenceIndex + 1}/${referenceMatches.length}`
+                                : "0/0"}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => moveReferenceMatch("next")}
+                              disabled={referenceMatches.length === 0}
+                              className="h-7 w-7 p-0"
+                              title={t("transcribe.reference_next")}
+                            >
+                              <SkipForward className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                        {normalizedSearchTerm && referenceMatches.length === 0 && (
+                          <p className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700">
+                            {t("transcribe.reference_no_matches")}
+                          </p>
+                        )}
+                        {currentReferenceMatch && (
+                          <button
+                            type="button"
+                            onClick={() => scrollToMatch(currentReferenceMatch.id)}
+                            className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-right hover:bg-primary/10 transition-colors"
+                          >
+                            <span className="mb-1 block text-[9px] font-bold uppercase tracking-wide text-primary">
+                              {t("transcribe.reference_active_match")} #{activeReferenceIndex + 1}
+                            </span>
+                            <span dir="rtl" className="block font-arabic text-sm leading-relaxed text-foreground">
+                              {currentReferenceMatch.snippet}
+                            </span>
+                          </button>
+                        )}
                       </div>
 
                       <div
@@ -1360,9 +1502,21 @@ function TranscribeContent() {
                           <div className="flex items-center justify-center py-10">
                             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                           </div>
+                        ) : !referenceText ? (
+                          <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-3 text-center text-muted-foreground">
+                            <FileText className="w-10 h-10 opacity-40" />
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">
+                                {t("transcribe.reference_empty_title")}
+                              </p>
+                              <p className="mx-auto mt-1 max-w-[280px] text-xs leading-relaxed">
+                                {t("transcribe.reference_empty_desc")}
+                              </p>
+                            </div>
+                          </div>
                         ) : (
                           <div className="font-arabic text-lg leading-loose whitespace-pre-wrap selection:bg-primary/20 pb-20">
-                            {getHighlightedText(referenceText, searchTerm)}
+                            {getHighlightedText(referenceText)}
                           </div>
                         )}
                       </div>

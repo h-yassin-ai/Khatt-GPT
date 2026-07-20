@@ -43,7 +43,7 @@ export default async function ManuscriptsListPage() {
             created_at,
             cover_image_url,
             total_segments,
-            segments ( id, status, transcription_count )
+            segments ( id, status, transcription_count, segmentation_issue_reported )
         `)
         .order('created_at', { ascending: false })
 
@@ -51,9 +51,9 @@ export default async function ManuscriptsListPage() {
         const segments = ms.segments || []
         const total = segments.length || ms.total_segments || 0
         const validated = segments.filter((s: any) => s.status === 'validated').length
-        const conflicts = segments.filter((s: any) => s.status === 'conflict' || s.status === 'flagged').length
+        const conflicts = segments.filter((s: any) => s.status === 'conflict' || s.status === 'flagged' || s.segmentation_issue_reported).length
         const toReview = segments.filter((s: any) =>
-            s.status !== 'validated' && s.status !== 'archived' && (s.transcription_count || 0) > 0
+            s.segmentation_issue_reported || (s.status !== 'validated' && s.status !== 'archived' && (s.transcription_count || 0) > 0)
         ).length
         const pending = Math.max(0, total - validated)
         const pct = total > 0 ? Math.round((validated / total) * 100) : 0

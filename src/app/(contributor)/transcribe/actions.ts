@@ -142,6 +142,7 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
                 image_url,
                 order_index,
                 polygon,
+                segmentation_issue_reported,
                 manuscript_id,
                 page_id,
                 manuscripts(id, title, description, reference_text_url),
@@ -179,6 +180,7 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
                 image_url,
                 order_index,
                 polygon,
+                segmentation_issue_reported,
                 manuscript_id,
                 page_id,
                 manuscripts(id, title, description, reference_text_url),
@@ -277,6 +279,7 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
         page_image_url: (segment.pages as any)?.image_url || '',
         page_label: (segment.pages as any)?.label || 'Unknown Page',
         other_transcriptions: otherTranscriptions || [],
+        segmentation_issue_reported: !!segment.segmentation_issue_reported,
     }
 }
 
@@ -339,6 +342,7 @@ export async function getSegmentById(segmentId: string) {
         page_image_url: segment.pages?.image_url || '',
         page_label: segment.pages?.label || 'Unknown Page',
         other_transcriptions: otherTranscriptions || [],
+        segmentation_issue_reported: !!segment.segmentation_issue_reported,
     }
 }
 
@@ -496,6 +500,41 @@ export async function flagSegment(segmentId: string) {
     if (!user) return { error: 'Unauthenticated' }
 
     await supabase.from('segments').update({ status: 'flagged' }).eq('id', segmentId)
+
+    return { success: true }
+}
+
+export async function reportSegmentationIssue(segmentId: string) {
+    const supabase = await createClient()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return { error: 'Unauthenticated' }
+
+    const { data: segment, error: fetchError } = await supabase
+        .from('segments')
+        .select('segmentation_issue_count')
+        .eq('id', segmentId)
+        .single()
+
+    if (fetchError) return { error: fetchError.message }
+
+    const { error } = await supabase
+        .from('segments')
+        .update({
+            segmentation_issue_reported: true,
+            segmentation_issue_count: (segment?.segmentation_issue_count || 0) + 1,
+            segmentation_issue_reported_at: new Date().toISOString(),
+            segmentation_issue_reported_by: user.id,
+        })
+        .eq('id', segmentId)
+
+    if (error) return { error: error.message }
+
+    revalidatePath('/admin')
+    revalidatePath('/admin/manuscripts')
+    revalidatePath('/transcribe')
 
     return { success: true }
 }
