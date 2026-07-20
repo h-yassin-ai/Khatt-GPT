@@ -5,7 +5,7 @@ import { Flame, Hexagon, BookOpen, PenTool, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getLevelProgress } from '@/lib/gamification'
 import { cookies } from 'next/headers'
-import { translate } from '@/lib/language-context'
+import { translate, type Language } from '@/lib/i18n'
 
 // Simple hash utility to generate consistent colors for avatars based on username
 function getAvatarColor(str: string) {
@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     }
 
     const cookieStore = await cookies()
-    const lang = (cookieStore.get('waraka_lang')?.value || 'fr') as 'en' | 'fr' | 'ar'
+    const lang = (cookieStore.get('waraka_lang')?.value || 'fr') as Language
 
     // Fetch user profile stats
     const { data: profile, error: profileError } = await supabase
