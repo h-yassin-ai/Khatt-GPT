@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "tsc --noEmit"
+    "lint": "eslint src && tsc --noEmit"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",

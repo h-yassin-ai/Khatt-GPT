@@ -650,37 +650,6 @@ function TranscribeContent() {
     }
   };
 
-  if (loading && !segment) {
-    return (
-      <div className="flex h-[calc(100vh-140px)] w-full items-center justify-center">
-        <div className="animate-spin text-primary">
-          <Sparkles className="w-8 h-8" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!segment && !loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-140px)] w-full text-center space-y-4 animate-in fade-in">
-        <div className="w-24 h-24 bg-success/10 text-success rounded-full flex items-center justify-center">
-          <Sparkles className="w-12 h-12" />
-        </div>
-        <h2 className="text-4xl font-heading font-semibold text-foreground">
-          {t("transcribe.all_caught_up")}
-        </h2>
-        <p className="text-muted-foreground font-sans max-w-md">
-          {t("transcribe.no_segments")}
-        </p>
-      </div>
-    );
-  }
-
-  const title = segment?.manuscript_title || "Unknown Manuscript";
-  const hasNonArabic =
-    text.trim() !== "" &&
-    /[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\s.,،؟!؛'"]/g.test(text);
-
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -742,6 +711,37 @@ function TranscribeContent() {
   useEffect(() => {
     setActiveReferenceMatch(0);
   }, [normalizedSearchNeedle, referenceText]);
+
+  if (loading && !segment) {
+    return (
+      <div className="flex h-[calc(100vh-140px)] w-full items-center justify-center">
+        <div className="animate-spin text-primary">
+          <Sparkles className="w-8 h-8" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!segment && !loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-140px)] w-full text-center space-y-4 animate-in fade-in">
+        <div className="w-24 h-24 bg-success/10 text-success rounded-full flex items-center justify-center">
+          <Sparkles className="w-12 h-12" />
+        </div>
+        <h2 className="text-4xl font-heading font-semibold text-foreground">
+          {t("transcribe.all_caught_up")}
+        </h2>
+        <p className="text-muted-foreground font-sans max-w-md">
+          {t("transcribe.no_segments")}
+        </p>
+      </div>
+    );
+  }
+
+  const title = segment?.manuscript_title || "Unknown Manuscript";
+  const hasNonArabic =
+    text.trim() !== "" &&
+    /[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\s.,،؟!؛'"]/g.test(text);
 
   const activeReferenceIndex =
     referenceMatches.length > 0
