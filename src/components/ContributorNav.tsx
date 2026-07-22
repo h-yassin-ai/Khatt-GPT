@@ -77,15 +77,15 @@ export function ContributorNav({ email, isAdmin, isFullWidth = false }: { email:
     )
 
     return (
-        <div className={`flex h-16 items-center justify-between px-6 mx-auto ${isFullWidth ? 'w-full max-w-none' : 'container max-w-7xl'}`}>
-            <div className="flex items-center gap-2 lg:gap-6">
+        <div className={`grid h-16 grid-cols-[auto_1fr_auto] items-center gap-4 px-4 sm:px-6 mx-auto ${isFullWidth ? 'w-full max-w-none' : 'container max-w-7xl'}`}>
+            <div className="flex items-center min-w-0">
                 <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0">
                     <span className="font-heading text-xl lg:text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-primary via-primary/90 to-amber-600 drop-shadow-sm">Khatt-GPT</span>
                 </Link>
-                <nav className="hidden md:flex items-center gap-0.5 lg:gap-1 text-[13px] lg:text-sm font-medium">
-                    <NavLinks />
-                </nav>
             </div>
+            <nav className="hidden md:flex items-center justify-center gap-0.5 lg:gap-1 text-[13px] lg:text-sm font-medium min-w-0">
+                <NavLinks />
+            </nav>
             <div className="flex items-center gap-3">
                 <div className="text-sm text-muted-foreground hidden lg:block">
                     {email}

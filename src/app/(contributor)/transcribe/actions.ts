@@ -188,6 +188,12 @@ async function buildSegmentPayload(supabase: any, segment: any, userId: string) 
     }
 }
 
+function getSubmissionOrderMultiplier(rank: number) {
+    if (rank <= 1) return 1
+    if (rank === 2) return 0.65
+    return 0.45
+}
+
 export async function getNextSegment(manuscriptId?: string, targetSegmentId?: string, afterSegmentId?: string, direction: 'next' | 'prev' = 'next') {
     const supabase = await createClient()
     const {
@@ -413,6 +419,14 @@ export async function submitTranscription(segmentId: string, text: string) {
         return { error: 'Ce segment est deja verrouille.' }
     }
 
+    const { count: existingActiveSubmissionCount } = await supabase
+        .from('transcriptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('segment_id', segmentId)
+        .in('status', ['pending', 'validated', 'modified'])
+
+    const submissionRank = (existingActiveSubmissionCount || 0) + 1
+
     // Pre-compute reward so we can store xp_awarded at insert time
     const { data: profileForReward } = await supabase
         .from('profiles')
@@ -430,6 +444,18 @@ export async function submitTranscription(segmentId: string, text: string) {
     }
     if (profileForReward) {
         reward = computeTranscriptionReward(profileForReward)
+    }
+
+    const originalFinalXp = reward.finalXp
+    const orderMultiplier = getSubmissionOrderMultiplier(submissionRank)
+    const adjustedFinalXp = Math.max(1, Math.round(originalFinalXp * orderMultiplier))
+    reward = {
+        ...reward,
+        originalFinalXp,
+        finalXp: adjustedFinalXp,
+        submissionRank,
+        orderMultiplier,
+        orderPenaltyXp: Math.max(0, originalFinalXp - adjustedFinalXp),
     }
 
     const pageImageUrl = (segmentData?.pages as any)?.image_url || null

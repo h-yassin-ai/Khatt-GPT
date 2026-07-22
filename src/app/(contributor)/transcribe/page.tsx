@@ -41,7 +41,8 @@ import {
   Flame,
   Star,
   Users,
-  List,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { OnboardingModal } from "@/components/OnboardingModal";
@@ -976,7 +977,7 @@ function TranscribeContent() {
             className={`h-9 px-3 gap-2 rounded-lg transition-colors border shrink-0 ${isSidebarOpen ? 'bg-primary/10 text-primary border-primary/20' : 'text-muted-foreground border-border/50 hover:bg-muted'}`}
             title={isSidebarOpen ? t("transcribe.close_navigation") : t("transcribe.open_navigation")}
           >
-            <List className="w-4 h-4" />
+            {isSidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
             <span className="hidden sm:inline text-xs font-semibold">
               {isSidebarOpen ? t("transcribe.close_navigation") : t("transcribe.open_navigation")}
             </span>

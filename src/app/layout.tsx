@@ -20,7 +20,11 @@ export const metadata: Metadata = {
   title: 'Khatt-GPT | Collaborative Arabic Manuscript Transcription',
   description: 'A platform connecting a community of contributors to transcribe segmented Maghrebi Arabic manuscripts into text, preserving history.',
   icons: {
-    icon: '/logo.png',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: '/icon-192.png',
   },
 };
 

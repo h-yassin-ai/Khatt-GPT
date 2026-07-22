@@ -66,7 +66,7 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
     }
 
     return (
-        <div className="flex flex-col gap-8 pb-12">
+        <div className="flex flex-col gap-8 pb-12 max-w-5xl mx-auto w-full">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>

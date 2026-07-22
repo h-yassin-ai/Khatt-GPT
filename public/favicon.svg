@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Khatt-GPT">
+  <rect width="64" height="64" rx="14" fill="#f7f2ea"/>
+  <path d="M16 15h26c6 0 10 4 10 10v24H24c-5 0-8-3-8-8V15z" fill="#fffaf3" stroke="#c85f2b" stroke-width="3"/>
+  <path d="M23 23h20M23 31h17M23 39h13" stroke="#1f3f3f" stroke-width="4" stroke-linecap="round"/>
+  <path d="M45 43c-2 4-6 6-12 6" fill="none" stroke="#c85f2b" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="46" cy="23" r="3" fill="#c85f2b"/>
+</svg>

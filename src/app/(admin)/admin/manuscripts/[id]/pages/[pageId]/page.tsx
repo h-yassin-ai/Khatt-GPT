@@ -45,7 +45,7 @@ type Segment = {
     segmentation_issue_reported?: boolean
     segmentation_issue_count?: number
     segmentation_issue_reported_at?: string
-    transcriptions?: { id: string, text: string, submitted_at: string, contributor_id: string, is_validated: boolean }[]
+    transcriptions?: { id: string, text: string, submitted_at: string, contributor_id: string, is_validated: boolean, xp_awarded?: number | null }[]
 }
 
 export default function PageDetailPage({ params }: { params: Promise<{ id: string, pageId: string }> }) {
@@ -83,7 +83,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
 
         const { data: segs } = await supabase
             .from('segments')
-            .select('*, transcriptions(id, text, submitted_at, contributor_id, is_validated)')
+            .select('*, transcriptions(id, text, submitted_at, contributor_id, is_validated, xp_awarded)')
             .eq('page_id', pageId)
             .order('order_index', { ascending: true })
 
@@ -533,7 +533,9 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
 
                                 {reviewSegment.transcriptions && reviewSegment.transcriptions.length > 0 ? (
                                     <div className="flex flex-col gap-3">
-                                        {reviewSegment.transcriptions.map((t) => (
+                                        {[...reviewSegment.transcriptions]
+                                            .sort((a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime())
+                                            .map((t, index) => (
                                             <div key={t.id} className={`p-4 rounded-xl border transition-all ${t.is_validated ? 'border-green-500 bg-green-50/30' : 'border-border bg-card shadow-sm'}`}>
                                                 <div className="flex justify-between items-start gap-4 mb-3">
                                                     <div className="p-3 bg-muted/30 rounded-lg flex-1">
@@ -541,7 +543,15 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
+                                                    <div className="flex flex-wrap items-center gap-3">
+                                                        <Badge className={index === 0 ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted text-muted-foreground border-border'}>
+                                                            #{index + 1} {index === 0 ? 'premier submit' : 'submit suivant'}
+                                                        </Badge>
+                                                        {typeof t.xp_awarded === 'number' && (
+                                                            <Badge className="bg-amber-500/10 text-amber-700 border-amber-500/20">
+                                                                +{t.xp_awarded} XP
+                                                            </Badge>
+                                                        )}
                                                         <div className="text-[10px] text-muted-foreground">
                                                             Posté le {new Date(t.submitted_at).toLocaleString()}
                                                         </div>
