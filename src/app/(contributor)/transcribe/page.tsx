@@ -163,6 +163,7 @@ function TranscribeContent() {
   const [loadingRef, setLoadingRef] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [showReferenceSearch, setShowReferenceSearch] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "reference" | "pdf" | "community"
   >("reference");
@@ -174,6 +175,7 @@ function TranscribeContent() {
   const [zoomPos, setZoomPos] = useState({ x: 0, y: 0 });
   const [isDraggingZoom, setIsDraggingZoom] = useState(false);
   const [reportingSegmentation, setReportingSegmentation] = useState(false);
+  const [showSegmentationConfirm, setShowSegmentationConfirm] = useState(false);
   const [gamification, setGamification] = useState<GamificationSnapshot | null>(
     null,
   );
@@ -420,13 +422,12 @@ function TranscribeContent() {
     setImgSize({ width: natW, height: natH });
   };
 
-  // Start every desktop segment focused on the active line, with corrected centering.
+  // Start every segment at the natural 100% page view.
   useEffect(() => {
     if (imgSize.width > 0 && segment?.id) {
-      const timer = window.setTimeout(() => centerOnSegment(), 120);
-      return () => window.clearTimeout(timer);
+      resetZoom();
     }
-  }, [segment?.id, imgSize.width, centerOnSegment]);
+  }, [segment?.id, imgSize.width, resetZoom]);
 
   const handleSubmit = async () => {
     if (!segment || !text.trim()) return;
@@ -579,6 +580,7 @@ function TranscribeContent() {
   const handleReportSegmentationIssue = async () => {
     if (!segment) return;
 
+    setShowSegmentationConfirm(false);
     setReportingSegmentation(true);
     const result = await reportSegmentationIssue(segment.id);
 
@@ -1212,7 +1214,7 @@ function TranscribeContent() {
           </div>
 
           {/* Transcription Area — Smaller width on large screens to give space to manuscript */}
-          <div className="flex-1 lg:flex-none lg:w-[390px] xl:w-[430px] 2xl:w-[460px] flex flex-col p-4 lg:px-5 xl:px-6 lg:pb-6 lg:pt-6 gap-4 overflow-y-auto lg:overflow-hidden relative z-10 bg-background">
+          <div className="flex-1 lg:flex-none lg:w-[490px] xl:w-[540px] 2xl:w-[575px] flex flex-col p-4 lg:px-5 xl:px-6 lg:pb-6 lg:pt-6 gap-4 overflow-y-auto lg:overflow-hidden relative z-10 bg-background">
             <div className="flex justify-between items-center shrink-0 border-b border-border/40 pb-3">
               <h2
                 className="text-lg font-heading font-bold text-foreground/80 tracking-tight"
@@ -1279,7 +1281,7 @@ function TranscribeContent() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={handleReportSegmentationIssue}
+                onClick={() => setShowSegmentationConfirm(true)}
                 disabled={
                   !segment ||
                   reportingSegmentation ||
@@ -1416,87 +1418,19 @@ function TranscribeContent() {
                             </p>
                           </div>
                         </div>
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                          <input
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder={t("transcribe.reference_search_placeholder")}
-                            dir="auto"
-                            className="w-full bg-background border border-border rounded-md pl-9 pr-9 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                          />
-                          {searchTerm && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSearchTerm("")}
-                              className="absolute right-1.5 top-1.5 h-7 w-7 p-0"
-                              title={t("transcribe.reference_clear")}
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                            {normalizedSearchTerm
-                              ? t("transcribe.reference_matches", {
-                                  count: referenceMatches.length,
-                                })
-                              : t("transcribe.reference_ready")}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => moveReferenceMatch("prev")}
-                              disabled={referenceMatches.length === 0}
-                              className="h-7 w-7 p-0"
-                              title={t("transcribe.reference_prev")}
-                            >
-                              <SkipBack className="w-3.5 h-3.5" />
-                            </Button>
-                            <span className="min-w-12 text-center text-[10px] font-bold text-primary">
-                              {referenceMatches.length > 0
-                                ? `${activeReferenceIndex + 1}/${referenceMatches.length}`
-                                : "0/0"}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => moveReferenceMatch("next")}
-                              disabled={referenceMatches.length === 0}
-                              className="h-7 w-7 p-0"
-                              title={t("transcribe.reference_next")}
-                            >
-                              <SkipForward className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                        {normalizedSearchTerm && referenceMatches.length === 0 && (
-                          <p className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700">
-                            {t("transcribe.reference_no_matches")}
-                          </p>
-                        )}
-                        {currentReferenceMatch && (
-                          <button
-                            type="button"
-                            onClick={() => scrollToMatch(currentReferenceMatch.id)}
-                            className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-right hover:bg-primary/10 transition-colors"
-                          >
-                            <span className="mb-1 block text-[9px] font-bold uppercase tracking-wide text-primary">
-                              {t("transcribe.reference_active_match")} #{activeReferenceIndex + 1}
-                            </span>
-                            <span dir="rtl" className="block font-arabic text-sm leading-relaxed text-foreground">
-                              {currentReferenceMatch.snippet}
-                            </span>
-                          </button>
-                        )}
+                        <Button
+                          type="button"
+                          onClick={() => setShowReferenceSearch(true)}
+                          className="h-10 justify-start gap-2"
+                          disabled={loadingRef}
+                        >
+                          <Search className="w-4 h-4" />
+                          {t("transcribe.reference_open_search")}
+                        </Button>
                       </div>
 
                       <div
-                        className="flex-1 overflow-y-auto p-4 scrollbar-hide text-right"
-                        dir="rtl"
+                        className="flex-1 overflow-y-auto p-4 text-right"
                       >
                         {loadingRef ? (
                           <div className="flex items-center justify-center py-10">
@@ -1515,8 +1449,16 @@ function TranscribeContent() {
                             </div>
                           </div>
                         ) : (
-                          <div className="font-arabic text-lg leading-loose whitespace-pre-wrap selection:bg-primary/20 pb-20">
-                            {getHighlightedText(referenceText)}
+                          <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-3 text-center">
+                            <Search className="w-10 h-10 text-primary/50" />
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">
+                                {t("transcribe.reference_popup_hint_title")}
+                              </p>
+                              <p className="mx-auto mt-1 max-w-[300px] text-xs leading-relaxed text-muted-foreground">
+                                {t("transcribe.reference_popup_hint_desc")}
+                              </p>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1601,6 +1543,196 @@ function TranscribeContent() {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showReferenceSearch && (
+          <motion.div
+            initial={{ opacity: 0, x: 28, scale: 0.98 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 28, scale: 0.98 }}
+            transition={{ duration: 0.18 }}
+            className="fixed z-[85] left-3 right-3 top-20 bottom-3 lg:left-auto lg:right-5 lg:w-[560px] xl:w-[620px] rounded-xl border border-border bg-background/98 shadow-2xl backdrop-blur flex flex-col overflow-hidden"
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-border p-4 bg-muted/20">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-foreground">
+                  {t("transcribe.reference_title")}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  {t("transcribe.reference_popup_desc")}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowReferenceSearch(false)}
+                className="h-8 w-8 p-0 rounded-full shrink-0"
+                title={t("transcribe.reference_close")}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <div className="border-b border-border p-4 flex flex-col gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={t("transcribe.reference_search_placeholder")}
+                  dir="auto"
+                  autoFocus
+                  className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-1.5 top-1.5 h-7 w-7 p-0"
+                    title={t("transcribe.reference_clear")}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  {normalizedSearchTerm
+                    ? t("transcribe.reference_matches", {
+                        count: referenceMatches.length,
+                      })
+                    : t("transcribe.reference_ready")}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => moveReferenceMatch("prev")}
+                    disabled={referenceMatches.length === 0}
+                    className="h-8 w-8 p-0"
+                    title={t("transcribe.reference_prev")}
+                  >
+                    <SkipBack className="w-3.5 h-3.5" />
+                  </Button>
+                  <span className="min-w-14 text-center text-[11px] font-bold text-primary">
+                    {referenceMatches.length > 0
+                      ? `${activeReferenceIndex + 1}/${referenceMatches.length}`
+                      : "0/0"}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => moveReferenceMatch("next")}
+                    disabled={referenceMatches.length === 0}
+                    className="h-8 w-8 p-0"
+                    title={t("transcribe.reference_next")}
+                  >
+                    <SkipForward className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+
+              {normalizedSearchTerm && referenceMatches.length === 0 && (
+                <p className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700">
+                  {t("transcribe.reference_no_matches")}
+                </p>
+              )}
+
+              {currentReferenceMatch && (
+                <button
+                  type="button"
+                  onClick={() => scrollToMatch(currentReferenceMatch.id)}
+                  className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-right hover:bg-primary/10 transition-colors"
+                >
+                  <span className="mb-1 block text-[9px] font-bold uppercase tracking-wide text-primary">
+                    {t("transcribe.reference_active_match")} #{activeReferenceIndex + 1}
+                  </span>
+                  <span dir="rtl" className="block font-arabic text-sm leading-relaxed text-foreground">
+                    {currentReferenceMatch.snippet}
+                  </span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 text-right" dir="rtl">
+              {loadingRef ? (
+                <div className="flex h-full min-h-[220px] items-center justify-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : !referenceText ? (
+                <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-3 text-center text-muted-foreground">
+                  <FileText className="w-10 h-10 opacity-40" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {t("transcribe.reference_empty_title")}
+                    </p>
+                    <p className="mx-auto mt-1 max-w-[300px] text-xs leading-relaxed">
+                      {t("transcribe.reference_empty_desc")}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="font-arabic text-lg leading-loose whitespace-pre-wrap selection:bg-primary/20 pb-10">
+                  {getHighlightedText(referenceText)}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSegmentationConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 18, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.96 }}
+              className="w-full max-w-md rounded-xl border border-border bg-background shadow-2xl p-5"
+            >
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-lg bg-amber-500/10 text-amber-700 border border-amber-500/20 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-heading text-lg font-semibold">
+                    {t("transcribe.segmentation_confirm_title")}
+                  </h3>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    {t("transcribe.segmentation_confirm_desc")}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-5 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSegmentationConfirm(false)}
+                  disabled={reportingSegmentation}
+                >
+                  {t("transcribe.cancel")}
+                </Button>
+                <Button
+                  onClick={handleReportSegmentationIssue}
+                  disabled={reportingSegmentation}
+                  className="gap-2 bg-amber-600 hover:bg-amber-700"
+                >
+                  {reportingSegmentation && (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
+                  {t("transcribe.segmentation_confirm_action")}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {/* Full Page Context Popup */}
       <AnimatePresence>

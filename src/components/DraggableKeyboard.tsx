@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { X, GripHorizontal } from 'lucide-react'
 
 const ARABIC_LAYOUT = [
@@ -27,7 +27,7 @@ export default function DraggableKeyboard({ onKeyPress, onBackspace, onClose }: 
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed z-[100] bottom-10 right-10 w-fit max-w-[500px] bg-background/95 backdrop-blur-md border border-border shadow-2xl rounded-2xl p-4 flex flex-col gap-3 cursor-default selection:none"
+            className="fixed z-[200] bottom-4 left-2 right-2 mx-auto w-auto max-w-[620px] bg-background/95 backdrop-blur-md border border-border shadow-2xl rounded-2xl p-3 sm:p-4 flex flex-col gap-3 cursor-default selection:none max-h-[46dvh] overflow-auto"
             style={{ touchAction: 'none' }}
         >
             {/* Header / Drag Handle - restrict drag to this area if needed */}
@@ -51,12 +51,12 @@ export default function DraggableKeyboard({ onKeyPress, onBackspace, onClose }: 
 
             <div className="flex flex-col gap-2">
                 {ARABIC_LAYOUT.map((row, rowIdx) => (
-                    <div key={rowIdx} className="flex justify-center gap-1">
+                    <div key={rowIdx} className="flex justify-center gap-1 min-w-max">
                         {row.map((char) => (
                             <Button
                                 key={char}
                                 variant="outline"
-                                className="w-8 h-10 sm:w-10 sm:h-12 flex-shrink-0 text-lg font-arabic font-medium shadow-sm hover:bg-primary/5 hover:border-primary/50 transition-colors p-0 bg-card"
+                                className="w-7 h-9 sm:w-10 sm:h-12 flex-shrink-0 text-base sm:text-lg font-arabic font-medium shadow-sm hover:bg-primary/5 hover:border-primary/50 transition-colors p-0 bg-card"
                                 onClick={(e) => {
                                     e.preventDefault()
                                     onKeyPress(char)
@@ -70,7 +70,7 @@ export default function DraggableKeyboard({ onKeyPress, onBackspace, onClose }: 
                         {rowIdx === 1 && (
                             <Button
                                 variant="destructive"
-                                className="h-10 sm:h-12 px-2 shadow-sm text-xs font-bold"
+                                className="h-9 sm:h-12 px-2 shadow-sm text-[10px] sm:text-xs font-bold"
                                 onClick={(e) => {
                                     e.preventDefault()
                                     onBackspace()

@@ -97,6 +97,11 @@ export const translations: Record<string, Record<Language, string>> = {
     'transcribe.community_tab': { en: 'Suggestions', fr: 'Propositions', ar: 'اقتراحات' },
     'transcribe.reference_title': { en: 'Published text reference', fr: 'Texte publié de référence', ar: 'النص المنشور المرجعي' },
     'transcribe.reference_desc': { en: 'Search the uploaded .txt of the same book to find a likely passage and compare wording.', fr: 'Cherchez dans le .txt du même livre pour retrouver un passage probable et comparer le texte.', ar: 'ابحث في ملف .txt للكتاب نفسه للعثور على مقطع محتمل ومقارنة الصياغة.' },
+    'transcribe.reference_open_search': { en: 'Open reference search', fr: 'Ouvrir la recherche de référence', ar: 'فتح البحث في المرجع' },
+    'transcribe.reference_popup_desc': { en: 'Search the printed text while keeping the manuscript line visible on the left.', fr: 'Cherchez dans le texte imprimé en gardant la ligne du manuscrit visible à gauche.', ar: 'ابحث في النص المطبوع مع إبقاء سطر المخطوطة مرئيا على اليسار.' },
+    'transcribe.reference_popup_hint_title': { en: 'Use the floating search panel', fr: 'Utilisez le panneau de recherche flottant', ar: 'استخدم لوحة البحث العائمة' },
+    'transcribe.reference_popup_hint_desc': { en: 'Open the search panel to compare the published text without hiding the highlighted manuscript line.', fr: 'Ouvrez le panneau de recherche pour comparer le texte publié sans cacher la ligne surlignée du manuscrit.', ar: 'افتح لوحة البحث لمقارنة النص المنشور دون إخفاء السطر المحدد من المخطوطة.' },
+    'transcribe.reference_close': { en: 'Close reference search', fr: 'Fermer la recherche de référence', ar: 'إغلاق البحث في المرجع' },
     'transcribe.reference_search_placeholder': { en: 'Search a word or phrase in the published text...', fr: 'Rechercher un mot ou une expression dans le texte publié...', ar: 'ابحث عن كلمة أو عبارة في النص المنشور...' },
     'transcribe.reference_ready': { en: 'Ready to search the reference text', fr: 'Prêt à chercher dans le texte de référence', ar: 'جاهز للبحث في النص المرجعي' },
     'transcribe.reference_matches': { en: '{count} matches', fr: '{count} correspondances', ar: '{count} نتيجة' },
@@ -113,6 +118,9 @@ export const translations: Record<string, Record<Language, string>> = {
     'transcribe.segmentation_reported_title': { en: 'Segmentation issue reported', fr: 'Problème de segmentation notifié', ar: 'تم الإبلاغ عن مشكلة التقطيع' },
     'transcribe.segmentation_reported_desc': { en: 'Admins will be able to find this segment during review.', fr: 'Les admins pourront retrouver ce segment lors de la vérification.', ar: 'سيتمكن المشرفون من العثور على هذا السطر أثناء المراجعة.' },
     'transcribe.segmentation_report_error': { en: 'Unable to report segmentation issue', fr: 'Impossible de notifier le problème de segmentation', ar: 'تعذر الإبلاغ عن مشكلة التقطيع' },
+    'transcribe.segmentation_confirm_title': { en: 'Report this segmentation?', fr: 'Notifier ce problème de segmentation ?', ar: 'هل تريد الإبلاغ عن مشكلة التقطيع؟' },
+    'transcribe.segmentation_confirm_desc': { en: 'Use this only when the crop or polygon does not match the line to transcribe. An admin will review it later.', fr: 'À utiliser seulement si le découpage ou le polygone ne correspond pas à la ligne à transcrire. Un admin le vérifiera ensuite.', ar: 'استخدم هذا فقط إذا كان القص أو حدود السطر لا تطابق السطر المطلوب نسخه. سيراجعه مشرف لاحقا.' },
+    'transcribe.segmentation_confirm_action': { en: 'Confirm report', fr: 'Confirmer le signalement', ar: 'تأكيد الإبلاغ' },
     'transcribe.loading': { en: 'Loading...', fr: 'Chargement...', ar: 'جاري التحميل...' },
 
     // Browse page
