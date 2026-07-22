@@ -66,6 +66,22 @@ type SegmentData = {
   manuscript_pdf_url?: string;
   page_image_url: string;
   page_label?: string;
+  segment_status?: string;
+  consensus_text?: string;
+  display_text?: string;
+  is_read_only?: boolean;
+  lock_reason?: "validated" | "already_submitted" | null;
+  user_transcription?: {
+    id: string;
+    text: string;
+    status: string;
+    is_validated: boolean;
+  } | null;
+  validated_transcription?: {
+    id: string;
+    text: string;
+    contributor_id: string;
+  } | null;
   other_transcriptions?: {
     text: string;
     profiles: {
@@ -207,8 +223,12 @@ function TranscribeContent() {
       const nextSeg = await getNextSegment(manuscriptId, targetId, afterId, direction);
       setSegment(nextSeg as any);
       if (nextSeg?.id) {
-        const saved = localStorage.getItem(`waraka_autosave_${nextSeg.id}`);
-        if (saved) setText(saved);
+        if ((nextSeg as any).display_text) {
+          setText((nextSeg as any).display_text);
+        } else {
+          const saved = localStorage.getItem(`waraka_autosave_${nextSeg.id}`);
+          if (saved) setText(saved);
+        }
       }
     } catch (err: any) {
       setErrorObj(err.message);
@@ -256,6 +276,12 @@ function TranscribeContent() {
     }
   }, [segment]);
 
+  useEffect(() => {
+    if (segment?.is_read_only) {
+      setShowKeyboard(false);
+    }
+  }, [segment?.id, segment?.is_read_only]);
+
   // Keyboard shortcuts removed as per user request (clic c tout)
   useEffect(() => {
     // Shortcuts were interfering with text editing
@@ -294,7 +320,13 @@ function TranscribeContent() {
 
   // Auto-save transcription text
   useEffect(() => {
-    if (segment?.id && !loading && !submitting) {
+    if (
+      segment?.id &&
+      !segment.is_read_only &&
+      !segment.user_transcription &&
+      !loading &&
+      !submitting
+    ) {
       const delayDebounceFn = setTimeout(() => {
         if (text) {
           localStorage.setItem(`waraka_autosave_${segment.id}`, text);
@@ -304,7 +336,7 @@ function TranscribeContent() {
       }, 500);
       return () => clearTimeout(delayDebounceFn);
     }
-  }, [text, segment?.id, loading, submitting]);
+  }, [text, segment?.id, segment?.is_read_only, segment?.user_transcription, loading, submitting]);
 
   // Segment Zoom & Pan Logic
   const handleSegmentWheel = (e: React.WheelEvent) => {
@@ -430,7 +462,7 @@ function TranscribeContent() {
   }, [segment?.id, imgSize.width, resetZoom]);
 
   const handleSubmit = async () => {
-    if (!segment || !text.trim()) return;
+    if (!segment || !text.trim() || isTranscriptionLocked) return;
     setSubmitting(true);
 
     if (!navigator.onLine) {
@@ -606,6 +638,7 @@ function TranscribeContent() {
   };
 
   const handleKeyPress = (char: string) => {
+    if (isTranscriptionLocked) return;
     if (!textareaRef.current) {
       setText((prev) => prev + char);
       return;
@@ -625,6 +658,7 @@ function TranscribeContent() {
   };
 
   const handleBackspace = () => {
+    if (isTranscriptionLocked) return;
     if (!textareaRef.current) return;
     const start = textareaRef.current.selectionStart;
     const end = textareaRef.current.selectionEnd;
@@ -744,6 +778,13 @@ function TranscribeContent() {
   const hasNonArabic =
     text.trim() !== "" &&
     /[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\s.,،؟!؛'"]/g.test(text);
+  const isTranscriptionLocked = !!segment?.is_read_only;
+  const lockNotice =
+    segment?.lock_reason === "validated"
+      ? t("transcribe.locked_validated")
+      : segment?.lock_reason === "already_submitted"
+        ? t("transcribe.locked_submitted")
+        : "";
 
   const activeReferenceIndex =
     referenceMatches.length > 0
@@ -1228,6 +1269,7 @@ function TranscribeContent() {
                   size="sm"
                   className="gap-2 h-8 rounded-full text-xs"
                   onClick={() => setShowKeyboard(!showKeyboard)}
+                  disabled={isTranscriptionLocked}
                 >
                   <Keyboard className="w-3.5 h-3.5" />
                   {showKeyboard
@@ -1253,7 +1295,14 @@ function TranscribeContent() {
               </div>
             )}
 
-            {hasNonArabic && (
+            {isTranscriptionLocked && lockNotice && (
+              <div className="bg-muted/70 text-muted-foreground text-[11px] p-3 rounded-lg flex items-start gap-2 border border-border shrink-0">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600" />
+                <span>{lockNotice}</span>
+              </div>
+            )}
+
+            {hasNonArabic && !isTranscriptionLocked && (
               <div className="bg-orange-500/10 text-orange-600 text-[10px] p-2 rounded flex items-center gap-2 border border-orange-500/20 shrink-0">
                 <AlertCircle className="w-3 h-3 flex-shrink-0" />
                 <span>{t("transcribe.non_arabic")}</span>
@@ -1274,8 +1323,12 @@ function TranscribeContent() {
                 placeholder={t("transcribe.placeholder")}
                 dir="rtl"
                 lang="ar"
-                disabled={submitting || loading}
-                className="resize-none h-32 min-h-[120px] shrink-0 font-arabic text-2xl leading-[2] bg-[#FAF7F2] border-border shadow-inner focus-visible:ring-primary p-4 rounded-xl text-foreground !outline-none focus:border-primary/50"
+                disabled={submitting || loading || isTranscriptionLocked}
+                className={`resize-none h-32 min-h-[120px] shrink-0 font-arabic text-2xl leading-[2] border-border shadow-inner focus-visible:ring-primary p-4 rounded-xl !outline-none focus:border-primary/50 ${
+                  isTranscriptionLocked
+                    ? "bg-muted/60 text-muted-foreground cursor-not-allowed border-dashed"
+                    : "bg-[#FAF7F2] text-foreground"
+                }`}
               />
               <Button
                 type="button"
@@ -1303,7 +1356,7 @@ function TranscribeContent() {
               </Button>
 
               <AnimatePresence>
-                {showKeyboard && (
+                {showKeyboard && !isTranscriptionLocked && (
                   <DraggableKeyboard
                     onKeyPress={handleKeyPress}
                     onBackspace={handleBackspace}
@@ -1316,7 +1369,7 @@ function TranscribeContent() {
               <div className="flex gap-2 shrink-0">
                 <Button
                   onClick={handleSubmit}
-                  disabled={submitting || loading || !text.trim()}
+                  disabled={submitting || loading || !text.trim() || isTranscriptionLocked}
                   className={`flex-1 h-12 text-sm font-bold tracking-wide shadow-md ${isEditing ? "bg-amber-600 hover:bg-amber-700" : ""}`}
                 >
                   {submitting ? (

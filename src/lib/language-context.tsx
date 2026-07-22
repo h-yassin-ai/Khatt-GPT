@@ -121,6 +121,8 @@ export const translations: Record<string, Record<Language, string>> = {
     'transcribe.segmentation_confirm_title': { en: 'Report this segmentation?', fr: 'Notifier ce problème de segmentation ?', ar: 'هل تريد الإبلاغ عن مشكلة التقطيع؟' },
     'transcribe.segmentation_confirm_desc': { en: 'Use this only when the crop or polygon does not match the line to transcribe. An admin will review it later.', fr: 'À utiliser seulement si le découpage ou le polygone ne correspond pas à la ligne à transcrire. Un admin le vérifiera ensuite.', ar: 'استخدم هذا فقط إذا كان القص أو حدود السطر لا تطابق السطر المطلوب نسخه. سيراجعه مشرف لاحقا.' },
     'transcribe.segmentation_confirm_action': { en: 'Confirm report', fr: 'Confirmer le signalement', ar: 'تأكيد الإبلاغ' },
+    'transcribe.locked_submitted': { en: 'You have already submitted a transcription for this line. It is shown here for reference and cannot be submitted again.', fr: 'Vous avez déjà soumis une transcription pour cette ligne. Elle est affichée ici pour consultation et ne peut pas être soumise une seconde fois.', ar: 'لقد أرسلت نسخا لهذا السطر من قبل. يظهر هنا للمراجعة ولا يمكن إرساله مرة أخرى.' },
+    'transcribe.locked_validated': { en: 'This line has already been validated. The accepted transcription is shown here and can no longer be edited.', fr: 'Cette ligne a déjà été validée. La transcription retenue est affichée ici et ne peut plus être modifiée.', ar: 'تم توثيق هذا السطر بالفعل. يظهر النص المعتمد هنا ولا يمكن تعديله.' },
     'transcribe.loading': { en: 'Loading...', fr: 'Chargement...', ar: 'جاري التحميل...' },
 
     // Browse page

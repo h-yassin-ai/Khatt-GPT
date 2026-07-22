@@ -109,6 +109,85 @@ export async function getPageSegments(pageId: string) {
     }))
 }
 
+async function buildSegmentPayload(supabase: any, segment: any, userId: string) {
+    const { data: transcriptionRows } = await supabase
+        .from('transcriptions')
+        .select('id, text, contributor_id, is_validated, status, submitted_at')
+        .eq('segment_id', segment.id)
+        .order('submitted_at', { ascending: false })
+        .limit(20)
+
+    const transcriptions = transcriptionRows || []
+    const userTranscription = transcriptions.find((t: any) => t.contributor_id === userId) || null
+    const validatedTranscription =
+        transcriptions.find((t: any) => t.is_validated || t.status === 'validated') || null
+
+    const otherData = transcriptions
+        .filter((t: any) => t.contributor_id !== userId)
+        .slice(0, 10)
+
+    let otherTranscriptions: any[] = []
+    if (otherData.length > 0) {
+        const cIds = Array.from(new Set(otherData.map((d: any) => d.contributor_id)))
+        const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, email, avatar_url, role')
+            .in('id', cIds)
+
+        const pMap = new Map((profiles || []).map((p: any) => [p.id, p]))
+        otherTranscriptions = otherData.map((d: any) => ({
+            text: d.text,
+            profiles: pMap.get(d.contributor_id) || null
+        }))
+    }
+
+    const isValidatedSegment =
+        segment.status === 'validated' ||
+        !!validatedTranscription ||
+        !!segment.consensus_text
+    const displayText =
+        validatedTranscription?.text ||
+        segment.consensus_text ||
+        userTranscription?.text ||
+        ''
+
+    return {
+        id: segment.id,
+        manuscript_id: (segment.manuscripts as any)?.id || segment.manuscript_id || '',
+        page_id: (segment.pages as any)?.id || segment.page_id || '',
+        image_url: segment.image_url,
+        order_index: segment.order_index,
+        polygon: segment.polygon,
+        manuscript_title: (segment.manuscripts as any)?.title || 'Unknown Manuscript',
+        manuscript_description: (segment.manuscripts as any)?.description || '',
+        manuscript_reference_text_url: (segment.manuscripts as any)?.reference_text_url || '',
+        page_image_url: (segment.pages as any)?.image_url || '',
+        page_label: (segment.pages as any)?.label || 'Unknown Page',
+        segment_status: segment.status || 'pending',
+        consensus_text: segment.consensus_text || '',
+        other_transcriptions: otherTranscriptions || [],
+        user_transcription: userTranscription ? {
+            id: userTranscription.id,
+            text: userTranscription.text,
+            status: userTranscription.status || 'pending',
+            is_validated: !!userTranscription.is_validated,
+        } : null,
+        validated_transcription: validatedTranscription ? {
+            id: validatedTranscription.id,
+            text: validatedTranscription.text,
+            contributor_id: validatedTranscription.contributor_id,
+        } : null,
+        display_text: displayText,
+        is_read_only: isValidatedSegment || !!userTranscription,
+        lock_reason: isValidatedSegment
+            ? 'validated'
+            : userTranscription
+                ? 'already_submitted'
+                : null,
+        segmentation_issue_reported: !!segment.segmentation_issue_reported,
+    }
+}
+
 export async function getNextSegment(manuscriptId?: string, targetSegmentId?: string, afterSegmentId?: string, direction: 'next' | 'prev' = 'next') {
     const supabase = await createClient()
     const {
@@ -141,6 +220,8 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
                 id,
                 image_url,
                 order_index,
+                status,
+                consensus_text,
                 polygon,
                 segmentation_issue_reported,
                 manuscript_id,
@@ -179,6 +260,8 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
                 id,
                 image_url,
                 order_index,
+                status,
+                consensus_text,
                 polygon,
                 segmentation_issue_reported,
                 manuscript_id,
@@ -242,45 +325,7 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
     // In sequential mode, we take the FIRST available in the filtered list (which is already ordered correctly for the direction)
     const segment = manuscriptId ? availableSegments[0] : availableSegments[Math.floor(Math.random() * availableSegments.length)];
 
-    // Fetch existing transcriptions for this segment by other users to show as references
-    const { data: otherData } = await supabase
-        .from('transcriptions')
-        .select('text, contributor_id')
-        .eq('segment_id', segment.id)
-        .neq('contributor_id', user.id)
-        .order('submitted_at', { ascending: false })
-        .limit(10)
-
-    let otherTranscriptions: any[] = []
-    if (otherData && otherData.length > 0) {
-        const cIds = Array.from(new Set(otherData.map((d: any) => d.contributor_id)))
-        const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, email, avatar_url, role')
-            .in('id', cIds)
-        
-        const pMap = new Map((profiles || []).map((p: any) => [p.id, p]))
-        otherTranscriptions = otherData.map((d: any) => ({
-            text: d.text,
-            profiles: pMap.get(d.contributor_id) || null
-        }))
-    }
-
-    return {
-        id: segment.id,
-        manuscript_id: (segment.manuscripts as any)?.id || segment.manuscript_id || '',
-        page_id: (segment.pages as any)?.id || segment.page_id || '',
-        image_url: segment.image_url,
-        order_index: segment.order_index,
-        polygon: segment.polygon,
-        manuscript_title: (segment.manuscripts as any)?.title || 'Unknown Manuscript',
-        manuscript_description: (segment.manuscripts as any)?.description || '',
-        manuscript_reference_text_url: (segment.manuscripts as any)?.reference_text_url || '',
-        page_image_url: (segment.pages as any)?.image_url || '',
-        page_label: (segment.pages as any)?.label || 'Unknown Page',
-        other_transcriptions: otherTranscriptions || [],
-        segmentation_issue_reported: !!segment.segmentation_issue_reported,
-    }
+    return buildSegmentPayload(supabase, segment, user.id)
 }
 
 export async function getSegmentById(segmentId: string) {
@@ -305,45 +350,7 @@ export async function getSegmentById(segmentId: string) {
         throw new Error('Segment not found')
     }
 
-    // Fetch existing transcriptions for this segment by other users to show as references
-    const { data: otherData } = await supabase
-        .from('transcriptions')
-        .select('text, contributor_id')
-        .eq('segment_id', segment.id)
-        .neq('contributor_id', user.id)
-        .order('submitted_at', { ascending: false })
-        .limit(10)
-
-    let otherTranscriptions: any[] = []
-    if (otherData && otherData.length > 0) {
-        const cIds = Array.from(new Set(otherData.map((d: any) => d.contributor_id)))
-        const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, email, avatar_url, role')
-            .in('id', cIds)
-        
-        const pMap = new Map((profiles || []).map((p: any) => [p.id, p]))
-        otherTranscriptions = otherData.map((d: any) => ({
-            text: d.text,
-            profiles: pMap.get(d.contributor_id) || null
-        }))
-    }
-
-    return {
-        id: segment.id,
-        manuscript_id: segment.manuscripts?.id || '',
-        page_id: segment.pages?.id || '',
-        image_url: segment.image_url,
-        order_index: segment.order_index,
-        polygon: segment.polygon,
-        manuscript_title: segment.manuscripts?.title || 'Unknown Manuscript',
-        manuscript_description: segment.manuscripts?.description || '',
-        manuscript_reference_text_url: segment.manuscripts?.reference_text_url || '',
-        page_image_url: segment.pages?.image_url || '',
-        page_label: segment.pages?.label || 'Unknown Page',
-        other_transcriptions: otherTranscriptions || [],
-        segmentation_issue_reported: !!segment.segmentation_issue_reported,
-    }
+    return buildSegmentPayload(supabase, segment, user.id)
 }
 
 export async function getPendingSegmentCount() {
@@ -398,9 +405,13 @@ export async function submitTranscription(segmentId: string, text: string) {
     // Fetch segment image_url, polygon and page image at submission time
     const { data: segmentData } = await supabase
         .from('segments')
-        .select('image_url, transcription_count, polygon, page_id, pages(image_url)')
+        .select('image_url, transcription_count, polygon, page_id, status, pages(image_url)')
         .eq('id', segmentId)
         .single()
+
+    if (segmentData?.status === 'validated' || segmentData?.status === 'archived') {
+        return { error: 'Ce segment est deja verrouille.' }
+    }
 
     // Pre-compute reward so we can store xp_awarded at insert time
     const { data: profileForReward } = await supabase
