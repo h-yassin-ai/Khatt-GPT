@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=1920, height=1080, initial-scale=1">
-  <title>Waraka - presentation</title>
+  <title>KHATT-GPT - presentation</title>
   <style>
     @font-face {
       font-family: Geist;
@@ -26,14 +26,13 @@
     body { background: var(--paper); color: var(--ink); font-family: Geist, Arial, sans-serif; }
     .scene { display: none; position: relative; width: 1920px; height: 1080px; overflow: hidden; }
     .scene.active { display: block; }
-    .eyebrow { color: var(--orange); font-size: 22px; font-weight: 750; letter-spacing: 5px; text-transform: uppercase; }
-    .display { margin: 0; font-size: 96px; line-height: .96; letter-spacing: -3px; font-weight: 800; }
-    .lead { margin: 28px 0 0; color: var(--ink-soft); font-size: 30px; line-height: 1.35; max-width: 650px; }
-    .brand { display: flex; align-items: center; gap: 18px; color: inherit; font-weight: 800; font-size: 30px; letter-spacing: 1px; }
-    .brand img { width: 54px; height: 54px; border-radius: 15px; box-shadow: 0 12px 30px rgba(12, 47, 47, .16); }
-    .brand small { display: block; color: var(--gold); font-size: 14px; letter-spacing: 3px; margin-top: 2px; font-weight: 700; }
+    .eyebrow { color: var(--orange); font-size: 18px; font-weight: 750; letter-spacing: 3px; text-transform: uppercase; }
+    .display { margin: 0; font-size: 84px; line-height: 1.02; letter-spacing: -2px; font-weight: 800; }
+    .lead { margin: 22px 0 0; color: var(--ink-soft); font-size: 25px; line-height: 1.35; max-width: 570px; }
+    .brand { display: flex; align-items: center; gap: 16px; color: inherit; font-weight: 800; font-size: 28px; letter-spacing: 1px; }
+    .brand img { width: 52px; height: 52px; border-radius: 15px; box-shadow: 0 12px 30px rgba(12, 47, 47, .16); }
     .topline { position: absolute; top: 56px; left: 72px; right: 72px; display: flex; justify-content: space-between; align-items: center; z-index: 3; }
-    .pill { display: inline-flex; align-items: center; height: 42px; padding: 0 17px; border: 1px solid currentColor; border-radius: 999px; font-size: 17px; font-weight: 700; letter-spacing: 1px; }
+    .pill { display: inline-flex; align-items: center; height: 38px; padding: 0 15px; border: 1px solid currentColor; border-radius: 999px; font-size: 15px; font-weight: 700; letter-spacing: 1px; }
     .muted { color: rgba(246, 239, 229, .65); }
 
     .scene-one { background: var(--ink); color: var(--paper); }
@@ -41,68 +40,69 @@
     .scene-one::after { content: ''; position: absolute; width: 10px; height: 390px; right: 483px; top: 100px; background: var(--orange); transform: rotate(34deg); box-shadow: 0 0 40px rgba(202,111,53,.7); }
     .scene-one .topline { color: var(--paper); }
     .scene-one .brand img { background: var(--paper); }
-    .one-copy { position: absolute; left: 150px; top: 285px; z-index: 2; }
-    .one-copy .display { max-width: 800px; }
+    .one-copy { position: absolute; left: 150px; top: 325px; z-index: 2; }
+    .one-copy .display { max-width: 900px; }
     .one-copy .display span { color: var(--gold); }
     .one-copy .lead { color: rgba(246,239,229,.72); }
-    .language-row { display: flex; gap: 12px; margin-top: 58px; }
+    .language-row { display: flex; gap: 12px; margin-top: 38px; }
     .language-row .pill { border-color: rgba(230,172,88,.72); color: var(--gold); }
-    .ink-mark { position: absolute; right: 310px; top: 360px; width: 410px; height: 280px; z-index: 2; transform: rotate(-8deg); opacity: .9; }
+    .ink-mark { position: absolute; right: 260px; top: 330px; width: 470px; height: 310px; z-index: 2; transform: rotate(-8deg); opacity: .9; }
     .ink-mark img { width: 100%; height: 100%; object-fit: cover; object-position: center; border: 20px solid rgba(246,239,229,.9); filter: sepia(.4) contrast(1.1); box-shadow: 0 35px 60px rgba(0,0,0,.22); }
     .ink-mark::after { content: 'مخطوط'; position: absolute; right: -16px; bottom: -26px; padding: 12px 20px; background: var(--orange); color: var(--paper); font-size: 25px; transform: rotate(7deg); box-shadow: 0 8px 22px rgba(0,0,0,.2); }
 
     .scene-two { background: var(--paper); }
     .scene-two .topline { color: var(--ink); }
-    .two-copy { position: absolute; left: 150px; top: 255px; z-index: 2; }
-    .two-copy .display { max-width: 720px; }
+    .two-copy { position: absolute; left: 150px; top: 330px; z-index: 2; }
+    .two-copy .display { max-width: 580px; margin-top: 12px; }
     .two-copy .display span { color: var(--orange); }
-    .page-card { position: absolute; right: 170px; top: 175px; width: 900px; height: 770px; padding: 24px; border: 1px solid rgba(25,59,59,.14); background: #fffaf1; box-shadow: 0 30px 70px rgba(92,68,42,.16); transform: rotate(3deg); }
+    .page-card { position: absolute; right: 115px; top: 245px; width: 1000px; height: 515px; padding: 45px; border: 1px solid rgba(25,59,59,.14); background: #fffaf1; box-shadow: 0 30px 70px rgba(92,68,42,.16); }
     .page-card::before { content: ''; position: absolute; inset: 16px; border: 1px solid rgba(202,111,53,.26); pointer-events: none; }
-    .page-card img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 36%; filter: grayscale(.25) sepia(.22) contrast(1.1); }
-    .page-number { position: absolute; top: 52px; right: 48px; color: var(--orange); font-size: 20px; font-weight: 700; }
-    .page-note { position: absolute; bottom: 44px; left: 52px; background: var(--paper); border-left: 5px solid var(--orange); padding: 15px 20px; font-size: 19px; font-weight: 750; box-shadow: 0 8px 18px rgba(92,68,42,.13); transform: rotate(-3deg); }
-    .quote { position: absolute; left: 150px; bottom: 175px; display: flex; gap: 18px; align-items: flex-start; color: var(--ink-soft); font-size: 21px; max-width: 560px; line-height: 1.45; }
-    .quote i { display: block; width: 6px; height: 68px; background: var(--gold); }
+    .page-card img { display: block; width: 100%; height: 150px; object-fit: cover; object-position: center; filter: grayscale(.25) sepia(.22) contrast(1.1); border: 3px solid #e4a30c; background: #fffdf9; }
+    .page-number { position: absolute; top: 25px; right: 45px; color: var(--orange); font-size: 18px; font-weight: 700; }
+    .page-note { position: absolute; bottom: 35px; left: 45px; background: var(--paper); border-left: 5px solid var(--orange); padding: 12px 18px; font-size: 18px; font-weight: 750; box-shadow: 0 8px 18px rgba(92,68,42,.13); }
+    .quote { position: absolute; left: 150px; bottom: 155px; color: var(--ink-soft); font-size: 21px; max-width: 480px; line-height: 1.45; }
 
     .scene-three { background: #e7ddd0; }
     .scene-three .topline { color: var(--ink); }
-    .three-copy { position: absolute; left: 150px; top: 180px; z-index: 3; }
-    .three-copy .display { max-width: 660px; font-size: 82px; }
+    .three-copy { position: absolute; left: 150px; top: 315px; z-index: 3; }
+    .three-copy .display { max-width: 500px; font-size: 82px; margin-top: 14px; }
+    .three-copy .lead { max-width: 390px; }
     .three-copy .display span { color: var(--orange); }
-    .workflow { position: absolute; right: 115px; top: 185px; width: 1030px; height: 720px; background: #fffaf1; border: 1px solid rgba(25,59,59,.18); box-shadow: 0 35px 80px rgba(45,59,52,.19); border-radius: 18px; overflow: hidden; }
+    .workflow { position: absolute; right: 115px; top: 220px; width: 1070px; height: 650px; background: #fffaf1; border: 1px solid rgba(25,59,59,.18); box-shadow: 0 35px 80px rgba(45,59,52,.19); border-radius: 18px; overflow: hidden; }
     .workflow-bar { height: 58px; display: flex; align-items: center; gap: 8px; padding: 0 22px; border-bottom: 1px solid var(--line); color: var(--ink-soft); font-size: 15px; }
     .workflow-bar b { margin-right: auto; color: var(--ink); font-size: 17px; }
     .dot { width: 11px; height: 11px; border-radius: 50%; background: #e5c4a7; }
     .dot:nth-child(2) { background: #c97658; }
     .dot:nth-child(3) { background: #4c8274; }
-    .workflow-main { display: grid; grid-template-columns: 54% 46%; height: calc(100% - 58px); }
-    .manuscript-pane { position: relative; padding: 35px; background: #d9d0c1; overflow: hidden; }
-    .manuscript-pane img { width: 100%; height: 100%; object-fit: cover; filter: sepia(.28) contrast(1.2) brightness(.95); }
-    .line-box { position: absolute; left: 57px; right: 57px; top: 242px; height: 102px; border: 4px solid #e4a30c; background: rgba(231,171,44,.16); box-shadow: 0 0 0 999px rgba(21,30,27,.16); }
-    .line-label { position: absolute; top: 208px; right: 57px; padding: 8px 14px; background: #e4a30c; color: #2c2a20; font-size: 14px; font-weight: 800; }
-    .write-pane { padding: 34px 32px; background: #fffaf1; }
+    .workflow-main { display: grid; grid-template-columns: 50% 50%; height: calc(100% - 58px); }
+    .manuscript-pane { position: relative; padding: 35px; background: #d9d0c1; overflow: hidden; display: grid; place-items: center; }
+    .line-stage { position: relative; width: 100%; height: 185px; padding: 48px 16px 28px; background: #fffdf9; border: 3px solid #e4a30c; box-shadow: 0 0 0 999px rgba(21,30,27,.14); overflow: hidden; }
+    .line-stage img { display: block; width: 270%; max-width: none; height: auto; transform: translateX(-31%); filter: sepia(.28) contrast(1.2) brightness(.95); }
+    .line-label { position: absolute; top: -34px; right: 0; padding: 8px 14px; background: #e4a30c; color: #2c2a20; font-size: 14px; font-weight: 800; }
+    .write-pane { padding: 42px 36px; background: #fffaf1; }
     .write-pane h3 { margin: 0; font-size: 22px; }
-    .write-pane p { color: var(--ink-soft); font-size: 15px; line-height: 1.45; }
-    .textarea { height: 160px; margin-top: 28px; border: 1px solid #d8c8b5; border-radius: 13px; padding: 20px; color: var(--ink-soft); font-size: 22px; direction: rtl; background: #fffdf9; }
+    .write-pane p { color: var(--ink-soft); font-size: 16px; line-height: 1.45; }
+    .textarea { height: 145px; margin-top: 22px; border: 1px solid #d8c8b5; border-radius: 13px; padding: 20px; color: var(--ink-soft); font-size: 24px; direction: rtl; background: #fffdf9; }
     .fake-caret { display: inline-block; width: 2px; height: 28px; background: var(--orange); vertical-align: middle; animation: blink 1s infinite; }
     @keyframes blink { 50% { opacity: .15; } }
-    .validate { margin-top: 22px; height: 50px; border-radius: 11px; background: var(--orange); color: white; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; }
-    .contributors { display: flex; gap: 10px; margin-top: 33px; align-items: center; }
+    .validate { margin-top: 18px; height: 50px; border-radius: 11px; background: var(--orange); color: white; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; }
+    .contributors { display: flex; gap: 10px; margin-top: 24px; align-items: center; }
     .avatar { width: 39px; height: 39px; display: grid; place-items: center; border-radius: 50%; color: white; font-size: 14px; font-weight: 800; border: 2px solid white; margin-left: -9px; }
     .avatar:first-child { margin-left: 0; background: #c66a32; }
     .avatar:nth-child(2) { background: #4f7f73; }
     .avatar:nth-child(3) { background: #be8b4b; }
     .contrib-label { color: var(--ink-soft); font-size: 14px; margin-left: 7px; }
-    .signal { position: absolute; left: 695px; top: 356px; width: 140px; height: 2px; background: var(--gold); transform: rotate(-20deg); transform-origin: left center; opacity: .8; }
+    .signal { position: absolute; left: 695px; top: 410px; width: 140px; height: 2px; background: var(--gold); transform: rotate(-20deg); transform-origin: left center; opacity: .8; }
     .signal::after { content: ''; position: absolute; right: -6px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--orange); }
 
     .scene-four { background: var(--ink); color: var(--paper); }
     .scene-four .topline { color: var(--paper); }
-    .four-copy { position: absolute; left: 150px; top: 270px; z-index: 2; }
-    .four-copy .display { max-width: 680px; }
+    .four-copy { position: absolute; left: 150px; top: 330px; z-index: 2; }
+    .four-copy .display { max-width: 690px; font-size: 76px; margin-top: 12px; }
     .four-copy .display span { color: var(--gold); }
-    .four-copy .lead { color: rgba(246,239,229,.72); }
-    .search-demo { position: absolute; right: 150px; top: 170px; width: 830px; height: 760px; border: 1px solid rgba(246,239,229,.23); border-radius: 22px; background: rgba(246,239,229,.08); box-shadow: 0 28px 80px rgba(0,0,0,.22); padding: 28px; }
+    .four-copy .lead { color: rgba(246,239,229,.72); max-width: 500px; }
+    .final-call { display: inline-flex; margin-top: 34px; padding: 12px 18px; border: 1px solid rgba(230,172,88,.75); border-radius: 999px; color: var(--gold); font-weight: 800; letter-spacing: 1px; }
+    .search-demo { position: absolute; right: 150px; top: 220px; width: 830px; height: 630px; border: 1px solid rgba(246,239,229,.23); border-radius: 22px; background: rgba(246,239,229,.08); box-shadow: 0 28px 80px rgba(0,0,0,.22); padding: 28px; }
     .search-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 22px; border-bottom: 1px solid rgba(246,239,229,.15); }
     .search-head strong { font-size: 22px; }
     .close { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; border: 1px solid rgba(246,239,229,.28); color: var(--gold); font-size: 22px; }
@@ -113,7 +113,7 @@
     .result-text { margin-top: 14px; color: var(--paper); font-size: 27px; line-height: 1.7; direction: rtl; }
     .result-text mark { background: rgba(230,172,88,.65); color: var(--ink); padding: 2px 6px; border-radius: 4px; }
     .result-meta { margin-top: 13px; color: rgba(246,239,229,.57); font-size: 15px; }
-    .search-tags { display: flex; gap: 10px; margin-top: 42px; }
+    .search-tags { display: flex; gap: 10px; margin-top: 32px; }
     .search-tags span { padding: 9px 14px; border: 1px solid rgba(230,172,88,.55); border-radius: 999px; color: var(--gold); font-size: 14px; font-weight: 700; }
     .crosshair { position: absolute; right: 930px; top: 638px; width: 90px; height: 90px; border: 2px solid var(--gold); border-radius: 50%; opacity: .7; }
     .crosshair::before, .crosshair::after { content: ''; position: absolute; background: var(--gold); }
@@ -137,47 +137,47 @@
 <body>
   <section class="scene scene-one" data-scene="1">
     <div class="topline">
-      <div class="brand"><img src="../public/icon-192.png" alt=""><div>Waraka<small>KHATT-GPT</small></div></div>
-      <div class="pill">PLATEFORME COLLABORATIVE</div>
+      <div class="brand"><img src="../public/icon-192.png" alt=""><div>KHATT-GPT</div></div>
+      <div class="pill">AR · FR · EN</div>
     </div>
     <div class="one-copy">
-      <div class="eyebrow">Patrimoine écrit · Intelligence collective</div>
-      <h1 class="display">Les manuscrits<br><span>reprennent vie.</span></h1>
-      <p class="lead">Une plateforme pour lire, transcrire et préserver les manuscrits arabes, ensemble.</p>
-      <div class="language-row"><span class="pill">العربية</span><span class="pill">FRANÇAIS</span><span class="pill">ENGLISH</span></div>
+      <div class="eyebrow">Manuscrits arabes · intelligence collective</div>
+      <h1 class="display">Lire.<br><span>Transcrire.</span><br>Préserver.</h1>
+      <p class="lead">Le patrimoine écrit devient accessible à tous.</p>
+      <div class="language-row"><span class="pill">العربية</span><span class="pill">FR</span><span class="pill">EN</span></div>
     </div>
     <div class="ink-mark"><img src="../public/images/guide/thuluth.png" alt="Manuscrit arabe"></div>
   </section>
 
   <section class="scene scene-two" data-scene="2">
     <div class="topline">
-      <div class="brand"><img src="../public/icon-192.png" alt=""><div>Waraka<small>KHATT-GPT</small></div></div>
-      <div class="pill">01 · OBSERVER</div>
+      <div class="brand"><img src="../public/icon-192.png" alt=""><div>KHATT-GPT</div></div>
+      <div class="pill">01 · VOIR</div>
     </div>
     <div class="two-copy">
       <div class="eyebrow">Un geste de lecture</div>
-      <h2 class="display">Chaque ligne<br>raconte <span>une histoire.</span></h2>
-      <p class="lead">Le fac-similé reste au centre. On observe l’écriture, le contexte et les détails qui donnent du sens au texte.</p>
+      <h2 class="display">Voir les<br><span>mots.</span></h2>
+      <p class="lead">Le fac-similé reste au centre.</p>
     </div>
-    <div class="quote"><i></i><span>Conserver la trace des mots, des formes et des voix pour les générations futures.</span></div>
-    <div class="page-card"><img src="../public/images/guide/thuluth.png" alt="Extrait de manuscrit"><div class="page-number">FOLIO 24</div><div class="page-note">Fac-similé original · écriture arabe</div></div>
+    <div class="quote">Une ligne manuscrite, isolée pour être lue.</div>
+    <div class="page-card"><img src="../public/images/guide/thuluth-line.png" alt="Ligne réelle extraite du manuscrit"><div class="page-number">FOLIO 24 · LIGNE 03</div><div class="page-note">Ligne réelle extraite du fac-similé</div></div>
   </section>
 
   <section class="scene scene-three" data-scene="3">
     <div class="topline">
-      <div class="brand"><img src="../public/icon-192.png" alt=""><div>Waraka<small>KHATT-GPT</small></div></div>
-      <div class="pill">02 · TRANSCRIRE</div>
+      <div class="brand"><img src="../public/icon-192.png" alt=""><div>KHATT-GPT</div></div>
+      <div class="pill">02 · ÉCRIRE</div>
     </div>
     <div class="three-copy">
       <div class="eyebrow">Le savoir se construit à plusieurs</div>
-      <h2 class="display">Transcrire<br><span>ensemble.</span></h2>
-      <p class="lead">Chaque contribution enrichit un dataset utile aux étudiants, aux chercheurs et aux outils de lecture automatique.</p>
+      <h2 class="display">Écrire<br><span>ensemble.</span></h2>
+      <p class="lead">Une ligne · plusieurs regards.</p>
     </div>
     <div class="workflow">
-      <div class="workflow-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><b>Transcription · ligne 03</b><span>100%</span></div>
+      <div class="workflow-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><b>KHATT-GPT · ligne 03</b><span>100%</span></div>
       <div class="workflow-main">
-        <div class="manuscript-pane"><img src="../public/images/guide/thuluth.png" alt="Ligne de manuscrit"><div class="line-box"></div><div class="line-label">ligne sélectionnée</div></div>
-        <div class="write-pane"><h3>Votre transcription</h3><p>Proposez une lecture fidèle de la ligne sélectionnée.</p><div class="textarea">هذا نصٌّ مقترح <span class="fake-caret"></span></div><div class="validate">Valider la transcription</div><div class="contributors"><span class="avatar">A</span><span class="avatar">M</span><span class="avatar">S</span><span class="contrib-label">3 propositions · 1 ligne relue</span></div></div>
+        <div class="manuscript-pane"><div class="line-stage"><img src="../public/images/guide/thuluth-line.png" alt="Ligne réelle du manuscrit"><div class="line-label">LIGNE 03</div></div></div>
+        <div class="write-pane"><h3>Votre transcription</h3><p>Écrivez ce que vous voyez.</p><div class="textarea">هذا نصّ مقترح <span class="fake-caret"></span></div><div class="validate">Valider</div><div class="contributors"><span class="avatar">A</span><span class="avatar">M</span><span class="avatar">S</span><span class="contrib-label">3 contributeurs</span></div></div>
       </div>
     </div>
     <div class="signal"></div>
@@ -185,36 +185,22 @@
 
   <section class="scene scene-four" data-scene="4">
     <div class="topline">
-      <div class="brand"><img src="../public/icon-192.png" alt=""><div>Waraka<small>KHATT-GPT</small></div></div>
-      <div class="pill">03 · COMPRENDRE</div>
+      <div class="brand"><img src="../public/icon-192.png" alt=""><div>KHATT-GPT</div></div>
+      <div class="pill">03 · CHERCHER</div>
     </div>
     <div class="four-copy">
       <div class="eyebrow">Une référence au bout des doigts</div>
-      <h2 class="display">Retrouver<br>les mots<br><span>plus vite.</span></h2>
-      <p class="lead">Importez le texte publié, cherchez une correspondance et gardez la ligne manuscrite visible pour décider avec confiance.</p>
+      <h2 class="display">Chercher une<br><span>correspondance.</span></h2>
+      <p class="lead">Un fichier TXT, une recherche, plus de confiance.</p>
+      <div class="final-call">Rejoindre KHATT-GPT →</div>
     </div>
     <div class="crosshair"></div>
     <div class="search-demo">
-      <div class="search-head"><strong>Rechercher dans la référence</strong><div class="close">×</div></div>
+      <div class="search-head"><strong>Recherche dans le texte</strong><div class="close">×</div></div>
       <div class="search-input"><span class="magnify">⌕</span><span>الكتب</span></div>
-      <div class="result-card"><div class="result-label">Correspondance possible · page 24</div><div class="result-text">... في <mark>الكتب</mark> القديمة ودفاتر العلماء ...</div><div class="result-meta">Recherche tolérante : ا · أ · إ · آ</div></div>
-      <div class="search-tags"><span>ARABE</span><span>RÉFÉRENCE TXT</span><span>CONFIANCE</span></div>
+      <div class="result-card"><div class="result-label">Correspondance · page 24</div><div class="result-text">... في <mark>الكتب</mark> القديمة ...</div><div class="result-meta">ا · أ · إ · آ sont rapprochés</div></div>
+      <div class="search-tags"><span>TXT</span><span>AR · FR · EN</span></div>
     </div>
-  </section>
-
-  <section class="scene scene-five" data-scene="5">
-    <div class="topline">
-      <div class="brand"><img src="../public/icon-192.png" alt=""><div>Waraka<small>KHATT-GPT</small></div></div>
-      <div class="pill">UN PROJET OUVERT</div>
-    </div>
-    <div class="five-copy">
-      <div class="eyebrow">Étudiants · chercheurs · curieux</div>
-      <h2 class="display">Votre lecture<br>devient <span>mémoire.</span></h2>
-      <p class="lead">Apprenez, contribuez et transmettez le patrimoine manuscrit au monde entier.</p>
-      <div class="cta">Rejoindre Waraka</div>
-    </div>
-    <div class="seal"><img src="../public/icon-192.png" alt="Waraka"><div class="seal-label">LIRE · TRANSCRIRE · PRÉSERVER</div></div>
-    <div class="footer-line"><span>WARAKA · KHATT-GPT</span><span>AR · FR · EN</span></div>
   </section>
 
   <script>
