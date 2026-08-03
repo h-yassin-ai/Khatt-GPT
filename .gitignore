@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.video-work/
 /out/
 
 # production
