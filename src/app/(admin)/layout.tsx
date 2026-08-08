@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { LayoutDashboard, Library, Download, LogOut, PieChart, Search, Settings, CheckCircle } from 'lucide-react'
 import { AdminRealtimeAlerts } from './AdminRealtimeAlerts'
 
-// This layout relies on middleware.ts doing the heavy lifting of admin authorization
+// This layout relies on proxy.ts doing the heavy lifting of admin authorization
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
