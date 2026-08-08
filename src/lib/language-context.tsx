@@ -20,6 +20,9 @@ export const translations: Record<string, Record<Language, string>> = {
     // Nav
     'nav.dashboard': { en: 'Dashboard', fr: 'Dashboard', ar: 'لوحة القيادة' },
     'nav.browse': { en: 'Browse Dataset', fr: 'Parcourir', ar: 'تصفح المخطوطات' },
+    'nav.corpus': { en: 'Corpus', fr: 'Corpus', ar: 'المجموعة' },
+    'nav.research': { en: 'Research', fr: 'Recherche', ar: 'البحث' },
+    'nav.methodology': { en: 'Methodology', fr: 'Méthodologie', ar: 'المنهجية' },
     'nav.transcribe': { en: 'Transcribe', fr: 'Transcrire', ar: 'نسخ المخطوطات' },
     'nav.learn': { en: 'Learn to Read', fr: 'Apprendre à lire', ar: 'تعلم القراءة' },
     'nav.profile': { en: 'Profile', fr: 'Profil', ar: 'الملف الشخصي' },

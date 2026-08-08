@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { LayoutDashboard, PenLine, User, LogOut, BookOpen, ShieldCheck, GraduationCap, Languages, History, Menu, X, Feather, ChevronDown, Shuffle } from 'lucide-react'
+import { LayoutDashboard, PenLine, User, LogOut, BookOpen, ShieldCheck, GraduationCap, Languages, History, Menu, X, Feather, ChevronDown, Shuffle, Landmark } from 'lucide-react'
 import { useLanguage } from '@/lib/language-context'
 import { useState } from 'react'
 import {
@@ -43,6 +43,9 @@ export function ContributorNav({ email, isAdmin, isFullWidth = false }: { email:
             </Link>
             <Link href="/guide" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <Feather className="w-4 h-4" /> {t('nav.guide')}
+            </Link>
+            <Link href="/research" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
+                <Landmark className="w-4 h-4" /> {t('nav.research')}
             </Link>
             
             <DropdownMenu>
@@ -87,7 +90,7 @@ export function ContributorNav({ email, isAdmin, isFullWidth = false }: { email:
                 <NavLinks />
             </nav>
             <div className="flex items-center gap-3">
-                <div className="text-sm text-muted-foreground hidden lg:block">
+                <div className="text-sm text-muted-foreground hidden xl:block">
                     {email}
                 </div>
                 <DropdownMenu>

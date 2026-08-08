@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { ContributorNav } from '@/components/ContributorNav';
-import Link from 'next/link';
+import { PublicHeader } from '@/components/PublicHeader';
+import { PublicFooter } from '@/components/PublicFooter';
 
 export default async function PublicLayout({
     children,
@@ -19,22 +20,7 @@ export default async function PublicLayout({
                 {user ? (
                     <ContributorNav email={user.email ?? ''} isAdmin={isAdmin} />
                 ) : (
-                    <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center w-full">
-                        <Link href="/" className="flex items-center gap-2.5 shrink-0">
-                            <span className="font-heading text-2xl lg:text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-primary via-primary/90 to-amber-600 drop-shadow-sm">Khatt-GPT</span>
-                        </Link>
-                        <nav className="flex items-center gap-6">
-                            <Link href="/auth/login" className="text-sm font-medium hover:text-primary transition-colors">
-                                Log In
-                            </Link>
-                            <Link
-                                href="/auth/register"
-                                className="text-sm font-medium bg-primary text-primary-foreground px-5 py-2.5 rounded-md hover:bg-primary/90 transition-all shadow-sm"
-                            >
-                                Start Contributing
-                            </Link>
-                        </nav>
-                    </div>
+                    <PublicHeader />
                 )}
             </header>
 
@@ -43,10 +29,7 @@ export default async function PublicLayout({
                 {children}
             </main>
 
-            {/* Footer */}
-            <footer className="w-full max-w-7xl p-6 text-center text-sm text-muted-foreground border-t border-border mt-16">
-                <p>© {new Date().getFullYear()} Khatt-GPT. Preserving Maghrebi Manuscripts.</p>
-            </footer>
+            <PublicFooter year={new Date().getFullYear()} />
         </div>
     );
 }

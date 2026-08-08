@@ -41,9 +41,12 @@ export async function updateSession(request: NextRequest) {
     const pathname = request.nextUrl.pathname
 
     // Public routes that don't need auth checking
-    const isPublicRoute = 
-        pathname === '/' || 
-        pathname.startsWith('/auth') || 
+    const isPublicRoute =
+        pathname === '/' ||
+        pathname === '/corpus' ||
+        pathname.startsWith('/corpus/') ||
+        pathname === '/research' ||
+        pathname.startsWith('/auth') ||
         pathname === '/manifest.webmanifest' ||
         pathname === '/favicon.ico' ||
         pathname === '/sw.js'
