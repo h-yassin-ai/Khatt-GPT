@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast'
 import { FileText, Save, Loader2, Upload, Link as LinkIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { uploadManuscriptPdf, updateManuscriptPdfUrl } from '../actions'
+import { useLanguage } from '@/lib/language-context'
 
 export default function PdfUrlUpdate({ manuscriptId, currentUrl }: { manuscriptId: string, currentUrl?: string }) {
     const [url, setUrl] = useState(currentUrl || '')
@@ -13,15 +14,16 @@ export default function PdfUrlUpdate({ manuscriptId, currentUrl }: { manuscriptI
     const [mode, setMode] = useState<'url' | 'upload'>('url')
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { toast } = useToast()
+    const { t, lang } = useLanguage()
     const router = useRouter()
 
     const handleUpdateUrl = async () => {
         setLoading(true)
         const res = await updateManuscriptPdfUrl(manuscriptId, url.trim())
         if (res.error) {
-            toast({ title: "Error", description: res.error, variant: "destructive" })
+            toast({ title: t('common.error'), description: res.error, variant: "destructive" })
         } else {
-            toast({ title: "Updated!", description: "PDF URL has been updated." })
+            toast({ title: t('common.updated'), description: t('admin.pdf_url_updated') })
             router.refresh()
         }
         setLoading(false)
@@ -32,7 +34,7 @@ export default function PdfUrlUpdate({ manuscriptId, currentUrl }: { manuscriptI
         if (!file) return
 
         if (!file.type.includes('pdf')) {
-            toast({ title: "Invalid file", description: "Please upload a PDF file.", variant: "destructive" })
+            toast({ title: t('admin.invalid_pdf'), description: t('admin.pdf_only'), variant: "destructive" })
             return
         }
 
@@ -42,9 +44,9 @@ export default function PdfUrlUpdate({ manuscriptId, currentUrl }: { manuscriptI
 
         const res = await uploadManuscriptPdf(manuscriptId, formData)
         if (res.error) {
-            toast({ title: "Upload failed", description: res.error, variant: "destructive" })
+            toast({ title: t('admin.upload_failed'), description: res.error, variant: "destructive" })
         } else {
-            toast({ title: "Uploaded!", description: "PDF has been uploaded and linked." })
+            toast({ title: t('admin.pdf_uploaded'), description: t('admin.pdf_linked') })
             setUrl(res.success ? '' : url) // success returns updated url usually but we refresh
             router.refresh()
         }
@@ -53,10 +55,10 @@ export default function PdfUrlUpdate({ manuscriptId, currentUrl }: { manuscriptI
     }
 
     return (
-        <div className="flex flex-col gap-3 p-4 rounded-xl bg-card border border-border shadow-sm">
+        <div className="flex flex-col gap-3 p-4 rounded-xl bg-card border border-border shadow-sm" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
-                    <FileText className="w-3 h-3" /> Manuscript PDF
+                    <FileText className="w-3 h-3" /> {t('admin.pdf_title')}
                 </label>
                 <div className="flex bg-muted rounded-lg p-0.5">
                     <button
@@ -69,7 +71,7 @@ export default function PdfUrlUpdate({ manuscriptId, currentUrl }: { manuscriptI
                         onClick={() => setMode('upload')}
                         className={`px-2 py-1 text-[10px] rounded-md transition-all ${mode === 'upload' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}
                     >
-                        <Upload className="w-2.5 h-2.5 inline mr-1" /> Upload
+                        <Upload className="w-2.5 h-2.5 inline mr-1" /> {t('admin.upload_pdf')}
                     </button>
                 </div>
             </div>
@@ -89,7 +91,7 @@ export default function PdfUrlUpdate({ manuscriptId, currentUrl }: { manuscriptI
                         className="shrink-0 gap-2"
                     >
                         {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                        Save
+                        {t('admin.save_changes')}
                     </Button>
                 </div>
             ) : (
@@ -112,17 +114,17 @@ export default function PdfUrlUpdate({ manuscriptId, currentUrl }: { manuscriptI
                         ) : (
                             <Upload className="w-6 h-6 text-muted-foreground" />
                         )}
-                        <span className="text-sm font-medium">Click to select PDF</span>
-                        <span className="text-[10px] text-muted-foreground">PDF max. 10MB</span>
+                        <span className="text-sm font-medium">{t('admin.choose_pdf')}</span>
+                        <span className="text-[10px] text-muted-foreground">{t('admin.pdf_size_hint')}</span>
                     </Button>
                     {currentUrl && (
                         <p className="text-[10px] text-green-600 font-medium text-center">
-                            ✓ Currently has a PDF linked
+                            ✓ {t('admin.pdf_currently_linked')}
                         </p>
                     )}
                 </div>
             )}
-            <p className="text-[10px] text-muted-foreground italic">Provide the PDF manuscript for contributors to search within.</p>
+            <p className="text-[10px] text-muted-foreground italic">{t('admin.pdf_contributor_hint')}</p>
         </div>
     )
 }

@@ -169,16 +169,16 @@ export function ResearchPageClient({ summary, summaryAvailable }: { summary: Man
     const principleIcons = [Library, CircleDot, Scale, ShieldCheck]
 
     return (
-        <article className="px-4 pb-16 pt-10 sm:px-6" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+        <article className="w-full min-w-0 px-4 pb-16 pt-10 sm:px-6" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             <header className="border-b border-border pb-10">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{c.eyebrow}</p>
                 <h1 className="mt-3 max-w-4xl font-heading text-4xl font-semibold leading-tight sm:text-5xl">{c.title}</h1>
                 <p className="mt-5 max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">{c.description}</p>
                 <div className="mt-7 flex flex-wrap gap-3">
-                    <Link href="/corpus" className="inline-flex h-10 items-center gap-2 rounded-md bg-secondary px-4 text-sm font-semibold text-secondary-foreground hover:bg-secondary/90">
+                    <Link href="/corpus" className="inline-flex max-w-full h-10 items-center justify-center gap-2 whitespace-normal rounded-md bg-secondary px-4 text-center text-sm font-semibold text-secondary-foreground hover:bg-secondary/90">
                         {c.corpusLink} <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
                     </Link>
-                    <Link href="/auth/register" className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-4 text-sm font-semibold hover:bg-muted">{c.contributeLink}</Link>
+                    <Link href="/auth/register" className="inline-flex max-w-full h-10 items-center justify-center gap-2 whitespace-normal rounded-md border border-border px-4 text-center text-sm font-semibold hover:bg-muted">{c.contributeLink}</Link>
                 </div>
                 <div className="mt-9 grid grid-cols-2 gap-x-5 gap-y-6 sm:grid-cols-4">
                     {[

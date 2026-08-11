@@ -1,13 +1,14 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/hooks/use-toast'
-import Link from 'next/link'
+import { useLanguage } from '@/lib/language-context'
 
 export function AdminRealtimeAlerts() {
     const { toast } = useToast()
-    const supabase = createClient()
+    const { t } = useLanguage()
+    const supabase = useMemo(() => createClient(), [])
 
     useEffect(() => {
         const channel = supabase.channel('admin-alerts')
@@ -22,8 +23,8 @@ export function AdminRealtimeAlerts() {
                 (payload) => {
                     if (payload.old.status !== 'conflict') {
                         toast({
-                            title: "⚠️ New Conflict Detected",
-                            description: `Segment #${payload.new.order_index} requires manual administrative review.`,
+                            title: t('admin.new_conflict'),
+                            description: t('admin.segment_requires_review', { count: payload.new.order_index }),
                         })
                     }
                 }
@@ -33,7 +34,7 @@ export function AdminRealtimeAlerts() {
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [supabase, toast])
+    }, [supabase, t, toast])
 
     return null
 }

@@ -16,6 +16,7 @@ const publicRoutesWithoutSession = (pathname: string) =>
     pathname === '/corpus' ||
     pathname.startsWith('/corpus/') ||
     pathname === '/research' ||
+    pathname.startsWith('/auth') ||
     pathname === '/manifest.webmanifest' ||
     pathname === '/favicon.ico' ||
     pathname === '/sw.js'

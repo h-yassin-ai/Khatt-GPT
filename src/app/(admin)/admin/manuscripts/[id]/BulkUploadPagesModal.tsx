@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import JSZip from 'jszip'
 import { v4 as uuidv4 } from 'uuid'
@@ -9,6 +9,7 @@ import { bulkInsertPagesWithSegments } from './pages/actions'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { UploadCloud, FileArchive, X, Loader2 } from 'lucide-react'
+import { useLanguage } from '@/lib/language-context'
 
 interface BulkUploadPagesModalProps {
     manuscriptId: string
@@ -22,7 +23,8 @@ export default function BulkUploadPagesModal({ manuscriptId, currentMaxOrder }: 
     const [statusText, setStatusText] = useState('')
     const router = useRouter()
     const { toast } = useToast()
-    const supabase = createClient()
+    const { t, lang } = useLanguage()
+    const supabase = useMemo(() => createClient(), [])
 
     const parsePolygonFromXML = async (zip: JSZip, xmlPath: string, segmentFileName?: string) => {
         try {
@@ -81,7 +83,7 @@ export default function BulkUploadPagesModal({ manuscriptId, currentMaxOrder }: 
 
         setUploading(true)
         setProgress(0)
-        setStatusText('Reading ZIP file...')
+        setStatusText(t('admin.reading_zip'))
 
         try {
             const zip = new JSZip()
@@ -127,7 +129,7 @@ export default function BulkUploadPagesModal({ manuscriptId, currentMaxOrder }: 
                     .filter(f => f !== mainPageImage)
                     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
 
-                setStatusText(`Processing ${folder}...`)
+                setStatusText(t('admin.processing_folder', { folder }))
 
                 // Upload Page Image
                 const pageBlob = await contents.files[mainPageImage].async('blob')
@@ -183,20 +185,20 @@ export default function BulkUploadPagesModal({ manuscriptId, currentMaxOrder }: 
             }
 
             if (fullSubmissionData.length > 0) {
-                setStatusText('Saving to database...')
+                setStatusText(t('admin.saving_database'))
                 const res = await bulkInsertPagesWithSegments(manuscriptId, fullSubmissionData)
                 if (res.error) throw new Error(res.error)
 
-                toast({ title: 'Success', description: `${fullSubmissionData.length} pages and ${fullSubmissionData.reduce((acc, p) => acc + p.segments.length, 0)} segments uploaded!` })
+                toast({ title: t('admin.success'), description: t('admin.upload_summary', { pages: fullSubmissionData.length, segments: fullSubmissionData.reduce((acc, p) => acc + p.segments.length, 0) }) })
                 setIsOpen(false)
                 router.refresh()
             } else {
-                throw new Error('No valid content found in ZIP.')
+                throw new Error(t('admin.no_valid_zip'))
             }
 
         } catch (err: any) {
             console.error(err)
-            toast({ title: 'Upload failed', description: err.message, variant: 'destructive' })
+            toast({ title: t('admin.upload_failed'), description: err.message, variant: 'destructive' })
         } finally {
             setUploading(false)
             setProgress(0)
@@ -208,14 +210,14 @@ export default function BulkUploadPagesModal({ manuscriptId, currentMaxOrder }: 
         return (
             <Button onClick={() => setIsOpen(true)} variant="outline" className="gap-2">
                 <FileArchive className="w-4 h-4" />
-                Bulk Add Pages (ZIP)
+                {t('admin.bulk_upload')}
             </Button>
         )
     }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl p-6 flex flex-col gap-6 relative animate-in zoom-in-95 duration-200">
+            <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl p-6 flex flex-col gap-6 relative animate-in zoom-in-95 duration-200" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
                 <button
                     onClick={() => !uploading && setIsOpen(false)}
                     className="absolute top-4 right-4 p-1 rounded-full hover:bg-muted transition-colors"
@@ -224,8 +226,8 @@ export default function BulkUploadPagesModal({ manuscriptId, currentMaxOrder }: 
                 </button>
 
                 <div className="flex flex-col gap-1">
-                    <h2 className="text-xl font-semibold">Bulk Upload Pages</h2>
-                    <p className="text-sm text-muted-foreground">Select a ZIP file containing page images. They will be added in alphabetical order.</p>
+                    <h2 className="text-xl font-semibold">{t('admin.bulk_title')}</h2>
+                    <p className="text-sm text-muted-foreground">{t('admin.bulk_desc')}</p>
                 </div>
 
                 {!uploading ? (
@@ -237,8 +239,8 @@ export default function BulkUploadPagesModal({ manuscriptId, currentMaxOrder }: 
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         />
                         <UploadCloud className="w-10 h-10 text-primary/60 mb-4" />
-                        <p className="font-medium text-primary">Click to select ZIP file</p>
-                        <p className="text-xs text-muted-foreground mt-2">Max 50MB recommended</p>
+                        <p className="font-medium text-primary">{t('admin.select_zip')}</p>
+                        <p className="text-xs text-muted-foreground mt-2">{t('admin.max_recommended')}</p>
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4 py-6 text-center">
@@ -253,7 +255,7 @@ export default function BulkUploadPagesModal({ manuscriptId, currentMaxOrder }: 
                                     style={{ width: `${progress}%` }}
                                 />
                             </div>
-                            <p className="text-xs text-muted-foreground">{progress}% complete</p>
+                            <p className="text-xs text-muted-foreground">{t('admin.complete', { count: progress })}</p>
                         </div>
                     </div>
                 )}
@@ -264,7 +266,7 @@ export default function BulkUploadPagesModal({ manuscriptId, currentMaxOrder }: 
                     disabled={uploading}
                     className="w-full"
                 >
-                    Cancel
+                    {t('admin.cancel')}
                 </Button>
             </div>
         </div>

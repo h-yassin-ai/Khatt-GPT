@@ -35,6 +35,28 @@ function normalizeOptionalUrl(url?: string) {
     }
 }
 
+function resourceMigrationError(column: 'pdf_url' | 'reference_text_url') {
+    return `La colonne ${column} manque dans la base. Exécutez docs/migration_manuscript_resources.sql dans Supabase, puis réessayez.`
+}
+
+async function ensureResourceColumn(supabase: any, manuscriptId: string, column: 'pdf_url' | 'reference_text_url') {
+    const { error } = await supabase
+        .from('manuscripts')
+        .select(`id, ${column}`)
+        .eq('id', manuscriptId)
+        .maybeSingle()
+
+    return error ? resourceMigrationError(column) : null
+}
+
+export async function checkManuscriptResourceColumn(manuscriptId: string, column: 'pdf_url' | 'reference_text_url') {
+    const admin = await requireAdmin()
+    if ('error' in admin) return { error: admin.error }
+
+    const error = await ensureResourceColumn(admin.supabase, manuscriptId, column)
+    return error ? { error } : { success: true }
+}
+
 async function syncManuscriptSegmentCount(supabase: any, manuscriptId: string) {
     const { count } = await supabase
         .from('segments')
@@ -60,15 +82,17 @@ export async function createManuscriptRecord({
     const safePdfUrl = normalizeOptionalUrl(pdfUrl)
     if (pdfUrl?.trim() && !safePdfUrl) return { error: 'PDF URL must be a valid http(s) URL.' }
 
-    const { data, error } = await admin.supabase.from('manuscripts').insert({
+    const insertPayload: Record<string, unknown> = {
         title: safeTitle,
         description: description.trim(),
         source: source.trim(),
         uploaded_by: admin.user.id,
         total_segments: Math.max(0, segmentsCount || 0),
         cover_image_url: coverUrl.trim(),
-        pdf_url: safePdfUrl
-    }).select('id').single()
+    }
+    if (safePdfUrl) insertPayload.pdf_url = safePdfUrl
+
+    const { data, error } = await admin.supabase.from('manuscripts').insert(insertPayload).select('id').single()
 
     if (error) return { error: error.message }
     return { id: data.id }
@@ -120,6 +144,9 @@ export async function updateManuscriptReferenceText(manuscriptId: string, url: s
 
     const safeUrl = normalizeOptionalUrl(url)
     if (url.trim() && !safeUrl) return { error: 'Reference text URL must be a valid http(s) URL.' }
+
+    const migrationError = await ensureResourceColumn(admin.supabase, manuscriptId, 'reference_text_url')
+    if (migrationError) return { error: migrationError }
 
     const { error } = await admin.supabase.from('manuscripts').update({ reference_text_url: safeUrl }).eq('id', manuscriptId)
     if (error) return { error: error.message }
@@ -176,6 +203,9 @@ export async function updateManuscriptPdfUrl(manuscriptId: string, url: string) 
     const safeUrl = normalizeOptionalUrl(url)
     if (url.trim() && !safeUrl) return { error: 'PDF URL must be a valid http(s) URL.' }
 
+    const migrationError = await ensureResourceColumn(admin.supabase, manuscriptId, 'pdf_url')
+    if (migrationError) return { error: migrationError }
+
     const { error } = await admin.supabase.from('manuscripts').update({ pdf_url: safeUrl }).eq('id', manuscriptId)
     if (error) return { error: error.message }
 
@@ -189,6 +219,9 @@ export async function uploadManuscriptPdf(manuscriptId: string, formData: FormDa
 
     const file = formData.get('file') as File
     if (!file) return { error: 'No file provided' }
+
+    const migrationError = await ensureResourceColumn(admin.supabase, manuscriptId, 'pdf_url')
+    if (migrationError) return { error: migrationError }
 
     const fileExt = file.name.split('.').pop()
     const fileName = `manuscript_${Date.now()}.${fileExt}`

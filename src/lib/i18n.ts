@@ -56,6 +56,21 @@ const translations: Record<string, Record<Language, string>> = {
         fr: 'Série',
         ar: 'سلسلة الأيام',
     },
+    'profile.points': {
+        en: 'Points',
+        fr: 'Points',
+        ar: 'النقاط',
+    },
+    'dashboard.no_image': {
+        en: 'No image',
+        fr: 'Aucune image',
+        ar: 'لا توجد صورة',
+    },
+    'dashboard.unknown_manuscript': {
+        en: 'Unknown manuscript',
+        fr: 'Manuscrit inconnu',
+        ar: 'مخطوطة غير معروفة',
+    },
 }
 
 function interpolate(value: string, vars?: Record<string, string | number>) {

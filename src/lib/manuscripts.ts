@@ -27,8 +27,8 @@ type RawManuscript = {
     cover_image_url: string | null
     total_segments: number | null
     created_at: string
-    pdf_url: string | null
-    reference_text_url: string | null
+    pdf_url?: string | null
+    reference_text_url?: string | null
     pages?: RawPage[] | null
     segments?: RawSegment[] | null
 }
@@ -94,6 +94,34 @@ function cleanSearchQuery(value: string) {
         .replace(/\s+/g, ' ')
 }
 
+function catalogSelect(includeOptionalColumns: boolean) {
+    return includeOptionalColumns
+        ? `
+            id,
+            title,
+            source,
+            description,
+            cover_image_url,
+            total_segments,
+            created_at,
+            pdf_url,
+            reference_text_url,
+            pages (id, image_url, order_index),
+            segments (id, status, image_url, order_index)
+        `
+        : `
+            id,
+            title,
+            source,
+            description,
+            cover_image_url,
+            total_segments,
+            created_at,
+            pages (id, image_url, order_index),
+            segments (id, status, image_url, order_index)
+        `
+}
+
 function orderedPages(pages: RawPage[] | null | undefined) {
     return [...(pages || [])].sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
 }
@@ -133,30 +161,20 @@ export async function getManuscriptCatalog(search = ''): Promise<ManuscriptCatal
     const supabase = await createClient()
     const query = cleanSearchQuery(search)
 
-    let request = supabase
-        .from('manuscripts')
-        .select(`
-            id,
-            title,
-            source,
-            description,
-            cover_image_url,
-            total_segments,
-            created_at,
-            pdf_url,
-            reference_text_url,
-            pages (id, image_url, order_index),
-            segments (id, status, image_url, order_index)
-        `)
-        .order('created_at', { ascending: false })
-        .order('order_index', { referencedTable: 'pages', ascending: true })
-        .order('order_index', { referencedTable: 'segments', ascending: true })
+    const buildRequest = (includeOptionalColumns: boolean) => {
+        const requestBuilder: any = supabase.from('manuscripts').select(catalogSelect(includeOptionalColumns) as any)
+        return requestBuilder
+            .order('created_at', { ascending: false })
+            .order('order_index', { referencedTable: 'pages', ascending: true })
+            .order('order_index', { referencedTable: 'segments', ascending: true })
+    }
 
+    let request: any = buildRequest(false)
     if (query) {
         request = request.or(`title.ilike.%${query}%,source.ilike.%${query}%,description.ilike.%${query}%`)
     }
 
-    const { data, error } = await request
+    let { data, error } = await request
     if (error) {
         console.warn('Unable to load manuscript catalog:', error.message)
         return {
@@ -166,7 +184,18 @@ export async function getManuscriptCatalog(search = ''): Promise<ManuscriptCatal
         }
     }
 
-    const manuscripts = ((data || []) as RawManuscript[]).map(toCatalogItem)
+    const rawManuscripts = ((data || []) as RawManuscript[])
+    if (rawManuscripts.length > 0) {
+        const { data: resources } = await supabase
+            .from('manuscripts')
+            .select('id, pdf_url, reference_text_url')
+            .in('id', rawManuscripts.map((manuscript) => manuscript.id))
+        if (resources) {
+            const resourceById = new Map((resources as Array<{ id: string; pdf_url?: string | null; reference_text_url?: string | null }>).map((resource) => [resource.id, resource]))
+            rawManuscripts.forEach((manuscript) => Object.assign(manuscript, resourceById.get(manuscript.id)))
+        }
+    }
+    const manuscripts = rawManuscripts.map(toCatalogItem)
     const summary = manuscripts.reduce<ManuscriptCatalogSummary>(
         (totals, manuscript) => ({
             manuscripts: totals.manuscripts + 1,
@@ -181,10 +210,10 @@ export async function getManuscriptCatalog(search = ''): Promise<ManuscriptCatal
 }
 
 export const getManuscriptRecord = cache(async (id: string): Promise<ManuscriptResearchRecord | null> => {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return null
+
     const supabase = await createClient()
-    const { data, error } = await supabase
-        .from('manuscripts')
-        .select(`
+    const recordSelect = (mode: 'all' | 'resources' | 'base') => mode === 'all' ? `
             id,
             title,
             source,
@@ -201,7 +230,42 @@ export const getManuscriptRecord = cache(async (id: string): Promise<ManuscriptR
                 created_at,
                 segments (id, status, image_url, order_index, segmentation_issue_reported)
             )
-        `)
+        ` : mode === 'resources' ? `
+            id,
+            title,
+            source,
+            description,
+            cover_image_url,
+            total_segments,
+            created_at,
+            pdf_url,
+            reference_text_url,
+            pages (
+                id,
+                image_url,
+                order_index,
+                created_at,
+                segments (id, status, image_url, order_index)
+            )
+        ` : `
+            id,
+            title,
+            source,
+            description,
+            cover_image_url,
+            total_segments,
+            created_at,
+            pages (
+                id,
+                image_url,
+                order_index,
+                created_at,
+                segments (id, status, image_url, order_index, segmentation_issue_reported)
+            )
+        `
+    let { data, error } = await supabase
+        .from('manuscripts')
+        .select(recordSelect('base') as any)
         .eq('id', id)
         .maybeSingle()
 
@@ -211,7 +275,14 @@ export const getManuscriptRecord = cache(async (id: string): Promise<ManuscriptR
     }
     if (!data) return null
 
-    const manuscript = data as RawManuscript
+    const { data: resources } = await supabase
+        .from('manuscripts')
+        .select('pdf_url, reference_text_url')
+        .eq('id', id)
+        .maybeSingle()
+    if (resources) Object.assign(data, resources)
+
+    const manuscript = data as unknown as RawManuscript
     const pages = orderedPages(manuscript.pages)
     const segments = pages.flatMap((page) => orderedSegments(page.segments))
     const catalogItem = toCatalogItem({ ...manuscript, pages, segments })
@@ -238,8 +309,8 @@ export const getManuscriptRecord = cache(async (id: string): Promise<ManuscriptR
 
     return {
         ...catalogItem,
-        pdfUrl: manuscript.pdf_url,
-        referenceTextUrl: manuscript.reference_text_url,
+        pdfUrl: manuscript.pdf_url ?? null,
+        referenceTextUrl: manuscript.reference_text_url ?? null,
         pages: pageRecords,
         qualityChecks,
         qualityScore: Math.round((passedChecks / Object.keys(qualityChecks).length) * 100),

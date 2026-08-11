@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { normalizeArabicText } from '@/lib/arabic'
 
 // Simple Levenshtein distance calculation
 export function levenshteinDistance(s1: string, s2: string): number {
@@ -32,14 +33,7 @@ export function computeSimilarity(s1: string, s2: string): number {
 
 export function normalizeText(text: string): string {
     if (!text) return ''
-    // Basic normalization for Arabic text
-    return text
-        .trim()
-        .replace(/\s+/g, ' ')
-        // Normalize forms of Alef
-        .replace(/[أإآ]/g, 'ا')
-        // Remove tatweel
-        .replace(/ـ/g, '')
+    return normalizeArabicText(text).trim().replace(/\s+/g, ' ')
 }
 
 export async function computeConsensus(segmentId: string) {
@@ -60,6 +54,7 @@ export async function computeConsensus(segmentId: string) {
         .from('transcriptions')
         .select('id, text, contributor_id')
         .eq('segment_id', segmentId)
+        .in('status', ['pending', 'modified', 'validated'])
 
     if (!transcriptions || transcriptions.length < segment.min_transcriptions) {
         return { success: true, reason: 'not enough transcriptions' }
@@ -90,7 +85,7 @@ export async function computeConsensus(segmentId: string) {
         }
     }
 
-    const consensusRatio = validPairs / totalPairs
+    const consensusRatio = totalPairs > 0 ? validPairs / totalPairs : 0
 
     if (consensusRatio >= (2 / 3)) {
         // We have consensus

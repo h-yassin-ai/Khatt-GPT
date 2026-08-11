@@ -3,6 +3,7 @@
 import { X, ZoomIn } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect } from 'react'
+import { useLanguage } from '@/lib/language-context'
 
 type LightboxProps = {
     isOpen: boolean
@@ -13,6 +14,13 @@ type LightboxProps = {
 }
 
 export default function LineLightbox({ isOpen, onClose, image_url, text, title }: LightboxProps) {
+    const { lang } = useLanguage()
+    const copy = {
+        noImage: lang === 'ar' ? 'لا تتوفر صورة' : lang === 'en' ? 'No image available' : 'Aucune image disponible',
+        heading: lang === 'ar' ? 'نسخ السطر' : lang === 'en' ? 'Line transcription' : 'Transcription de la ligne',
+        pending: lang === 'ar' ? 'في انتظار النسخ...' : lang === 'en' ? 'Awaiting transcription...' : 'En attente de transcription...',
+        notice: lang === 'ar' ? 'تم اعتماد هذا النسخ من المجتمع. وهو جزء من مجموعة بيانات مفتوحة للبحث في المخطوطات المغاربية.' : lang === 'en' ? 'This transcription was validated by the community. It is part of the open dataset for research on Maghrebi manuscripts.' : 'Cette transcription a été validée par la communauté. Elle fait partie du dataset open-source pour la recherche sur les manuscrits maghrébins.',
+    }
     // Prevent scrolling when lightbox is open
     useEffect(() => {
         if (isOpen) {
@@ -58,7 +66,7 @@ export default function LineLightbox({ isOpen, onClose, image_url, text, title }
                             ) : (
                                 <div className="text-muted-foreground flex flex-col items-center gap-2">
                                     <ZoomIn className="w-12 h-12 opacity-20" />
-                                    <span>No image available</span>
+                                    <span>{copy.noImage}</span>
                                 </div>
                             )}
                         </div>
@@ -66,17 +74,17 @@ export default function LineLightbox({ isOpen, onClose, image_url, text, title }
                         <div className="w-full md:w-[350px] p-8 flex flex-col gap-6 bg-card border-t md:border-t-0 md:border-l border-border overflow-y-auto">
                             <div className="space-y-1">
                                 <span className="text-xs font-bold text-primary uppercase tracking-widest">{title}</span>
-                                <h3 className="text-xl font-heading font-semibold">Transcription de la ligne</h3>
+                                <h3 className="text-xl font-heading font-semibold">{copy.heading}</h3>
                             </div>
 
                             <div className="flex-1 flex flex-col justify-center">
                                 <p className="font-arabic text-3xl md:text-4xl leading-relaxed text-right text-foreground p-4 bg-muted/20 rounded-xl border border-border/50" dir="rtl">
-                                    {text || "En attente de transcription..."}
+                                    {text || copy.pending}
                                 </p>
                             </div>
 
                             <div className="text-[11px] text-muted-foreground italic leading-relaxed pt-4 border-t border-border/50">
-                                Cette transcription a été validée par la communauté Waraka. Elle fait partie du dataset open-source pour la recherche sur les manuscrits maghrébins.
+                                {copy.notice}
                             </div>
                         </div>
                     </motion.div>

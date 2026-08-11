@@ -7,9 +7,7 @@ import {
   flagSegment,
   reportSegmentationIssue,
   updateTranscription,
-  getPendingSegmentCount,
   getGamificationSnapshot,
-  getSegmentById,
 } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,15 +28,12 @@ import {
   X,
   ChevronRight,
   Loader2,
-  History,
   ImageIcon,
   CheckCircle2,
-  PenLine,
   FileImage,
   FileText,
   Trophy,
   Zap,
-  Flame,
   Star,
   Users,
   PanelLeftClose,
@@ -53,6 +48,7 @@ import { useLanguage } from "@/lib/language-context";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { ManuscriptNavigation } from "./ManuscriptNavigation";
+import { normalizeArabicText } from "@/lib/arabic";
 
 type SegmentData = {
   id: string;
@@ -128,16 +124,7 @@ type GamificationSnapshot = {
   } | null;
 };
 
-const normalizeArabicForSearch = (value: string) =>
-  value
-    .normalize("NFKD")
-    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, "")
-    .replace(/\u0640/g, "")
-    .replace(/[إأآٱ]/g, "ا")
-    .replace(/ى/g, "ي")
-    .replace(/ؤ/g, "و")
-    .replace(/ئ/g, "ي")
-    .replace(/ة/g, "ه");
+const normalizeArabicForSearch = normalizeArabicText;
 
 function buildArabicSearchIndex(value: string) {
   let normalized = "";
@@ -185,7 +172,6 @@ function TranscribeContent() {
     "reference" | "pdf" | "community"
   >("reference");
   const [activeReferenceMatch, setActiveReferenceMatch] = useState(0);
-  const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
   const [zoomScale, setZoomScale] = useState(1);
@@ -240,14 +226,8 @@ function TranscribeContent() {
 
   useEffect(() => {
     loadSegment();
-    fetchPendingCount();
     fetchGamification();
   }, [loadSegment]);
-
-  const fetchPendingCount = async () => {
-    const count = await getPendingSegmentCount();
-    setPendingCount(count);
-  };
 
   const fetchGamification = async () => {
     const snapshot = await getGamificationSnapshot();
@@ -262,7 +242,10 @@ function TranscribeContent() {
       const fetchRef = async () => {
         setLoadingRef(true);
         try {
-          const res = await fetch(segment.manuscript_reference_text_url!);
+          const res = await fetch(segment.manuscript_reference_text_url!, {
+            cache: "force-cache",
+          });
+          if (!res.ok) throw new Error(`Reference text returned ${res.status}`);
           const content = await res.text();
           setReferenceText(content);
         } catch (e) {
@@ -297,15 +280,33 @@ function TranscribeContent() {
       const queue: { id: string; text: string }[] =
         (await get("waraka_offline_queue")) || [];
       if (queue.length > 0) {
-        toast({ title: "Back online! Syncing transcriptions..." });
+        toast({ title: t("transcribe.online_syncing") });
+        const failed: { id: string; text: string }[] = [];
+        let syncedCount = 0;
         for (const item of queue) {
-          await submitTranscription(item.id, item.text).catch(console.error);
+          try {
+            const result = await submitTranscription(item.id, item.text);
+            if (result?.error) failed.push(item);
+            else syncedCount += 1;
+          } catch (error) {
+            console.error(error);
+            failed.push(item);
+          }
         }
-        await set("waraka_offline_queue", []);
-        toast({
-          title: "Offline transcriptions synced! 🎉",
-          description: `Successfully synced ${queue.length} transcripts.`,
-        });
+        await set("waraka_offline_queue", failed);
+        if (syncedCount > 0) {
+          toast({
+            title: t("transcribe.offline_synced"),
+            description: t("transcribe.offline_synced_desc", { count: syncedCount }),
+          });
+        }
+        if (failed.length > 0) {
+          toast({
+            title: t("common.error"),
+            description: t("transcribe.offline_sync_failed", { count: failed.length }),
+            variant: "destructive",
+          });
+        }
       }
     };
 
@@ -317,7 +318,7 @@ function TranscribeContent() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [toast]);
+  }, [t, toast]);
 
   // Auto-save transcription text
   useEffect(() => {
@@ -352,7 +353,7 @@ function TranscribeContent() {
     setZoomScale(newScale);
   };
 
-  const handleSegmentMouseDown = (e: React.MouseEvent) => {
+  const handleSegmentMouseDown = () => {
     if (zoomScale > 1) {
       setIsDraggingZoom(true);
     }
@@ -471,8 +472,8 @@ function TranscribeContent() {
       queue.push({ id: segment.id, text });
       await set("waraka_offline_queue", queue);
       toast({
-        title: "Offline Mode \uD83D\uDCC4",
-        description: "Saved to device. Will sync when connection is restored.",
+        title: t("transcribe.offline"),
+        description: t("transcribe.offline_saved"),
       });
       setText("");
       setSessionCount((prev) => prev + 1);
@@ -486,7 +487,7 @@ function TranscribeContent() {
 
     if (result.error) {
       toast({
-        title: "Error",
+        title: t("common.error"),
         description: result.error,
         variant: "destructive",
       });
@@ -497,14 +498,14 @@ function TranscribeContent() {
     localStorage.removeItem(`waraka_autosave_${segment.id}`);
 
     if (isEditing) {
-      toast({ title: "Updated", description: "Transcription updated." });
+      toast({ title: t("common.updated"), description: t("transcribe.updated_desc") });
     } else {
       const gain = result.reward?.finalXp || 0;
       const combo = Number(result.reward?.multiplier || 1);
       const streakNow = Number(result.reward?.newStreak || 0);
       const boostLabel = result.reward?.boosts?.length
-        ? "Boosts: " + result.reward.boosts.map((b: any) => b.label).join(", ")
-        : "Keep your streak active to unlock XP multipliers.";
+        ? t("transcribe.boosts_active", { boosts: result.reward.boosts.map((b: any) => b.label).join(", ") })
+        : t("transcribe.streak_hint");
 
       toast({
         title: "+" + gain + " XP",
@@ -531,11 +532,11 @@ function TranscribeContent() {
         result.achievements.length > 0
       ) {
         const normalized = result.achievements.map((item: any) => ({
-          name: item.name_fr || item.title || item.slug || "Badge unlocked",
+          name: item.name_fr || item.title || item.slug || t("transcribe.badge_unlocked"),
           description:
             item.description_fr ||
             item.description ||
-            "Nouveau badge debloque.",
+            t("transcribe.badge_unlocked_desc"),
           points: Number(item.points || 0),
         }));
         setBadgeReveal(normalized);
@@ -552,28 +553,7 @@ function TranscribeContent() {
     const currentId = segment.id;
     setIsEditing(null);
     await loadSegment(undefined, currentId, 'next');
-    fetchPendingCount();
     setSubmitting(false);
-  };
-
-  const startEditing = async (t: any) => {
-    setLoading(true);
-    try {
-      const seg = await getSegmentById(t.segment_id);
-      setSegment(seg as any);
-      setIsEditing(t.id);
-      const saved = localStorage.getItem(`waraka_autosave_${t.segment_id}`);
-      setText(saved || t.text);
-      textareaRef.current?.focus();
-    } catch (err: any) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger le segment",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   const cancelEditing = () => {
@@ -584,14 +564,12 @@ function TranscribeContent() {
   const handleSkip = async () => {
     setSubmitting(true);
     await loadSegment(undefined, segment?.id, 'next');
-    fetchPendingCount();
     setSubmitting(false);
   };
 
   const handlePrevious = async () => {
     setSubmitting(true);
     await loadSegment(undefined, segment?.id, 'prev');
-    fetchPendingCount();
     setSubmitting(false);
   };
 
@@ -602,11 +580,10 @@ function TranscribeContent() {
     await flagSegment(segment.id);
     localStorage.removeItem(`waraka_autosave_${segment.id}`);
     toast({
-      title: "Segment flagged",
-      description: "Admin will review this segment.",
+      title: t("transcribe.flagged_title"),
+      description: t("transcribe.flagged_desc"),
     });
     await loadSegment(undefined, currentId, 'next');
-    fetchPendingCount();
     setSubmitting(false);
   };
 
@@ -855,8 +832,6 @@ function TranscribeContent() {
 
   const currentReferenceMatch =
     referenceMatches[activeReferenceIndex] || referenceMatches[0];
-
-  const topBadges = gamification?.badges?.slice(0, 6) || [];
 
   return (
     <div className="flex flex-col w-full h-[calc(100dvh-64px)] animate-in fade-in duration-500 overflow-hidden bg-background">
@@ -1449,7 +1424,7 @@ function TranscribeContent() {
                       onClick={() => setActiveTab("pdf")}
                       className={`flex-1 py-3 text-xs font-bold flex flex-col items-center gap-1 transition-colors ${activeTab === "pdf" ? "text-red-600 bg-red-50 border-b-2 border-red-600" : "text-muted-foreground hover:bg-muted"}`}
                     >
-                      <FileImage className="w-4 h-4" /> PDF
+                      <FileImage className="w-4 h-4" /> {t('transcribe.pdf_tab')}
                     </button>
                   )}
 
@@ -1804,7 +1779,7 @@ function TranscribeContent() {
                 </div>
                 <div>
                   <h3 className="font-heading font-semibold text-lg leading-tight">{title}</h3>
-                  <p className="text-xs text-white/60">Page {segment.page_label} — Vue d'ensemble</p>
+                  <p className="text-xs text-white/60">{t('transcribe.page_context')} : {segment.page_label}</p>
                 </div>
               </div>
               <Button
@@ -1824,7 +1799,7 @@ function TranscribeContent() {
                     <div className="relative">
                       <img
                         src={segment.page_image_url}
-                        alt="Full Page Context"
+                        alt={t('transcribe.full_page_alt')}
                         className="max-h-[85vh] max-w-full object-contain rounded shadow-2xl"
                       />
                       {segment.polygon && imgSize.width > 0 && (

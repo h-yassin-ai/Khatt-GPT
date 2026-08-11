@@ -29,7 +29,7 @@ export default async function DashboardPage() {
     const lang = (cookieStore.get('waraka_lang')?.value || 'fr') as Language
 
     // Fetch user profile stats
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
         .from('profiles')
         .select('username, display_name, total_contributions, current_streak, points')
         .eq('id', user.id)
@@ -110,7 +110,7 @@ export default async function DashboardPage() {
 
                         <div className="grid grid-cols-2 gap-4 w-full mt-6 z-10">
                             <div className="flex flex-col items-center p-4 bg-muted/50 rounded-lg border border-border/50">
-                                <span className="text-sm text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Points</span>
+                                <span className="text-sm text-muted-foreground mb-1 uppercase tracking-wider font-semibold">{translate('profile.points', lang)}</span>
                                 <span className="text-3xl font-bold font-sans">{profile.points || 0}</span>
                             </div>
                             <div className="flex flex-col items-center p-4 bg-secondary/10 rounded-lg border border-secondary/20">
@@ -181,12 +181,12 @@ export default async function DashboardPage() {
                                             {t.segments?.image_url ? (
                                                 <img src={t.segments.image_url || undefined} alt="Segment crop" className="w-full h-full object-cover" />
                                             ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No img</div>
+                                                <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">{translate('dashboard.no_image', lang)}</div>
                                             )}
                                         </div>
                                         <div className="flex flex-col overflow-hidden w-full">
                                             <span className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold truncate">
-                                                {t.segments?.manuscripts?.title || 'Unknown Manuscript'}
+                                                {t.segments?.manuscripts?.title || translate('dashboard.unknown_manuscript', lang)}
                                             </span>
                                             <p className="font-arabic text-lg leading-relaxed truncate text-foreground p-2 bg-background rounded border border-border/30 text-right" dir="rtl">
                                                 {t.text}

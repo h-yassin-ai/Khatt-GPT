@@ -1,13 +1,13 @@
 'use client'
 
-import { GraduationCap, ShieldCheck, AlertTriangle, BookOpen, Search, Shuffle, RefreshCcw } from 'lucide-react'
+import { GraduationCap, ShieldCheck, AlertTriangle, BookOpen, Search, RefreshCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Zoom from 'react-medium-image-zoom'
 import 'react-medium-image-zoom/dist/styles.css'
 import Link from 'next/link'
 import { useLanguage } from '@/lib/language-context'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 
 type Segment = {
     id: string
@@ -19,7 +19,7 @@ type Segment = {
 }
 
 export function LearnPageClient({ segments, initialQuery }: { segments: Segment[]; initialQuery: string }) {
-    const { t } = useLanguage()
+    const { t, lang } = useLanguage()
     const router = useRouter()
     const [query, setQuery] = useState(initialQuery)
     const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set())
@@ -66,7 +66,7 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
     }
 
     return (
-        <div className="flex flex-col gap-8 pb-12 max-w-5xl mx-auto w-full">
+        <div className="flex flex-col gap-8 pb-12 max-w-5xl mx-auto w-full" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -86,7 +86,7 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
                         className="rounded-full gap-2 border-primary/20 hover:bg-primary/5 text-primary font-bold whitespace-nowrap"
                     >
                         <RefreshCcw className={`w-4 h-4 ${randomSeed > 0 ? 'animate-spin-once' : ''}`} />
-                        Aléatoire
+                        {t('learn.randomize')}
                     </Button>
                     <form onSubmit={handleSearch} className="flex-1 md:w-64 flex items-center relative">
                         <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
@@ -121,7 +121,7 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
                         const isValidated = seg.status === 'validated'
                         const manuscriptTitle = Array.isArray(seg.manuscripts)
                             ? seg.manuscripts[0]?.title
-                            : (seg.manuscripts as any)?.title ?? 'Unknown Source'
+                            : (seg.manuscripts as any)?.title ?? t('learn.unknown_source')
 
                         return (
                             <div
@@ -177,7 +177,7 @@ export function LearnPageClient({ segments, initialQuery }: { segments: Segment[
                                             {!isValidated && !revealedIds.has(seg.id) && (
                                                 <div className="absolute inset-0 flex items-center justify-center bg-background/10 backdrop-blur-[2px] rounded-lg">
                                                     <span className="bg-primary/90 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg uppercase tracking-widest opacity-0 group-hover/text:opacity-100 transition-opacity">
-                                                        Cliquer pour révéler
+                                                        {t('learn.reveal')}
                                                     </span>
                                                 </div>
                                             )}

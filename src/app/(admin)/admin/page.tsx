@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { AlertTriangle, Library, FileText, CheckCircle } from 'lucide-react'
+import { getServerLanguage, translateServer } from '@/lib/server-i18n'
 
 // Manual Card Components if shadcn cards are missing
 function SimpleCard({ title, value, subtitle, icon: Icon, href }: any) {
@@ -27,6 +28,8 @@ function SimpleCard({ title, value, subtitle, icon: Icon, href }: any) {
 
 export default async function AdminOverviewPage() {
     const supabase = await createClient()
+    const language = await getServerLanguage()
+    const tx = (key: string, vars?: Record<string, string | number>) => translateServer(key, language, vars)
 
     // KPIs
     const { count: manuscriptsCount } = await supabase.from('manuscripts').select('*', { count: 'exact', head: true })
@@ -56,37 +59,37 @@ export default async function AdminOverviewPage() {
         : 0
 
     return (
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-8" dir={language === 'ar' ? 'rtl' : 'ltr'}>
             <div>
-                <h1 className="text-3xl font-heading font-semibold text-foreground">Vue d'ensemble admin</h1>
-                <p className="mt-1 text-sm text-muted-foreground">Suivi des corpus, des contributeurs et des validations à traiter.</p>
+                <h1 className="text-3xl font-heading font-semibold text-foreground">{tx('admin.overview_title')}</h1>
+                <p className="mt-1 text-sm text-muted-foreground">{tx('admin.overview_desc')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <SimpleCard
-                    title="Total Manuscripts"
+                    title={tx('admin.total_manuscripts')}
                     value={manuscriptsCount || 0}
-                    subtitle="Uploaded volumes"
+                    subtitle={tx('admin.uploaded_volumes')}
                     icon={Library}
                     href="/admin/manuscripts"
                 />
                 <SimpleCard
-                    title="Total Segments"
+                    title={tx('admin.total_segments')}
                     value={segmentsCount || 0}
-                    subtitle={`${(transcriptionsCount || 0).toLocaleString('fr-FR')} transcription(s) soumise(s)`}
+                    subtitle={tx('admin.submitted_transcriptions', { count: (transcriptionsCount || 0).toLocaleString(language === 'ar' ? 'ar' : language === 'en' ? 'en' : 'fr-FR') })}
                     icon={FileText}
                 />
                 <SimpleCard
-                    title="Validated Lines"
+                    title={tx('admin.validated_lines')}
                     value={validatedSegmentsCount || 0}
-                    subtitle={`${pctValidated}% du corpus validé`}
+                    subtitle={tx('admin.validated_corpus', { count: pctValidated })}
                     icon={CheckCircle}
                     href="/admin/verify"
                 />
                 <SimpleCard
-                    title="Review Queue"
+                    title={tx('admin.review_queue')}
                     value={reviewSegmentsCount || 0}
-                    subtitle={`${conflictSegmentsCount || 0} conflit(s) ou signalement(s)`}
+                    subtitle={tx('admin.conflicts_reports', { count: conflictSegmentsCount || 0 })}
                     icon={AlertTriangle}
                     href="/admin/verify"
                 />
@@ -97,14 +100,14 @@ export default async function AdminOverviewPage() {
                 {/* Top Contributors Table */}
                 <div className="bg-card border border-border shadow-sm rounded-xl p-6">
                     <h2 className="text-lg font-semibold mb-4 text-foreground tracking-tight">
-                        Top Contributors <span className="text-sm font-normal text-muted-foreground">({contributorsCount || 0} inscrits)</span>
+                        {tx('admin.top_contributors')} <span className="text-sm font-normal text-muted-foreground">({tx('admin.registered', { count: contributorsCount || 0 })})</span>
                     </h2>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
                             <thead className="text-muted-foreground border-b border-border/50">
                                 <tr>
-                                    <th className="pb-3 font-medium">User</th>
-                                    <th className="pb-3 font-medium text-right">Contributions</th>
+                                    <th className="pb-3 font-medium">{tx('admin.user')}</th>
+                                    <th className="pb-3 font-medium text-right">{tx('admin.contributions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/50">
@@ -116,7 +119,7 @@ export default async function AdminOverviewPage() {
                                 ))}
                                 {!topContributors?.length && (
                                     <tr>
-                                        <td colSpan={2} className="py-4 text-center text-muted-foreground">No contributors yet</td>
+                                        <td colSpan={2} className="py-4 text-center text-muted-foreground">{tx('admin.no_contributors')}</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -126,13 +129,13 @@ export default async function AdminOverviewPage() {
 
                 {/* Recent Manuscripts Table */}
                 <div className="bg-card border border-border shadow-sm rounded-xl p-6">
-                    <h2 className="text-lg font-semibold mb-4 text-foreground tracking-tight">Recent Manuscripts</h2>
+                    <h2 className="text-lg font-semibold mb-4 text-foreground tracking-tight">{tx('admin.recent_manuscripts')}</h2>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
                             <thead className="text-muted-foreground border-b border-border/50">
                                 <tr>
-                                    <th className="pb-3 font-medium">Title</th>
-                                    <th className="pb-3 font-medium text-right">Segments</th>
+                                    <th className="pb-3 font-medium">{tx('admin.title')}</th>
+                                    <th className="pb-3 font-medium text-right">{tx('admin.segments')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/50">
@@ -144,7 +147,7 @@ export default async function AdminOverviewPage() {
                                 ))}
                                 {!recentManuscripts?.length && (
                                     <tr>
-                                        <td colSpan={2} className="py-4 text-center text-muted-foreground">No manuscripts yet</td>
+                                        <td colSpan={2} className="py-4 text-center text-muted-foreground">{tx('admin.no_manuscripts')}</td>
                                     </tr>
                                 )}
                             </tbody>

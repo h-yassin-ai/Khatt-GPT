@@ -78,7 +78,7 @@ export async function validateTranscription(transcriptionId: string, isValid: bo
                                 headers,
                                 body: JSON.stringify(payload)
                             }).catch(e => console.error("Webhook failed:", wh.url, e))
-                        } catch (e) { }
+                        } catch { }
                     })
                 }
             }

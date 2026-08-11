@@ -3,10 +3,13 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronRight, ArrowLeft } from 'lucide-react'
 import ConflictResolver from './ConflictResolver'
+import { getServerLanguage, translateServer } from '@/lib/server-i18n'
 
 export default async function ManuscriptConflictsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     const supabase = await createClient()
+    const language = await getServerLanguage()
+    const tx = (key: string, vars?: Record<string, string | number>) => translateServer(key, language, vars)
 
     // 1. Verify existence
     const { data: manuscript } = await supabase
@@ -34,21 +37,21 @@ export default async function ManuscriptConflictsPage({ params }: { params: Prom
         .order('order_index', { ascending: true })
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center text-sm text-muted-foreground mb-1 gap-1">
-                        <Link href="/admin/manuscripts" className="hover:text-foreground transition-colors">Manuscripts</Link>
+                        <Link href="/admin/manuscripts" className="hover:text-foreground transition-colors">{tx('admin.manuscripts')}</Link>
                         <ChevronRight className="w-4 h-4" />
                         <Link href={`/admin/manuscripts/${manuscript.id}`} className="hover:text-foreground transition-colors">{manuscript.title}</Link>
                         <ChevronRight className="w-4 h-4" />
-                        <span className="text-foreground font-medium">Conflicts</span>
+                        <span className="text-foreground font-medium">{tx('admin.conflict_count')}</span>
                     </div>
                     <h1 className="text-3xl font-heading font-semibold text-foreground">
-                        Conflict Resolution
+                        {tx('admin.conflict_resolution')}
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                        Resolve inconsistencies between contributor transcriptions.
+                        {tx('admin.resolve_conflicts_desc')}
                     </p>
                 </div>
                 <Link
@@ -56,7 +59,7 @@ export default async function ManuscriptConflictsPage({ params }: { params: Prom
                     className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground rounded-md shadow-sm border border-border hover:bg-secondary/80 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    Back to Manuscript
+                    {tx('admin.back_to_manuscript')}
                 </Link>
             </div>
 
@@ -67,9 +70,9 @@ export default async function ManuscriptConflictsPage({ params }: { params: Prom
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                     </div>
-                    <h3 className="text-xl font-heading font-medium text-foreground mb-2">No Conflicts Found</h3>
+                    <h3 className="text-xl font-heading font-medium text-foreground mb-2">{tx('admin.no_conflicts')}</h3>
                     <p className="text-muted-foreground max-w-sm mx-auto">
-                        All segments in this manuscript are currently either pending, in progress, or validated.
+                        {tx('admin.all_segments_clear')}
                     </p>
                 </div>
             ) : (

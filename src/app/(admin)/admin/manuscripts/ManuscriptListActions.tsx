@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { useLanguage } from '@/lib/language-context'
 import {
     Dialog,
     DialogContent,
@@ -36,6 +37,7 @@ export default function ManuscriptListActions({
     const [isPending, startTransition] = useTransition()
     const router = useRouter()
     const { toast } = useToast()
+    const { t, lang } = useLanguage()
 
     const resetForm = () => {
         setTitle(currentTitle)
@@ -45,7 +47,7 @@ export default function ManuscriptListActions({
 
     const handleSave = () => {
         if (!title.trim()) {
-            toast({ title: 'Titre requis', description: 'Le livre doit avoir un titre.', variant: 'destructive' })
+            toast({ title: t('admin.title_required'), description: t('admin.book_needs_title'), variant: 'destructive' })
             return
         }
 
@@ -57,25 +59,25 @@ export default function ManuscriptListActions({
             })
 
             if (res?.error) {
-                toast({ title: 'Erreur', description: res.error, variant: 'destructive' })
+                toast({ title: t('common.error'), description: res.error, variant: 'destructive' })
                 return
             }
 
-            toast({ title: 'Livre mis à jour', description: 'Les métadonnées ont été enregistrées.' })
+            toast({ title: t('admin.book_updated'), description: t('admin.metadata_saved') })
             setOpen(false)
             router.refresh()
         })
     }
 
     const handleDelete = async () => {
-        if (!confirm('Supprimer ce livre, toutes ses pages et toutes ses lignes ? Cette action est irréversible.')) return
+        if (!confirm(t('admin.delete_book_confirm'))) return
         setLoadingDelete(true)
         const res = await deleteManuscript(id)
         if (res?.error) {
-            toast({ title: 'Erreur', description: res.error, variant: 'destructive' })
+            toast({ title: t('common.error'), description: res.error, variant: 'destructive' })
             setLoadingDelete(false)
         } else {
-            toast({ title: 'Livre supprimé' })
+            toast({ title: t('admin.book_deleted') })
             router.refresh()
         }
     }
@@ -86,7 +88,7 @@ export default function ManuscriptListActions({
                 <button
                     onClick={() => setOpen(true)}
                     disabled={isPending || loadingDelete}
-                    title="Modifier les métadonnées"
+                    title={t('admin.edit_metadata')}
                     className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:opacity-40"
                 >
                     <Edit2 className="h-4 w-4" />
@@ -94,7 +96,7 @@ export default function ManuscriptListActions({
                 <button
                     onClick={handleDelete}
                     disabled={isPending || loadingDelete}
-                    title="Supprimer le livre"
+                    title={t('admin.delete_book')}
                     className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
                 >
                     {loadingDelete ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -105,29 +107,29 @@ export default function ManuscriptListActions({
                 setOpen(next)
                 if (!next) resetForm()
             }}>
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="sm:max-w-lg" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
                     <DialogHeader>
-                        <DialogTitle>Modifier le livre</DialogTitle>
+                        <DialogTitle>{t('admin.edit_book')}</DialogTitle>
                         <DialogDescription>
-                            Ces informations aident les contributeurs et les vérificateurs à comprendre le corpus.
+                            {t('admin.metadata_help')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Titre</label>
+                            <label className="text-sm font-medium">{t('admin.title')}</label>
                             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Source / collection</label>
-                            <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="Bibliothèque, collection, cote..." />
+                            <label className="text-sm font-medium">{t('admin.source_collection')}</label>
+                            <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder={t('admin.source_placeholder')} />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Description</label>
+                            <label className="text-sm font-medium">{t('admin.description')}</label>
                             <Textarea
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
-                                placeholder="Contexte, folios, type d'écriture, consignes de transcription..."
+                                placeholder={t('admin.description_placeholder')}
                                 className="min-h-28"
                             />
                         </div>
@@ -135,11 +137,11 @@ export default function ManuscriptListActions({
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
-                            Annuler
+                            {t('admin.cancel')}
                         </Button>
                         <Button onClick={handleSave} disabled={isPending}>
                             {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Enregistrer
+                            {t('admin.save')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

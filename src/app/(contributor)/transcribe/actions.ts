@@ -110,6 +110,20 @@ export async function getPageSegments(pageId: string) {
 }
 
 async function buildSegmentPayload(supabase: any, segment: any, userId: string) {
+    const manuscript = (segment.manuscripts as any) || null
+    let referenceTextUrl = manuscript?.reference_text_url || null
+
+    // Resource columns are deployed separately from the core corpus. A
+    // missing migration must not make the transcription workflow unavailable.
+    if (!referenceTextUrl && manuscript?.id) {
+        const { data: resource } = await supabase
+            .from('manuscripts')
+            .select('reference_text_url')
+            .eq('id', manuscript.id)
+            .maybeSingle()
+        referenceTextUrl = resource?.reference_text_url || null
+    }
+
     const { data: transcriptionRows } = await supabase
         .from('transcriptions')
         .select('id, text, contributor_id, is_validated, status, submitted_at')
@@ -160,7 +174,7 @@ async function buildSegmentPayload(supabase: any, segment: any, userId: string) 
         polygon: segment.polygon,
         manuscript_title: (segment.manuscripts as any)?.title || 'Unknown Manuscript',
         manuscript_description: (segment.manuscripts as any)?.description || '',
-        manuscript_reference_text_url: (segment.manuscripts as any)?.reference_text_url || '',
+        manuscript_reference_text_url: referenceTextUrl || '',
         page_image_url: (segment.pages as any)?.image_url || '',
         page_label: (segment.pages as any)?.label || 'Unknown Page',
         segment_status: segment.status || 'pending',
@@ -232,7 +246,7 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
                 segmentation_issue_reported,
                 manuscript_id,
                 page_id,
-                manuscripts(id, title, description, reference_text_url),
+                manuscripts(id, title, description),
                 pages!inner(id, image_url, label, order_index)
             `)
             .neq('status', 'archived')
@@ -272,7 +286,7 @@ export async function getNextSegment(manuscriptId?: string, targetSegmentId?: st
                 segmentation_issue_reported,
                 manuscript_id,
                 page_id,
-                manuscripts(id, title, description, reference_text_url),
+                manuscripts(id, title, description),
                 pages(id, image_url, label)
             `)
             .neq('status', 'validated')
@@ -346,7 +360,7 @@ export async function getSegmentById(segmentId: string) {
         .from('segments')
         .select(`
             *,
-            manuscripts(id, title, description, reference_text_url),
+            manuscripts(id, title, description),
             pages(id, image_url, label)
         `)
         .eq('id', segmentId)
@@ -551,11 +565,14 @@ export async function reportSegmentationIssue(segmentId: string) {
 
     const { data: segment, error: fetchError } = await supabase
         .from('segments')
-        .select('segmentation_issue_count')
+        .select('segmentation_issue_count, segmentation_issue_reported_by')
         .eq('id', segmentId)
         .single()
 
     if (fetchError) return { error: fetchError.message }
+    if (segment?.segmentation_issue_reported_by === user.id) {
+        return { success: true, alreadyReported: true }
+    }
 
     const { error } = await supabase
         .from('segments')
@@ -588,12 +605,22 @@ export async function updateTranscription(transcriptionId: string, newText: stri
 
     const { data: existing, error: fetchError } = await supabase
         .from('transcriptions')
-        .select('contributor_id, segment_id')
+        .select('contributor_id, segment_id, is_validated, status')
         .eq('id', transcriptionId)
         .single()
 
     if (fetchError || !existing) return { error: 'Transcription not found' }
     if (existing.contributor_id !== user.id) return { error: 'Unauthorized' }
+
+    const { data: segment } = await supabase
+        .from('segments')
+        .select('status')
+        .eq('id', existing.segment_id)
+        .maybeSingle()
+
+    if (existing.is_validated || existing.status === 'validated' || segment?.status === 'validated') {
+        return { error: 'This transcription is locked after validation.' }
+    }
 
     const { error: updateError } = await supabase
         .from('transcriptions')

@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import Image from 'next/image'
+import { useState } from 'react'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
+import { useLanguage } from '@/lib/language-context'
 import { resolveConflict } from './actions'
 import { CheckCircle2, User, RefreshCw } from 'lucide-react'
 import * as Diff from 'diff'
 
 export default function ConflictResolver({ segment, manuscriptId }: { segment: any, manuscriptId: string }) {
     const { toast } = useToast()
+    const { t, lang } = useLanguage()
     const [submitting, setSubmitting] = useState(false)
 
     // Sort transcriptions by creation
@@ -24,7 +25,7 @@ export default function ConflictResolver({ segment, manuscriptId }: { segment: a
 
     async function handleResolve() {
         if (!finalText.trim()) {
-            toast({ title: 'Error', description: 'Consensus text cannot be empty.', variant: 'destructive' })
+            toast({ title: t('common.error'), description: t('admin.consensus_empty'), variant: 'destructive' })
             return
         }
         setSubmitting(true)
@@ -32,14 +33,14 @@ export default function ConflictResolver({ segment, manuscriptId }: { segment: a
         setSubmitting(false)
 
         if (res.error) {
-            toast({ title: 'Failed to resolve', description: res.error, variant: 'destructive' })
+            toast({ title: t('admin.failed_resolve'), description: res.error, variant: 'destructive' })
         } else {
-            toast({ title: 'Conflict Resolved', description: 'Segment marked as validated.' })
+            toast({ title: t('admin.conflict_resolved'), description: t('admin.segment_validated') })
         }
     }
 
     return (
-        <div className="bg-card border border-border/50 shadow-sm rounded-xl overflow-hidden flex flex-col md:flex-row">
+        <div className="bg-card border border-border/50 shadow-sm rounded-xl overflow-hidden flex flex-col md:flex-row" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             {/* Image Side */}
             <div className="w-full md:w-1/3 bg-muted border-b md:border-b-0 md:border-r border-border/50 relative min-h-[200px] flex items-center justify-center p-4">
                 {segment.image_url ? (
@@ -50,7 +51,7 @@ export default function ConflictResolver({ segment, manuscriptId }: { segment: a
                         loading="lazy"
                     />
                 ) : (
-                    <span className="text-muted-foreground">No image available</span>
+                    <span className="text-muted-foreground">{t('admin.no_image')}</span>
                 )}
                 <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-foreground font-mono shadow-sm">
                     Seg #{segment.order_index}
@@ -61,8 +62,8 @@ export default function ConflictResolver({ segment, manuscriptId }: { segment: a
             <div className="w-full md:w-2/3 p-6 flex flex-col gap-6">
                 <div>
                     <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                        <span className="text-foreground">Merged Consensus Text</span>
-                        <span className="text-xs font-normal text-muted-foreground">(Edit to finalize)</span>
+                        <span className="text-foreground">{t('admin.merged_consensus')}</span>
+                        <span className="text-xs font-normal text-muted-foreground">{t('admin.edit_finalize')}</span>
                     </h3>
                     <Textarea
                         value={finalText}
@@ -73,38 +74,38 @@ export default function ConflictResolver({ segment, manuscriptId }: { segment: a
                     <div className="mt-3 flex justify-end">
                         <Button onClick={handleResolve} disabled={submitting || !finalText.trim()} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
                             {submitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                            {submitting ? 'Resolving...' : 'Confirm Resoluton'}
+                {submitting ? t('admin.resolving') : t('admin.confirm_resolution')}
                         </Button>
                     </div>
                 </div>
 
                 <div className="border-t border-border/50 pt-6">
-                    <h3 className="text-sm font-semibold mb-4 text-foreground">Submitted Transcriptions ({transcriptions.length})</h3>
+                <h3 className="text-sm font-semibold mb-4 text-foreground">{t('admin.submitted_count', { count: transcriptions.length })}</h3>
                     <div className="space-y-4">
-                        {transcriptions.map((t: any, i: number) => {
+                        {transcriptions.map((submission: any) => {
                             // Compute diff between 'finalText' (what admin is building) and 't.text' (what user submitted)
                             // We treat 'finalText' as new, 't.text' as old.
                             // However, since it's RTL Arabic, diffing outputs left-to-right nodes unless we are careful.
                             // The diff structure gives arrays of {value, added, removed}.
-                            const differences = Diff.diffChars(finalText, t.text)
+                            const differences = Diff.diffChars(finalText, submission.text)
 
                             return (
-                                <div key={t.id} className="bg-background border border-border/50 rounded-md p-4 shadow-sm">
+                                <div key={submission.id} className="bg-background border border-border/50 rounded-md p-4 shadow-sm">
                                     <div className="flex justify-between items-center mb-2">
                                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                             <div className="w-6 h-6 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center">
                                                 <User className="w-3 h-3" />
                                             </div>
-                                            <span className="font-medium text-foreground">{t.profiles?.display_name || 'Anonymous'}</span>
+                        <span className="font-medium text-foreground">{submission.profiles?.display_name || t('admin.anonymous')}</span>
                                             <span className="text-xs opacity-70">
-                                                {new Date(t.created_at).toLocaleDateString()}
+                                                {new Date(submission.created_at).toLocaleDateString()}
                                             </span>
                                         </div>
                                         <Button
                                             variant="outline"
                                             size="sm"
                                             className="text-xs h-7 px-2"
-                                            onClick={() => setFinalText(t.text)}
+                                            onClick={() => setFinalText(submission.text)}
                                         >
                                             Use as Base
                                         </Button>
@@ -126,8 +127,8 @@ export default function ConflictResolver({ segment, manuscriptId }: { segment: a
                                         })}
                                     </div>
                                     <div className="text-xs text-muted-foreground mt-2 flex gap-4">
-                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive/50"></span> Contributor added</span>
-                                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-success/50"></span> Contributor missing</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive/50"></span> {t('admin.contributor_added')}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-success/50"></span> {t('admin.contributor_missing')}</span>
                                     </div>
                                 </div>
                             )

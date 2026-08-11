@@ -1,15 +1,19 @@
+'use client'
+
 import Link from 'next/link'
 import { BookOpen, Shuffle, GraduationCap, ArrowRight } from 'lucide-react'
+import { useLanguage } from '@/lib/language-context'
 
 export default function LearnHubPage() {
+    const { lang, t } = useLanguage()
     return (
-        <div className="flex flex-col gap-8 pb-12 max-w-5xl mx-auto w-full">
+        <div className="flex flex-col gap-8 pb-12 max-w-5xl mx-auto w-full" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             <div className="flex flex-col text-center items-center justify-center pt-8 pb-4">
                 <h1 className="text-4xl font-heading font-bold text-foreground flex items-center gap-3 mb-4">
-                    <GraduationCap className="w-10 h-10 text-primary" /> Apprendre
+                    <GraduationCap className="w-10 h-10 text-primary" /> {t('learn.hub_title')}
                 </h1>
                 <p className="text-muted-foreground max-w-2xl text-lg">
-                    Découvrez le patrimoine écrit et exercez votre lecture. Choisissez un manuscrit spécifique à explorer, ou entraînez-vous en lisant des lignes validées aléatoires.
+                    {t('learn.hub_desc')}
                 </p>
             </div>
 
@@ -24,13 +28,13 @@ export default function LearnHubPage() {
                         <BookOpen className="w-8 h-8" />
                     </div>
                     <h2 className="text-2xl font-heading font-bold text-foreground mb-3">
-                        Parcourir les manuscrits
+                        {t('learn.browse_title')}
                     </h2>
                     <p className="text-muted-foreground mb-8">
-                        Explorez notre bibliothèque complète de manuscrits historiques. Choisissez une œuvre spécifique, observez sa progression et parcourez ses pages.
+                        {t('learn.browse_desc')}
                     </p>
                     <div className="mt-auto flex items-center text-primary font-bold gap-2 group-hover:gap-3 transition-all">
-                        Explorer la bibliothèque <ArrowRight className="w-4 h-4" />
+                        {t('learn.browse_cta')} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                     </div>
                 </Link>
 
@@ -44,13 +48,13 @@ export default function LearnHubPage() {
                         <Shuffle className="w-8 h-8" />
                     </div>
                     <h2 className="text-2xl font-heading font-bold text-foreground mb-3">
-                        Lignes au hasard
+                        {t('learn.random_title')}
                     </h2>
                     <p className="text-muted-foreground mb-8">
-                        Lisez et étudiez des segments transcrits pris au hasard parmi tous les manuscrits. Un excellent moyen de vous familiariser avec différentes écritures.
+                        {t('learn.random_desc')}
                     </p>
                     <div className="mt-auto flex items-center text-secondary font-bold gap-2 group-hover:gap-3 transition-all">
-                        Débuter l'entraînement <ArrowRight className="w-4 h-4" />
+                        {t('learn.random_cta')} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                     </div>
                 </Link>
             </div>

@@ -1,12 +1,12 @@
 'use client'
 
 import { useLanguage } from '@/lib/language-context'
-import { Feather, Info, AlertCircle, CheckCircle, ArrowRight, BookOpen, Layers, Type } from 'lucide-react'
+import { Feather, Info, AlertCircle, CheckCircle, ArrowRight, Layers, Type } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 
 export default function CalligraphyGuidePage() {
-    const { t } = useLanguage()
+    const { t, lang } = useLanguage()
 
     const styles = [
         {
@@ -47,13 +47,13 @@ export default function CalligraphyGuidePage() {
     ]
 
     return (
-        <div className="flex flex-col gap-12 pb-20 animate-in fade-in duration-500">
+        <div className="flex flex-col gap-12 pb-20 animate-in fade-in duration-500" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             {/* Hero Section */}
             <div className="relative overflow-hidden rounded-3xl bg-card border border-border p-8 lg:p-12">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
                 <div className="relative z-10 max-w-3xl">
                     <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold mb-6 uppercase tracking-wider">
-                        <Feather className="w-4 h-4" /> Apprendre
+                        <Feather className="w-4 h-4" /> {t('guide.learn_label')}
                     </div>
                     <h1 className="text-4xl lg:text-5xl font-heading font-bold text-foreground mb-6 leading-tight">
                         {t('guide.title')}
@@ -89,7 +89,7 @@ export default function CalligraphyGuidePage() {
                                 "{t('guide.fa.desc')}"
                             </p>
                             <div className="pt-2 flex items-center gap-2 text-xs text-amber-600 font-bold bg-amber-50 rounded-lg p-2">
-                                <AlertCircle className="w-3.5 h-3.5" /> Différence majeure
+                                <AlertCircle className="w-3.5 h-3.5" /> {t('guide.major_difference')}
                             </div>
                         </CardContent>
                     </Card>
@@ -132,7 +132,7 @@ export default function CalligraphyGuidePage() {
                     </div>
                     <div>
                         <h2 className="text-2xl font-heading font-bold text-foreground">{t('guide.styles.title')}</h2>
-                        <p className="text-muted-foreground">Découvrez les trois styles principaux que vous rencontrerez.</p>
+                        <p className="text-muted-foreground">{t('guide.styles_desc')}</p>
                     </div>
                 </div>
 
@@ -161,7 +161,7 @@ export default function CalligraphyGuidePage() {
                                 </p>
                                 <div className="pt-4 border-t border-border/40 flex justify-end">
                                     <div className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1">
-                                        Style {style.id} <ArrowRight className="w-3 h-3" />
+                                        {t('guide.style_label', { style: style.id })} <ArrowRight className="w-3 h-3" />
                                     </div>
                                 </div>
                             </div>
@@ -173,13 +173,13 @@ export default function CalligraphyGuidePage() {
             {/* Final Tips Card */}
             <div className="bg-primary/5 rounded-3xl border border-primary/20 p-8 lg:p-12 mt-4 text-center">
                 <Type className="w-12 h-12 text-primary mx-auto mb-6 opacity-40" />
-                <h2 className="text-3xl font-heading font-bold text-foreground mb-4">Besoin d'aide supplémentaire ?</h2>
+                <h2 className="text-3xl font-heading font-bold text-foreground mb-4">{t('guide.help_title')}</h2>
                 <p className="text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
-                    N'oubliez pas d'utiliser le panneau "Ouvrir le panneau" sur la page de transcription pour consulter le fac-similé complet ou le texte imprimé correspondant.
+                    {t('guide.help_desc')}
                 </p>
                 <div className="flex flex-wrap justify-center gap-4">
                     <div className="bg-card border border-border px-6 py-3 rounded-full flex items-center gap-2 text-sm font-bold shadow-sm">
-                        <CheckCircle className="w-4 h-4 text-success" /> Précision avant tout
+                        <CheckCircle className="w-4 h-4 text-success" /> {t('guide.accuracy_first')}
                     </div>
                 </div>
             </div>

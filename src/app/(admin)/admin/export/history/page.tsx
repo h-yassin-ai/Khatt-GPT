@@ -1,8 +1,11 @@
 import { createClient } from '@/utils/supabase/server'
 import { FileArchive, FileJson, Clock, User } from 'lucide-react'
+import { getServerLanguage, translateServer } from '@/lib/server-i18n'
 
 export default async function ExportHistoryPage() {
     const supabase = await createClient()
+    const language = await getServerLanguage()
+    const tx = (key: string) => translateServer(key, language)
 
     const { data: logs, error } = await supabase
         .from('export_logs')
@@ -21,10 +24,10 @@ export default async function ExportHistoryPage() {
     }
 
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
             <div>
-                <h1 className="text-3xl font-heading font-semibold text-foreground mb-2">Export Logs</h1>
-                <p className="text-muted-foreground">History of dataset exports by administrators.</p>
+                <h1 className="text-3xl font-heading font-semibold text-foreground mb-2">{tx('admin.export_logs')}</h1>
+                <p className="text-muted-foreground">{tx('admin.export_logs_desc')}</p>
             </div>
 
             <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
@@ -32,17 +35,17 @@ export default async function ExportHistoryPage() {
                     <table className="w-full text-sm text-left relative">
                         <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
                             <tr>
-                                <th className="px-6 py-4 font-medium">Date & Time</th>
-                                <th className="px-6 py-4 font-medium">Format</th>
-                                <th className="px-6 py-4 font-medium text-right">Records</th>
-                                <th className="px-6 py-4 font-medium">Exported By</th>
+                                <th className="px-6 py-4 font-medium">{tx('admin.date_time')}</th>
+                                <th className="px-6 py-4 font-medium">{tx('admin.format')}</th>
+                                <th className="px-6 py-4 font-medium text-right">{tx('admin.records')}</th>
+                                <th className="px-6 py-4 font-medium">{tx('admin.exported_by')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
                             {!logs || logs.length === 0 ? (
                                 <tr>
                                     <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
-                                        No exports recorded yet.
+                                        {tx('admin.no_exports')}
                                     </td>
                                 </tr>
                             ) : (
@@ -64,7 +67,7 @@ export default async function ExportHistoryPage() {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <User className="w-4 h-4 text-muted-foreground" />
-                                                {(log.profiles as any)?.username || 'Unknown Admin'}
+                                                {(log.profiles as any)?.username || tx('admin.unknown_admin')}
                                             </div>
                                         </td>
                                     </tr>

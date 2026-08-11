@@ -69,7 +69,7 @@ export default function ProfileInteractive({
     }
 
     return (
-        <div className="flex flex-col gap-8 w-full max-w-6xl mx-auto py-8 px-4 sm:px-6">
+        <div className="flex flex-col gap-8 w-full max-w-6xl mx-auto py-8 px-4 sm:px-6" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             <div className="bg-card border border-border rounded-xl p-8 shadow-sm">
                 <h2 className="text-2xl font-heading font-semibold mb-6">{t('profile.title')}</h2>
 
@@ -256,8 +256,8 @@ export default function ProfileInteractive({
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="font-semibold text-xs text-primary">{tItem.segments?.manuscripts?.title || 'Unknown'}</span>
-                                                    <span className="text-xs text-muted-foreground">Order: #{tItem.segments?.order_index || 0}</span>
+                                <span className="font-semibold text-xs text-primary">{tItem.segments?.manuscripts?.title || t('profile.unknown')}</span>
+                                <span className="text-xs text-muted-foreground">{t('profile.order')}: #{tItem.segments?.order_index || 0}</span>
                                                 </div>
                                             </div>
                                         </td>

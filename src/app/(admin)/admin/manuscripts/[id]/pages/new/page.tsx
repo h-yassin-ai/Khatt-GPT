@@ -1,15 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { createPage } from '../actions'
 import { Button } from '@/components/ui/button'
 import { v4 as uuidv4 } from 'uuid'
-import { UploadCloud, ChevronLeft, FileImage } from 'lucide-react'
+import { UploadCloud, ChevronLeft } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import { use } from 'react'
+import { useLanguage } from '@/lib/language-context'
 
 export default function NewPagePage({ params }: { params: Promise<{ id: string }> }) {
     const { id: manuscriptId } = use(params)
@@ -22,7 +23,8 @@ export default function NewPagePage({ params }: { params: Promise<{ id: string }
 
     const router = useRouter()
     const { toast } = useToast()
-    const supabase = createClient()
+    const { t, lang } = useLanguage()
+    const supabase = useMemo(() => createClient(), [])
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const f = e.target.files?.[0]
@@ -58,20 +60,20 @@ export default function NewPagePage({ params }: { params: Promise<{ id: string }
                 manuscriptId: manuscriptId,
                 imageUrl: data.publicUrl,
                 orderIndex: orderIndex,
-                label: label || `Page ${orderIndex}`
+                label: label || `${t('admin.page_default')} ${orderIndex}`
             })
 
             setUploadProgress(100)
 
             if (result.error) throw new Error(result.error)
 
-            toast({ title: "✅ Page added!", description: "Now you can upload lines for this page." })
+            toast({ title: t('admin.page_added'), description: t('admin.page_added_desc') })
             router.push(`/admin/manuscripts/${manuscriptId}/pages/${result.id}`)
             router.refresh()
 
         } catch (err: any) {
             toast({
-                title: "Upload failed",
+                title: t('admin.page_upload_failed'),
                 description: err.message,
                 variant: "destructive"
             })
@@ -81,29 +83,29 @@ export default function NewPagePage({ params }: { params: Promise<{ id: string }
     }
 
     return (
-        <div className="max-w-2xl mx-auto py-10 flex flex-col gap-8">
+        <div className="max-w-2xl mx-auto py-10 flex flex-col gap-8" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             <div>
                 <Link href={`/admin/manuscripts/${manuscriptId}`} className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-1 mb-4">
-                    <ChevronLeft className="w-4 h-4" /> Back to Manuscript
+                    <ChevronLeft className="w-4 h-4" /> {t('admin.back_to_manuscript')}
                 </Link>
-                <h1 className="text-3xl font-heading font-semibold mb-1">Add New Page</h1>
-                <p className="text-muted-foreground">Upload the full-page scan. You'll add individual line images after.</p>
+                <h1 className="text-3xl font-heading font-semibold mb-1">{t('admin.add_page_title')}</h1>
+                <p className="text-muted-foreground">{t('admin.add_page_desc')}</p>
             </div>
 
             <form onSubmit={handleUpload} className="bg-card border border-border p-8 rounded-xl shadow-sm flex flex-col gap-6">
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-2">
-                        <label className="text-sm font-medium">Page Label</label>
+                        <label className="text-sm font-medium">{t('admin.page_label')}</label>
                         <input
                             value={label}
                             onChange={e => setLabel(e.target.value)}
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
-                            placeholder="e.g. Page 3 or Folio 12r"
+                            placeholder={t('admin.page_label_placeholder')}
                         />
                     </div>
                     <div className="flex flex-col gap-2">
-                        <label className="text-sm font-medium">Order Position</label>
+                        <label className="text-sm font-medium">{t('admin.order_position')}</label>
                         <input
                             type="number"
                             min={1}
@@ -116,7 +118,7 @@ export default function NewPagePage({ params }: { params: Promise<{ id: string }
 
                 {/* File Drop Zone */}
                 <div className="flex flex-col gap-3">
-                    <label className="text-sm font-medium">Page Image <span className="text-destructive">*</span></label>
+                    <label className="text-sm font-medium">{t('admin.page_image')} <span className="text-destructive">*</span></label>
                     <div className="border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors rounded-xl flex flex-col items-center justify-center gap-3 relative cursor-pointer overflow-hidden min-h-[200px]">
                         <input
                             type="file"
@@ -131,8 +133,8 @@ export default function NewPagePage({ params }: { params: Promise<{ id: string }
                             <>
                                 <UploadCloud className="w-10 h-10 text-primary/60" />
                                 <div className="text-center">
-                                    <p className="font-medium text-sm">Click or drag a full-page scan here</p>
-                                    <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WEBP supported</p>
+                                <p className="font-medium text-sm">{t('admin.full_page_dropzone')}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{t('admin.image_formats')}</p>
                                 </div>
                             </>
                         )}
@@ -147,7 +149,7 @@ export default function NewPagePage({ params }: { params: Promise<{ id: string }
                 {uploading && (
                     <div className="flex flex-col gap-1">
                         <div className="flex justify-between text-xs font-semibold text-primary">
-                            <span>Uploading...</span><span>{uploadProgress}%</span>
+                            <span>{t('admin.uploading')}</span><span>{uploadProgress}%</span>
                         </div>
                         <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                             <div className="h-full bg-primary transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
@@ -156,7 +158,7 @@ export default function NewPagePage({ params }: { params: Promise<{ id: string }
                 )}
 
                 <Button type="submit" disabled={uploading || !file} className="w-full h-12 text-base">
-                    {uploading ? 'Uploading...' : 'Upload Page & Add Lines →'}
+                    {uploading ? t('admin.uploading') : t('admin.page_upload_cta')}
                 </Button>
             </form>
         </div>

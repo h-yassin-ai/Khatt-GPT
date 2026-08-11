@@ -3,26 +3,28 @@
 import { useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { validateTranscription } from './actions'
-import { ShieldCheck, ShieldAlert, Check } from 'lucide-react'
+import { ShieldCheck, Check } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useLanguage } from '@/lib/language-context'
 
 export default function ValidationButtons({ transcriptionId, isValidated }: { transcriptionId: string, isValidated: boolean }) {
     const [isPending, startTransition] = useTransition()
     const { toast } = useToast()
+    const { t, lang } = useLanguage()
 
     const handleValidate = (valid: boolean) => {
         startTransition(async () => {
             const res = await validateTranscription(transcriptionId, valid)
             if (res.error) {
-                toast({ title: "Error", description: res.error, variant: "destructive" })
+                toast({ title: t('common.error'), description: res.error, variant: "destructive" })
             } else {
-                toast({ title: "Updated", description: valid ? "Marked as Validated" : "Removed validation" })
+                toast({ title: t('common.updated'), description: valid ? t('admin.segment_validated') : t('admin.remove_validation') })
             }
         })
     }
 
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             {isValidated ? (
                 <Button
                     size="sm"
@@ -31,7 +33,7 @@ export default function ValidationButtons({ transcriptionId, isValidated }: { tr
                     onClick={() => handleValidate(false)}
                     disabled={isPending}
                 >
-                    <Check className="w-4 h-4 mr-1" /> Validated
+                    <Check className="w-4 h-4 mr-1" /> {t('admin.approved')}
                 </Button>
             ) : (
                 <Button
@@ -41,7 +43,7 @@ export default function ValidationButtons({ transcriptionId, isValidated }: { tr
                     onClick={() => handleValidate(true)}
                     disabled={isPending}
                 >
-                    <ShieldCheck className="w-4 h-4 mr-1" /> Accept as Valid
+                    <ShieldCheck className="w-4 h-4 mr-1" /> {t('admin.accept_valid')}
                 </Button>
             )}
         </div>

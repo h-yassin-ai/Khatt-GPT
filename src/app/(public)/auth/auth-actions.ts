@@ -17,7 +17,7 @@ export async function login(formData: FormData) {
     const { error } = await supabase.auth.signInWithPassword(data)
 
     if (error) {
-        redirect('/auth/login?error=Could not authenticate user')
+        redirect('/auth/login?error=auth_failed')
     }
 
     revalidatePath('/', 'layout')
@@ -31,7 +31,7 @@ export async function signup(formData: FormData) {
     const honeypot = formData.get('website')
     if (honeypot) {
         console.warn('Honeypot filled - potential bot detected')
-        redirect('/auth/register?error=Spam detected')
+        redirect('/auth/register?error=auth_spam')
     }
 
     const data = {
@@ -44,7 +44,7 @@ export async function signup(formData: FormData) {
     const { data: profileCheck } = await supabase.from('profiles').select('id').eq('username', data.username).single()
 
     if (profileCheck) {
-        redirect('/auth/register?error=Username already taken')
+        redirect('/auth/register?error=username_taken')
     }
 
     const { error } = await supabase.auth.signUp({
@@ -60,7 +60,7 @@ export async function signup(formData: FormData) {
     if (error) {
         let errorMessage = error.message
         if (errorMessage.toLowerCase().includes('database error') || errorMessage.toLowerCase().includes('plugin') || errorMessage.toLowerCase().includes('function')) {
-            errorMessage = "Database configuration error. Please ensure Supabase triggers are set up (see docs/supabase_setup.sql)."
+            errorMessage = 'auth_database'
         }
         console.error('Signup error:', error)
         redirect(`/auth/register?error=${encodeURIComponent(errorMessage)}`)

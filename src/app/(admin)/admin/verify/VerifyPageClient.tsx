@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { approveTranscription, rejectTranscription, getValidatedSegments, bulkRejectTranscriptions } from './actions'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
+import { useLanguage } from '@/lib/language-context'
 import {
     Check, Edit2, Save, Trash2, AlertCircle, ImageIcon,
     ClipboardCheck, History, ChevronDown, Loader2
@@ -50,6 +51,7 @@ const SegmentImageWithPolygon = ({
     fallbackImageUrl?: string | null
     showContext?: boolean
 }) => {
+    const { t } = useLanguage()
     const [imgSize, setImgSize] = useState({ width: 0, height: 0 })
     const containerRef = useRef<HTMLDivElement>(null)
 
@@ -71,7 +73,7 @@ const SegmentImageWithPolygon = ({
         return (
             <img
                 src={fallbackImageUrl}
-                alt="Segment crop"
+                alt={t('admin.segment_alt')}
                 className="w-full max-h-[320px] object-contain rounded-sm shadow-md bg-white/5"
             />
         )
@@ -83,7 +85,7 @@ const SegmentImageWithPolygon = ({
             <div ref={containerRef} className="relative w-full overflow-hidden rounded-sm shadow-md bg-black/5">
                 <img
                     src={pageImageUrl}
-                    alt="Page du manuscrit"
+                    alt={t('admin.full_page_scan')}
                     className="w-full max-h-[400px] object-contain"
                     onLoad={handleImageLoad}
                 />
@@ -125,7 +127,7 @@ const SegmentImageWithPolygon = ({
         return (
             <img
                 src={fallbackImageUrl}
-                alt="Segment"
+                alt={t('admin.segment_alt')}
                 className="w-full max-h-[320px] object-contain rounded-sm shadow"
             />
         )
@@ -134,7 +136,7 @@ const SegmentImageWithPolygon = ({
     return (
         <div className="flex flex-col items-center gap-2 text-muted-foreground opacity-30 py-8">
             <ImageIcon className="w-10 h-10" />
-            <span className="text-xs">Pas d'image</span>
+            <span className="text-xs">{t('admin.no_image')}</span>
         </div>
     )
 }
@@ -167,6 +169,7 @@ function TranscriptionCard({
     onEditTextChange: (v: string) => void
 }) {
     const [showContext, setShowContext] = useState(false)
+    const { t: tx, lang } = useLanguage()
 
     // Priority: use the page_image_url + polygon stored at submission time (exact same view as contributor)
     // Fall back to: current segment page, then segment crop
@@ -198,14 +201,14 @@ function TranscriptionCard({
                             className="flex items-center gap-1.5 text-[10px] font-medium text-primary hover:underline"
                         >
                             <ImageIcon className="w-3 h-3" />
-                            {showContext ? "Voir le segment" : "Voir le contexte page"}
+                            {showContext ? tx('admin.view_segment') : tx('admin.view_page_context')}
                         </button>
                     )}
                 </div>
 
                 {imageChanged && (
                     <div className="w-full bg-amber-500/90 text-white text-[10px] px-2 py-1 rounded text-center font-medium">
-                        ⚠️ Image modifiée depuis la soumission
+                        ⚠️ {tx('admin.image_changed')}
                     </div>
                 )}
             </div>
@@ -219,10 +222,10 @@ function TranscriptionCard({
                             {t.profiles?.display_name?.charAt(0) || t.profiles?.username?.charAt(0) || '?'}
                         </div>
                         <span className="text-xs font-medium text-foreground">
-                            {t.profiles?.display_name || t.profiles?.username || 'Inconnu'}
+                            {t.profiles?.display_name || t.profiles?.username || tx('admin.unknown')}
                         </span>
                         <span className="text-[10px] text-muted-foreground opacity-60">
-                            {new Date(t.submitted_at).toLocaleDateString('fr-FR')}
+                            {new Date(t.submitted_at).toLocaleDateString(lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr-FR' : 'en-US')}
                         </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -235,7 +238,7 @@ function TranscriptionCard({
                             ? 'bg-destructive/10 text-destructive border-destructive/20 animate-pulse'
                             : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
                             }`}>
-                            {seg.status === 'conflict' ? 'CONFLIT' : 'EN ATTENTE'}
+                            {seg.status === 'conflict' ? tx('admin.status_conflict_short') : tx('admin.status_review_short')}
                         </span>
                     </div>
                 </div>
@@ -251,16 +254,16 @@ function TranscriptionCard({
                         />
                         <div className="text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded border border-amber-200 dark:border-amber-700">
                             {t.status === 'modified'
-                                ? "Cette contribution a déjà reçu son ajustement XP de correction."
-                                : "Modifier le texte retirera 1/4 des XP attribués au contributeur, une seule fois."}
+                                ? tx('admin.correction_xp_note')
+                                : tx('admin.edit_xp_note')}
                         </div>
                         <div className="flex gap-2 justify-end">
                             <Button size="sm" variant="outline" onClick={onCancelEdit} disabled={loading === t.id}>
-                                Annuler
+                                {tx('admin.cancel')}
                             </Button>
                             <Button size="sm" onClick={onSaveEdit} disabled={loading === t.id}>
                                 <Save className="w-3.5 h-3.5 mr-2" />
-                                Modifier et Valider
+                                {tx('admin.edit_and_validate')}
                             </Button>
                         </div>
                     </div>
@@ -277,7 +280,7 @@ function TranscriptionCard({
                                 onClick={onStartEdit}
                                 disabled={loading !== null}
                             >
-                                <Edit2 className="w-3 h-3" /> Modifier
+                                <Edit2 className="w-3 h-3" /> {tx('admin.edit')}
                             </Button>
                             <Button
                                 size="sm"
@@ -286,7 +289,7 @@ function TranscriptionCard({
                                 onClick={onReject}
                                 disabled={loading !== null}
                             >
-                                <Trash2 className="w-3 h-3" /> Refuser
+                                <Trash2 className="w-3 h-3" /> {tx('admin.reject')}
                             </Button>
                             <Button
                                 size="sm"
@@ -294,7 +297,7 @@ function TranscriptionCard({
                                 onClick={onApprove}
                                 disabled={loading !== null}
                             >
-                                <Check className="w-3.5 h-3.5" /> Valider
+                                <Check className="w-3.5 h-3.5" /> {tx('admin.approve')}
                             </Button>
                         </div>
                     </>
@@ -310,26 +313,27 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
     const [editText, setEditText] = useState('')
     const [loading, setLoading] = useState<string | null>(null)
     const { toast } = useToast()
+    const { t: tx, lang } = useLanguage()
 
     const handleApprove = async (segmentId: string, transcriptionId: string, text: string) => {
         setLoading(transcriptionId)
         const result = await approveTranscription(segmentId, transcriptionId, text)
         if (result.success) {
-            toast({ title: "Validé !", description: "La transcription a été approuvée comme officielle." })
+            toast({ title: tx('admin.approved'), description: tx('admin.approval_success') })
             setSegments(prev => prev.filter(s => s.id !== segmentId))
         } else {
-            toast({ title: "Erreur", description: (result as any).error, variant: "destructive" })
+            toast({ title: tx('common.error'), description: (result as any).error, variant: "destructive" })
         }
         setLoading(null)
     }
 
     const handleReject = async (transcriptionId: string) => {
-        if (!confirm("Voulez-vous vraiment refuser cette transcription ? Les XP du contributeur seront retirés.")) return
+        if (!confirm(tx('admin.reject_confirm'))) return
 
         setLoading(transcriptionId)
         const result = await rejectTranscription(transcriptionId)
         if (result.success) {
-            toast({ title: "Refusé", description: "La transcription a été supprimée et les XP retirés." })
+            toast({ title: tx('admin.rejected'), description: tx('admin.rejection_success') })
             setSegments(prev => prev
                 .map(s => ({
                     ...s,
@@ -338,7 +342,7 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
                 .filter(s => s.transcriptions.length > 0)
             )
         } else {
-            toast({ title: "Erreur", description: (result as any).error, variant: "destructive" })
+            toast({ title: tx('common.error'), description: (result as any).error, variant: "destructive" })
         }
         setLoading(null)
     }
@@ -351,12 +355,12 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
 
     const handleBulkReject = async () => {
         if (selectedIds.length === 0) return
-        if (!confirm(`Voulez-vous vraiment rejeter ces ${selectedIds.length} transcriptions ?`)) return
+        if (!confirm(tx('admin.bulk_reject_confirm', { count: selectedIds.length }))) return
 
         setLoading('bulk')
         const result = await bulkRejectTranscriptions(selectedIds)
         if (result.success) {
-            toast({ title: "Succès", description: `${selectedIds.length} transcriptions ont été rejetées.` })
+            toast({ title: tx('admin.success'), description: tx('admin.bulk_rejected', { count: selectedIds.length }) })
             setSegments(prev => prev
                 .map(s => ({
                     ...s,
@@ -366,7 +370,7 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
             )
             setSelectedIds([])
         } else {
-            toast({ title: "Erreur", description: (result as any).error, variant: "destructive" })
+            toast({ title: tx('common.error'), description: (result as any).error, variant: "destructive" })
         }
         setLoading(null)
     }
@@ -375,8 +379,8 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center bg-muted/20 rounded-xl border border-dashed border-border">
                 <Check className="w-12 h-12 text-muted-foreground/30 mb-4" />
-                <h2 className="text-xl font-semibold text-foreground">Tout est vérifié !</h2>
-                <p className="text-muted-foreground">Il n'y a plus de transcriptions en attente de validation.</p>
+                <h2 className="text-xl font-semibold text-foreground">{tx('admin.all_verified')}</h2>
+                <p className="text-muted-foreground">{tx('admin.no_pending')}</p>
             </div>
         )
     }
@@ -388,17 +392,16 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
         <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
                 <p className="text-sm text-muted-foreground">
-                    <span className="font-semibold text-foreground">{pendingCount}</span> proposition{pendingCount > 1 ? 's' : ''} à vérifier sur{' '}
-                    <span className="font-semibold text-foreground">{segments.length}</span> segment{segments.length > 1 ? 's' : ''}.
+                    {tx('admin.proposals_to_review', { count: pendingCount, segments: segments.length })}
                     {multiUserCount > 0 && (
                         <span className="ml-2 text-amber-700">
-                            {multiUserCount} segment{multiUserCount > 1 ? 's' : ''} avec plusieurs contributeurs.
+                            {tx('admin.segments_multiple_contributors', { count: multiUserCount })}
                         </span>
                     )}
                 </p>
                 {selectedIds.length > 0 && (
                     <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-                        <span className="text-xs font-semibold text-primary">{selectedIds.length} sélectionné(s)</span>
+                        <span className="text-xs font-semibold text-primary">{tx('admin.selected_count', { count: selectedIds.length })}</span>
                         <Button 
                             variant="destructive" 
                             size="sm" 
@@ -407,10 +410,10 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
                             disabled={loading === 'bulk'}
                         >
                             {loading === 'bulk' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                            Rejeter la sélection
+                            {tx('admin.reject_selection')}
                         </Button>
                         <Button variant="ghost" size="sm" className="h-8" onClick={() => setSelectedIds([])}>
-                            Annuler
+                            {tx('admin.cancel')}
                         </Button>
                     </div>
                 )}
@@ -421,27 +424,27 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
                         <div>
                             <div className="flex flex-wrap items-center gap-2">
                                 <span className="rounded-md border border-border bg-background px-2 py-1 text-xs font-bold">
-                                    {seg.manuscripts?.title || 'Manuscrit inconnu'} · ligne #{seg.order_index}
+                                    {seg.manuscripts?.title || tx('admin.unknown_manuscript')} · {tx('transcribe.line')} #{seg.order_index}
                                 </span>
                                 <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${seg.status === 'conflict'
                                     ? 'border-destructive/20 bg-destructive/10 text-destructive'
                                     : 'border-amber-500/20 bg-amber-500/10 text-amber-700'
                                     }`}>
-                                    {seg.status === 'conflict' ? 'Conflit' : 'À vérifier'}
+                                    {seg.status === 'conflict' ? tx('admin.status_conflict_short') : tx('admin.status_review_short')}
                                 </span>
                                 {seg.transcriptions.length > 1 && (
                                     <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
-                                        {seg.transcriptions.length} propositions
+                                        {tx('admin.proposals_count', { count: seg.transcriptions.length })}
                                     </span>
                                 )}
                             </div>
                             <p className="mt-2 text-xs text-muted-foreground">
-                                Comparez les propositions du même segment avant de choisir la version officielle.
+                                {tx('admin.compare_same_segment')}
                             </p>
                         </div>
                     </div>
                     <div className="flex flex-col gap-3 p-4">
-                        {seg.transcriptions.map((t) => (
+                        {seg.transcriptions.map((t, transcriptionIndex) => (
                             <div key={t.id} className="relative flex items-start gap-4">
                                 <div className="pt-8 pl-1">
                                     <input
@@ -449,7 +452,7 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
                                         className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary"
                                         checked={selectedIds.includes(t.id)}
                                         onChange={() => toggleSelect(t.id)}
-                                        aria-label="Sélectionner cette transcription"
+                                        aria-label={tx('admin.select_transcription')}
                                     />
                                 </div>
                                 <div className="flex-1">
@@ -470,6 +473,9 @@ function PendingTab({ initialSegments }: { initialSegments: Segment[] }) {
                                         }}
                                         onEditTextChange={setEditText}
                                     />
+                                    <p className="mt-1 text-[10px] text-muted-foreground">
+                                        {tx('admin.proposal_submitted', { count: transcriptionIndex + 1 })} {new Date(t.submitted_at).toLocaleString(lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr-FR' : 'en-US')}
+                                    </p>
                                 </div>
                             </div>
                         ))}
@@ -492,6 +498,7 @@ function ValidatedTranscriptionCard({
     const [editText, setEditText] = useState(seg.consensus_text || '')
     const [loading, setLoading] = useState(false)
     const { toast } = useToast()
+    const { t: tx } = useLanguage()
 
     const approvedT = seg.transcriptions.find(t => t.is_validated) || seg.transcriptions[0]
     const pageImage = approvedT?.page_image_url || seg.pages?.image_url || null
@@ -503,11 +510,11 @@ function ValidatedTranscriptionCard({
         setLoading(true)
         const result = await approveTranscription(seg.id, approvedT.id, editText)
         if (result.success) {
-            toast({ title: "Modifié !", description: "La transcription officielle a été mise à jour." })
+            toast({ title: tx('admin.edit'), description: tx('admin.official_updated') })
             onUpdate({ ...seg, consensus_text: editText })
             setIsEditing(false)
         } else {
-            toast({ title: "Erreur", description: (result as any).error, variant: "destructive" })
+            toast({ title: tx('common.error'), description: (result as any).error, variant: "destructive" })
         }
         setLoading(false)
     }
@@ -532,7 +539,7 @@ function ValidatedTranscriptionCard({
                             className="flex items-center gap-1.5 text-[10px] font-medium text-primary hover:underline"
                         >
                             <ImageIcon className="w-3 h-3" />
-                            {showContext ? "Voir le segment" : "Voir le contexte page"}
+                            {showContext ? tx('admin.view_segment') : tx('admin.view_page_context')}
                         </button>
                     )}
                 </div>
@@ -582,7 +589,7 @@ function ValidatedTranscriptionCard({
                                 onClick={() => { setIsEditing(true); setEditText(seg.consensus_text || '') }}
                                 disabled={loading}
                             >
-                                <Edit2 className="w-3 h-3" /> Modifier
+                                <Edit2 className="w-3 h-3" /> {tx('admin.edit')}
                             </Button>
                         </div>
                     </>
@@ -594,7 +601,7 @@ function ValidatedTranscriptionCard({
                             {approvedT.profiles?.display_name?.charAt(0) || approvedT.profiles?.username?.charAt(0) || '?'}
                         </div>
                         <span className="text-[10px] text-muted-foreground">
-                            Transcription de {approvedT.profiles?.display_name || approvedT.profiles?.username || 'Inconnu'}
+                            {tx('transcribe.transcription_of')} {approvedT.profiles?.display_name || approvedT.profiles?.username || tx('admin.unknown')}
                         </span>
                         {approvedT.xp_awarded ? (
                             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/5 text-primary/70 border border-primary/10 ml-auto">
@@ -615,6 +622,7 @@ function ValidatedTab() {
     const [page, setPage] = useState(0)
     const [hasMore, setHasMore] = useState(true)
     const LIMIT = 20
+    const { t: tx } = useLanguage()
 
     const loadPage = async (p: number) => {
         setLoading(true)
@@ -645,10 +653,10 @@ function ValidatedTab() {
         return (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center bg-muted/10 rounded-xl border border-dashed border-border">
                 <History className="w-10 h-10 text-muted-foreground/30" />
-                <p className="text-muted-foreground text-sm">Cliquez pour charger l'historique des validations</p>
+                <p className="text-muted-foreground text-sm">{tx('admin.validation_history_load')}</p>
                 <Button variant="outline" onClick={handleLoad} disabled={loading}>
                     {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ChevronDown className="w-4 h-4 mr-2" />}
-                    Charger les validations
+                    {tx('admin.load_validations')}
                 </Button>
             </div>
         )
@@ -658,14 +666,14 @@ function ValidatedTab() {
         return (
             <div className="flex flex-col items-center justify-center py-16 text-center bg-muted/10 rounded-xl border border-dashed border-border">
                 <ClipboardCheck className="w-10 h-10 text-muted-foreground/30 mb-3" />
-                <p className="text-muted-foreground">Aucune transcription validée pour l'instant.</p>
+                <p className="text-muted-foreground">{tx('admin.no_validated_transcriptions')}</p>
             </div>
         )
     }
 
     return (
         <div className="flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground">{segments.length} segment{segments.length > 1 ? 's' : ''} validé{segments.length > 1 ? 's' : ''} (chargés)</p>
+            <p className="text-sm text-muted-foreground">{tx('admin.loaded_segments', { count: segments.length })}</p>
             {segments.map(seg => (
                 <ValidatedTranscriptionCard
                     key={seg.id}
@@ -677,7 +685,7 @@ function ValidatedTab() {
                 <div className="flex justify-center pt-2">
                     <Button variant="outline" onClick={handleLoadMore} disabled={loading}>
                         {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ChevronDown className="w-4 h-4 mr-2" />}
-                        Charger plus
+                        {tx('admin.load_more')}
                     </Button>
                 </div>
             )}
@@ -687,11 +695,12 @@ function ValidatedTab() {
 
 export function VerifyPageClient({ initialSegments }: { initialSegments: Segment[] }) {
     const [activeTab, setActiveTab] = useState<'pending' | 'validated'>('pending')
+    const { t: tx, lang } = useLanguage()
 
     const pendingCount = initialSegments.reduce((sum, s) => sum + s.transcriptions.length, 0)
 
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             {/* Tabs */}
             <div className="flex gap-1 p-1 bg-muted/40 rounded-lg w-fit border border-border">
                 <button
@@ -702,7 +711,7 @@ export function VerifyPageClient({ initialSegments }: { initialSegments: Segment
                         }`}
                 >
                     <AlertCircle className="w-4 h-4" />
-                    À vérifier
+                    {tx('admin.status_review_short')}
                     {pendingCount > 0 && (
                         <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded-full">
                             {pendingCount}
@@ -717,7 +726,7 @@ export function VerifyPageClient({ initialSegments }: { initialSegments: Segment
                         }`}
                 >
                     <ClipboardCheck className="w-4 h-4" />
-                    Validations effectuées
+                    {tx('admin.validated_history')}
                 </button>
             </div>
 

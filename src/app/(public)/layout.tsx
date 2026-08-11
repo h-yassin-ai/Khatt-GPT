@@ -2,14 +2,33 @@ import { createClient } from '@/utils/supabase/server';
 import { ContributorNav } from '@/components/ContributorNav';
 import { PublicHeader } from '@/components/PublicHeader';
 import { PublicFooter } from '@/components/PublicFooter';
+import { cookies } from 'next/headers';
+
+const USER_LOOKUP_TIMEOUT_MS = 1200;
+
+async function getOptionalUser() {
+    const cookieStore = await cookies();
+    const hasAuthCookie = cookieStore.getAll().some(({ name }) => name.startsWith('sb-') && name.includes('auth-token'));
+    if (!hasAuthCookie) return null;
+
+    const supabase = await createClient();
+    try {
+        const result = await Promise.race([
+            supabase.auth.getUser(),
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), USER_LOOKUP_TIMEOUT_MS)),
+        ]);
+        return result && 'data' in result ? result.data.user : null;
+    } catch {
+        return null;
+    }
+}
 
 export default async function PublicLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getOptionalUser();
     const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()) || [];
     const isAdmin = user?.email ? adminEmails.includes(user.email) : false;
 

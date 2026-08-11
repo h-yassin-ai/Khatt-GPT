@@ -3,6 +3,7 @@ import localFont from 'next/font/local';
 import './globals.css';
 import { PWARegister } from '@/components/PWARegister'
 import { LanguageProvider } from '@/lib/language-context'
+import { ToastProvider } from '@/hooks/use-toast'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -46,7 +47,7 @@ export default async function RootLayout({
       >
         <PWARegister />
         <LanguageProvider>
-          {children}
+          <ToastProvider>{children}</ToastProvider>
         </LanguageProvider>
       </body>
     </html>

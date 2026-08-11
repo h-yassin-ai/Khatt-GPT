@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, use } from 'react'
+import { useState, useEffect, useCallback, use, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { bulkInsertSegmentsForPage, deleteSegment, reorderSegments, deletePage, updatePage } from '../actions'
@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button'
 import { v4 as uuidv4 } from 'uuid'
 import {
     UploadCloud, ChevronLeft, Trash2, CheckCircle2, Clock,
-    GripVertical, Pencil, Check, X, AlertCircle, FileImage,
-    Eye, MoreHorizontal, MessageSquare, Flag, AlertTriangle
+    GripVertical, Pencil, Check, X, FileImage,
+    Eye, MessageSquare, AlertTriangle
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useLanguage } from '@/lib/language-context'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import {
@@ -67,7 +68,8 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
 
     const router = useRouter()
     const { toast } = useToast()
-    const supabase = createClient()
+    const { t, lang } = useLanguage()
+    const supabase = useMemo(() => createClient(), [])
 
     const fetchData = useCallback(async () => {
         const { data: pageData } = await supabase
@@ -124,7 +126,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                 if (uploadError) {
                     console.error('Upload error for', file.name, uploadError)
                     toast({
-                        title: `Failed: ${file.name}`,
+                        title: t('admin.file_upload_error', { file: file.name }),
                         description: uploadError.message,
                         variant: "destructive"
                     })
@@ -144,13 +146,13 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                 if (result.error) throw new Error(result.error)
             }
 
-            toast({ title: `✅ ${segmentDetails.length} lines added!` })
+            toast({ title: t('admin.lines_added', { count: segmentDetails.length }) })
             setFiles([])
             setShowUploader(false)
             await fetchData()
 
         } catch (err: any) {
-            toast({ title: "Upload failed", description: err.message, variant: "destructive" })
+            toast({ title: t('admin.upload_failed'), description: err.message, variant: "destructive" })
         } finally {
             setUploading(false)
             setUploadProgress(0)
@@ -158,30 +160,30 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
     }
 
     const handleDeleteSegment = async (segmentId: string) => {
-        if (!confirm('Delete this line segment? This is irreversible.')) return
+        if (!confirm(t('admin.delete_line_confirm'))) return
         const res = await deleteSegment(segmentId, manuscriptId, pageId)
         if (res.success) {
             setSegments(prev => prev.filter(s => s.id !== segmentId))
-            toast({ title: 'Line deleted' })
+            toast({ title: t('admin.line_deleted') })
         } else {
-            toast({ title: 'Error', description: res.error, variant: 'destructive' })
+            toast({ title: t('common.error'), description: res.error, variant: 'destructive' })
         }
     }
 
     const handleDeletePage = async () => {
-        if (!confirm('Delete this page AND all its lines? This cannot be undone.')) return
+        if (!confirm(t('admin.delete_page_confirm'))) return
         const res = await deletePage(pageId, manuscriptId)
         if (res.success) {
             router.push(`/admin/manuscripts/${manuscriptId}`)
         } else {
-            toast({ title: 'Error', description: res.error, variant: 'destructive' })
+            toast({ title: t('common.error'), description: res.error, variant: 'destructive' })
         }
     }
 
     const handleSaveLabel = async () => {
         const res = await updatePage(pageId, manuscriptId, { label: pageLabel })
         if (res.success) {
-            toast({ title: 'Page renamed' })
+            toast({ title: t('admin.order_saved') })
             setEditingLabel(false)
         }
     }
@@ -205,7 +207,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
             segments.map(s => ({ id: s.id, order_index: s.order_index })),
             manuscriptId, pageId
         )
-        toast({ title: 'Order saved' })
+        toast({ title: t('admin.order_saved') })
     }
 
     const getStatusColor = (seg: Segment) => {
@@ -215,6 +217,15 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
         if ((seg.transcriptions?.length || 0) > 1) return 'orange'
         return 'gray'
     }
+
+    const getStatusLabel = (status: string) => ({
+        validated: t('admin.status_validated'),
+        conflict: t('admin.status_conflict_short'),
+        flagged: t('admin.status_flagged'),
+        archived: t('admin.status_archived'),
+        pending: t('admin.status_pending'),
+        in_progress: t('admin.status_in_progress'),
+    }[status] || status)
 
     const handleOpenReview = (seg: Segment) => {
         setReviewSegment(seg)
@@ -228,14 +239,14 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
             const { validateTranscription } = await import('../../actions')
             const res = await validateTranscription(transcriptionId, true)
             if (res.success) {
-                toast({ title: "Transcription validée" })
+            toast({ title: t('admin.transcription_validated') })
                 setIsReviewOpen(false)
                 fetchData()
             } else {
-                toast({ title: "Erreur", description: res.error, variant: "destructive" })
+                toast({ title: t('common.error'), description: res.error, variant: "destructive" })
             }
         } catch (err: any) {
-            toast({ title: "Erreur", description: err.message, variant: "destructive" })
+                toast({ title: t('common.error'), description: err.message, variant: "destructive" })
         } finally {
             setValidatingId(null)
         }
@@ -248,15 +259,15 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
         })
     }
 
-    if (loading) return <div className="p-20 text-center text-muted-foreground">Loading page...</div>
-    if (!page) return <div className="p-20 text-center text-muted-foreground">Page not found.</div>
+    if (loading) return <div className="p-20 text-center text-muted-foreground">{t('admin.loading_page')}</div>
+    if (!page) return <div className="p-20 text-center text-muted-foreground">{t('admin.page_not_found')}</div>
 
     return (
-        <div className="flex flex-col gap-8 pb-20">
+        <div className="flex flex-col gap-8 pb-20" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             {/* Header */}
             <div className="flex flex-col gap-3">
                 <Link href={`/admin/manuscripts/${manuscriptId}`} className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-1">
-                    <ChevronLeft className="w-4 h-4" /> Back to Manuscript
+                    <ChevronLeft className="w-4 h-4" /> {t('admin.back_to_manuscript')}
                 </Link>
                 <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
@@ -275,15 +286,15 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                         ) : (
                             <div className="flex items-center gap-2">
                                 <h1 className="text-3xl font-heading font-semibold">{pageLabel || `Page ${page.order_index}`}</h1>
-                                <button onClick={() => setEditingLabel(true)} className="p-1.5 rounded hover:bg-muted transition-colors" title="Rename page">
+                        <button onClick={() => setEditingLabel(true)} className="p-1.5 rounded hover:bg-muted transition-colors" title={t('admin.rename_page')}>
                                     <Pencil className="w-4 h-4 text-muted-foreground" />
                                 </button>
                             </div>
                         )}
-                        <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full font-mono">Position #{page.order_index}</span>
+                        <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full font-mono">{t('admin.position')} #{page.order_index}</span>
                     </div>
                     <Button variant="destructive" size="sm" onClick={handleDeletePage} className="gap-2 shrink-0">
-                        <Trash2 className="w-4 h-4" /> Delete Page
+                        <Trash2 className="w-4 h-4" /> {t('admin.delete_page')}
                     </Button>
                 </div>
             </div>
@@ -291,13 +302,13 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                 {/* Full Page Scan */}
                 <div className="flex flex-col gap-4">
-                    <h2 className="text-xl font-semibold">Full Page Scan</h2>
+                    <h2 className="text-xl font-semibold">{t('admin.full_page_scan')}</h2>
                     <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm aspect-[3/4] relative group">
                         {page.image_url && page.image_url.trim() !== "" ? (
                             <>
                                 <img
                                     src={page.image_url || undefined}
-                                    alt="Full Page"
+                                    alt={t('admin.full_page_scan')}
                                     className="w-full h-full object-contain"
                                     id="full-page-image"
                                     onLoad={handlePageImgLoad}
@@ -342,17 +353,17 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                 {/* Lines Panel */}
                 <div className="flex flex-col gap-4">
                     <div className="flex justify-between items-center">
-                        <h2 className="text-xl font-semibold">Lines ({segments.length})</h2>
+                    <h2 className="text-xl font-semibold">{t('admin.lines_count', { count: segments.length })}</h2>
                         <Button size="sm" onClick={() => setShowUploader(!showUploader)} className="gap-2">
                             <UploadCloud className="w-4 h-4" />
-                            {showUploader ? 'Cancel' : 'Add Lines'}
+                    {showUploader ? t('admin.cancel_upload') : t('admin.add_lines')}
                         </Button>
                     </div>
 
                     {/* Uploader */}
                     {showUploader && (
                         <form onSubmit={handleUploadLines} className="bg-card border border-border p-5 rounded-xl flex flex-col gap-4 shadow-sm">
-                            <p className="text-sm text-muted-foreground">Select multiple line images. They will be added after existing lines, sorted by filename.</p>
+                <p className="text-sm text-muted-foreground">{t('admin.line_upload_desc')}</p>
                             <div className="border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors rounded-xl p-6 flex flex-col items-center justify-center text-center relative cursor-pointer">
                                 <input
                                     type="file"
@@ -363,7 +374,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                                     disabled={uploading}
                                 />
                                 <UploadCloud className="w-8 h-8 text-primary/60 mb-2" />
-                                <p className="text-sm font-medium">{files.length > 0 ? `${files.length} files ready` : 'Click or drag line images here'}</p>
+                        <p className="text-sm font-medium">{files.length > 0 ? t('admin.files_ready', { count: files.length }) : t('admin.click_drag_lines')}</p>
                                 {files.length > 0 && (
                                     <p className="text-xs text-muted-foreground mt-1">
                                         {files.map(f => f.name).slice(0, 3).join(', ')}{files.length > 3 ? `... +${files.length - 3} more` : ''}
@@ -373,7 +384,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                             {uploading && (
                                 <div className="flex flex-col gap-1">
                                     <div className="flex justify-between text-xs font-semibold text-primary">
-                                        <span>Uploading...</span><span>{uploadProgress}%</span>
+                            <span>{t('admin.uploading')}</span><span>{uploadProgress}%</span>
                                     </div>
                                     <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                                         <div className="h-full bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
@@ -381,7 +392,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                                 </div>
                             )}
                             <Button type="submit" disabled={uploading || files.length === 0} className="w-full">
-                                {uploading ? 'Uploading...' : `Upload ${files.length} Lines`}
+                    {uploading ? t('admin.uploading') : t('admin.upload_lines', { count: files.length })}
                             </Button>
                         </form>
                     )}
@@ -389,13 +400,13 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                     {/* Drag-to-reorder segment list */}
                     {segments.length === 0 && !showUploader ? (
                         <div className="p-12 text-center text-muted-foreground border border-dashed border-border rounded-xl">
-                            <p className="font-medium">No lines yet.</p>
-                            <p className="text-sm">Click "Add Lines" to upload segment images for this page.</p>
+                    <p className="font-medium">{t('admin.no_lines')}</p>
+                    <p className="text-sm">{t('admin.add_lines_hint')}</p>
                         </div>
                     ) : (
                         <div className="flex flex-col gap-2 max-h-[500px] overflow-y-auto pr-1">
                             <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                <GripVertical className="w-3 h-3" /> Drag to reorder — changes save automatically
+                    <GripVertical className="w-3 h-3" /> {t('admin.drag_reorder')}
                             </p>
                             {segments.map((seg, idx) => (
                                 <div
@@ -409,7 +420,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                                     <GripVertical className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
                                     <div className="w-12 h-10 bg-muted rounded overflow-hidden flex-shrink-0 border border-border/50">
                                         {seg.image_url && seg.image_url.trim() !== "" ? (
-                                            <img src={seg.image_url || undefined} className="w-full h-full object-cover" alt={`Line ${idx + 1}`} />
+                                            <img src={seg.image_url || undefined} className="w-full h-full object-cover" alt={`${t('transcribe.line')} ${idx + 1}`} />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center">
                                                 <FileImage className="w-4 h-4 text-muted-foreground opacity-20" />
@@ -417,7 +428,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                                         )}
                                     </div>
                                     <div className="flex-1 flex flex-col min-w-0">
-                                        <span className="text-sm font-medium text-foreground">Line #{seg.order_index}</span>
+                                        <span className="text-sm font-medium text-foreground">{t('transcribe.line')} #{seg.order_index}</span>
                                         <div className="flex items-center gap-2 mt-0.5">
                                             {(() => {
                                                 const color = getStatusColor(seg)
@@ -428,19 +439,19 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                                                                  color === 'purple' ? 'bg-purple-500/10 text-purple-700 border border-purple-500/20' :
                                                                  'bg-muted/70 text-muted-foreground border border-border/50'
                                                          }`}>
-                                                        {seg.segmentation_issue_reported ? 'SEGMENTATION' : seg.status === 'flagged' ? 'FLAGGED' : seg.status}
-                                                        {color === 'orange' && seg.status !== 'conflict' && ' (MULTIPLE)'}
+                                                        {seg.segmentation_issue_reported ? t('admin.segmentation') : getStatusLabel(seg.status)}
+                                                        {color === 'orange' && seg.status !== 'conflict' && ` (${t('admin.multiple')})`}
                                                     </span>
                                                 )
                                             })()}
                                             {seg.segmentation_issue_reported && (
                                                 <span className="text-[10px] text-purple-700 flex items-center gap-1 font-semibold">
                                                     <AlertTriangle className="w-2.5 h-2.5" />
-                                                    {seg.segmentation_issue_count || 1} signalement
+                                                    {t('admin.report_count', { count: seg.segmentation_issue_count || 1 })}
                                                 </span>
                                             )}
                                             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                                <Clock className="w-2.5 h-2.5" /> {seg.transcriptions?.length || 0} subs
+                                                <Clock className="w-2.5 h-2.5" /> {t('admin.submissions_count', { count: seg.transcriptions?.length || 0 })}
                                             </span>
                                         </div>
                                     </div>
@@ -455,7 +466,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                                                     handleOpenReview(seg)
                                                 }}
                                             >
-                                                <Eye className="w-3.5 h-3.5" /> Review
+                                <Eye className="w-3.5 h-3.5" /> {t('admin.review')}
                                             </Button>
                                         )}
                                         <button
@@ -464,7 +475,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                                                 handleDeleteSegment(seg.id)
                                             }}
                                             className="opacity-0 group-hover:opacity-100 p-1.5 text-destructive hover:bg-destructive/10 rounded transition-all shrink-0"
-                                            title="Delete this line"
+                                    title={t('admin.delete_line')}
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
@@ -481,10 +492,10 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-2xl font-heading">
-                            Review Segment #{reviewSegment?.order_index}
+                            {t('admin.review_segment', { count: reviewSegment?.order_index || 0 })}
                         </DialogTitle>
                         <DialogDescription>
-                            Compare subsmisison and validate the final transcription.
+                            {t('admin.compare_submissions')}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -494,7 +505,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                             <div className="bg-muted rounded-lg p-2 flex justify-center border border-border">
                                 <img
                                     src={reviewSegment.image_url}
-                                    alt="Segment"
+                                    alt={t('admin.segment_alt')}
                                     className="max-h-40 object-contain"
                                 />
                             </div>
@@ -502,7 +513,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                             {/* Status Info */}
                             <div className="flex items-center gap-4">
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status Actuel</span>
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('admin.current_status')}</span>
                                     <div className="flex items-center gap-2">
                                         <Badge variant={reviewSegment.status === 'validated' ? 'secondary' : 'outline'} className={
                                             reviewSegment.status === 'validated' ? 'bg-green-500/10 text-green-600 border-green-500/20' :
@@ -510,15 +521,15 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                                                     reviewSegment.status === 'flagged' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
                                                         'bg-muted text-muted-foreground'
                                         }>
-                                            <span className="capitalize">{reviewSegment.status}</span>
+                                            <span className="capitalize">{getStatusLabel(reviewSegment.status)}</span>
                                         </Badge>
                                         <span className="text-sm text-muted-foreground">
-                                            {reviewSegment.transcriptions?.length || 0} transcriptions reçues
+                                            {t('admin.transcription_count', { count: reviewSegment.transcriptions?.length || 0 })}
                                         </span>
                                         {reviewSegment.segmentation_issue_reported && (
                                             <Badge className="bg-purple-500/10 text-purple-700 border-purple-500/20">
                                                 <AlertTriangle className="w-3 h-3 mr-1" />
-                                                Segmentation a revoir ({reviewSegment.segmentation_issue_count || 1})
+                                                {t('admin.segmentation_review')} ({reviewSegment.segmentation_issue_count || 1})
                                             </Badge>
                                         )}
                                     </div>
@@ -528,53 +539,53 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                             {/* Transcriptions List */}
                             <div className="flex flex-col gap-3">
                                 <h3 className="text-sm font-semibold flex items-center gap-2">
-                                    <MessageSquare className="w-4 h-4 text-primary" /> Transcriptions suggérées
+                        <MessageSquare className="w-4 h-4 text-primary" /> {t('admin.suggested_transcriptions')}
                                 </h3>
 
                                 {reviewSegment.transcriptions && reviewSegment.transcriptions.length > 0 ? (
                                     <div className="flex flex-col gap-3">
                                         {[...reviewSegment.transcriptions]
                                             .sort((a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime())
-                                            .map((t, index) => (
-                                            <div key={t.id} className={`p-4 rounded-xl border transition-all ${t.is_validated ? 'border-green-500 bg-green-50/30' : 'border-border bg-card shadow-sm'}`}>
+                                             .map((submission, index) => (
+                                             <div key={submission.id} className={`p-4 rounded-xl border transition-all ${submission.is_validated ? 'border-green-500 bg-green-50/30' : 'border-border bg-card shadow-sm'}`}>
                                                 <div className="flex justify-between items-start gap-4 mb-3">
                                                     <div className="p-3 bg-muted/30 rounded-lg flex-1">
-                                                        <p className="font-arabic text-2xl leading-relaxed text-right" dir="rtl">{t.text}</p>
+                                                         <p className="font-arabic text-2xl leading-relaxed text-right" dir="rtl">{submission.text}</p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex flex-wrap items-center gap-3">
                                                         <Badge className={index === 0 ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted text-muted-foreground border-border'}>
-                                                            #{index + 1} {index === 0 ? 'premier submit' : 'submit suivant'}
+                            #{index + 1} {index === 0 ? t('admin.first_submit') : t('admin.next_submit')}
                                                         </Badge>
-                                                        {typeof t.xp_awarded === 'number' && (
+                                                         {typeof submission.xp_awarded === 'number' && (
                                                             <Badge className="bg-amber-500/10 text-amber-700 border-amber-500/20">
-                                                                +{t.xp_awarded} XP
+                                                                 +{submission.xp_awarded} XP
                                                             </Badge>
                                                         )}
                                                         <div className="text-[10px] text-muted-foreground">
-                                                            Posté le {new Date(t.submitted_at).toLocaleString()}
+                                                             {t('admin.posted_on')} {new Date(submission.submitted_at).toLocaleString(lang === 'ar' ? 'ar' : lang === 'fr' ? 'fr-FR' : 'en-US')}
                                                         </div>
-                                                        {t.is_validated && (
+                                                         {submission.is_validated && (
                                                             <Badge className="bg-green-500 hover:bg-green-600 text-white gap-1 py-0 px-2 h-5">
-                                                                <Check className="w-3 h-3" /> Validé
+                                                                <Check className="w-3 h-3" /> {t('admin.approved')}
                                                             </Badge>
                                                         )}
                                                     </div>
 
-                                                    {!t.is_validated && (
+                                                     {!submission.is_validated && (
                                                         <Button
                                                             size="sm"
-                                                            onClick={() => handleValidate(t.id)}
+                                                             onClick={() => handleValidate(submission.id)}
                                                             disabled={validatingId !== null}
                                                             className="gap-2"
                                                         >
-                                                            {validatingId === t.id ? (
+                                                             {validatingId === submission.id ? (
                                                                 <Clock className="w-4 h-4 animate-spin" />
                                                             ) : (
                                                                 <CheckCircle2 className="w-4 h-4" />
                                                             )}
-                                                            Valider cette version
+                                                            {t('admin.validate_version')}
                                                         </Button>
                                                     )}
                                                 </div>
@@ -583,7 +594,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                                     </div>
                                 ) : (
                                     <div className="p-8 text-center bg-muted/30 rounded-xl border border-dashed border-border text-muted-foreground">
-                                        Aucune transcription proposée pour le moment.
+                                        {t('admin.no_proposals')}
                                     </div>
                                 )}
                             </div>
@@ -591,7 +602,7 @@ export default function PageDetailPage({ params }: { params: Promise<{ id: strin
                     )}
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsReviewOpen(false)}>Fermer</Button>
+                <Button variant="outline" onClick={() => setIsReviewOpen(false)}>{t('admin.close')}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

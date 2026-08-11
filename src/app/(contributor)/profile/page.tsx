@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import ProfileInteractive from './ProfileInteractive'
+import { getServerLanguage, translateServer } from '@/lib/server-i18n'
 
 export default async function ProfilePage() {
     const supabase = await createClient()
@@ -67,7 +68,10 @@ export default async function ProfilePage() {
         }
     })
 
-    if (!profile) return <div>Loading...</div>
+    if (!profile) {
+        const language = await getServerLanguage()
+        return <div className="p-8 text-center text-muted-foreground" dir={language === 'ar' ? 'rtl' : 'ltr'}>{translateServer('transcribe.loading', language)}</div>
+    }
 
     return (
         <ProfileInteractive

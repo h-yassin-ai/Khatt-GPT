@@ -1,23 +1,23 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import {
     LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts'
 import { RefreshCw } from 'lucide-react'
-
-const COLORS = ['#1B4E52', '#C4622D', '#2C3E50', '#8B4513', '#E8DFD0']
+import { useLanguage } from '@/lib/language-context'
 
 export default function AnalyticsPage() {
-    const supabase = createClient()
+    const supabase = useMemo(() => createClient(), [])
+    const { t, lang } = useLanguage()
     const [loading, setLoading] = useState(true)
 
     const [dailyData, setDailyData] = useState<any[]>([])
     const [statusData, setStatusData] = useState<any[]>([])
     const [topUsers, setTopUsers] = useState<any[]>([])
 
-    const fetchAnalytics = async () => {
+    const fetchAnalytics = useCallback(async () => {
         setLoading(true)
 
         // 1. Fetch transcriptions for chronological data
@@ -53,9 +53,9 @@ export default function AnalyticsPage() {
             }, {})
 
             setStatusData([
-                { name: 'Pending', value: counts['pending'] || 0 },
-                { name: 'Validated', value: counts['validated'] || 0 },
-                { name: 'Conflict/Flagged', value: (counts['conflict'] || 0) + (counts['flagged'] || 0) }
+                { name: t('admin.status_pending'), value: counts['pending'] || 0 },
+                { name: t('admin.status_validated'), value: counts['validated'] || 0 },
+                { name: t('admin.status_conflict'), value: (counts['conflict'] || 0) + (counts['flagged'] || 0) }
             ])
         }
 
@@ -71,23 +71,23 @@ export default function AnalyticsPage() {
         }
 
         setLoading(false)
-    }
+    }, [supabase, t])
 
     useEffect(() => {
         fetchAnalytics()
-    }, [])
+    }, [fetchAnalytics])
 
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-heading font-semibold text-foreground">Analytics Hub</h1>
+                <h1 className="text-3xl font-heading font-semibold text-foreground">{t('admin.analytics_title')}</h1>
                 <button
                     onClick={fetchAnalytics}
                     disabled={loading}
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                     <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                    Refresh Data
+                    {t('admin.refresh_data')}
                 </button>
             </div>
 
@@ -100,7 +100,7 @@ export default function AnalyticsPage() {
 
                     {/* Transcriptions Over Time */}
                     <div className="bg-card border border-border rounded-xl p-6 shadow-sm col-span-1 lg:col-span-2">
-                        <h2 className="text-lg font-semibold mb-4">Transcription Activity</h2>
+                        <h2 className="text-lg font-semibold mb-4">{t('admin.transcription_activity')}</h2>
                         <div className="h-[300px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={dailyData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
@@ -111,8 +111,8 @@ export default function AnalyticsPage() {
                                         contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                     />
                                     <Legend />
-                                    <Line type="monotone" dataKey="total" name="Total Submissions" stroke="#1B4E52" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                                    <Line type="monotone" dataKey="validated" name="Validated" stroke="#C4622D" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                                    <Line type="monotone" dataKey="total" name={t('admin.total_submissions')} stroke="#1B4E52" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                                    <Line type="monotone" dataKey="validated" name={t('admin.status_validated')} stroke="#C4622D" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
@@ -120,7 +120,7 @@ export default function AnalyticsPage() {
 
                     {/* Segment Status Breakdown */}
                     <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                        <h2 className="text-lg font-semibold mb-4">Segment Status Pipeline</h2>
+                        <h2 className="text-lg font-semibold mb-4">{t('admin.segment_pipeline')}</h2>
                         <div className="h-[250px] w-full flex items-center justify-center">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
@@ -134,7 +134,7 @@ export default function AnalyticsPage() {
                                         dataKey="value"
                                     >
                                         {statusData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.name === 'Validated' ? '#1B4E52' : entry.name === 'Pending' ? '#E8DFD0' : '#C4622D'} />
+                                        <Cell key={`cell-${index}`} fill={entry.name === t('admin.status_validated') ? '#1B4E52' : entry.name === t('admin.status_pending') ? '#E8DFD0' : '#C4622D'} />
                                         ))}
                                     </Pie>
                                     <Tooltip
@@ -149,7 +149,7 @@ export default function AnalyticsPage() {
 
                     {/* Top Contributors */}
                     <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                        <h2 className="text-lg font-semibold mb-4">Top Contributors (Points)</h2>
+                        <h2 className="text-lg font-semibold mb-4">{t('admin.top_points')}</h2>
                         <div className="h-[250px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={topUsers} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -160,7 +160,7 @@ export default function AnalyticsPage() {
                                         cursor={{ fill: '#f3f4f6' }}
                                         contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                     />
-                                    <Bar dataKey="points" name="Points" fill="#1B4E52" radius={[0, 4, 4, 0]} barSize={24} />
+                                    <Bar dataKey="points" name={t('admin.points')} fill="#1B4E52" radius={[0, 4, 4, 0]} barSize={24} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>

@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
 import { X, GripHorizontal } from 'lucide-react'
+import { useLanguage } from '@/lib/language-context'
 
 const ARABIC_LAYOUT = [
     ['ذ', 'ض', 'ص', 'ث', 'ق', 'ف', 'غ', 'ع', 'ه', 'خ', 'ح', 'ج', 'د'],
@@ -18,6 +19,13 @@ interface DraggableKeyboardProps {
 }
 
 export default function DraggableKeyboard({ onKeyPress, onBackspace, onClose }: DraggableKeyboardProps) {
+    const { lang } = useLanguage()
+    const copy = {
+        title: lang === 'ar' ? 'لوحة المفاتيح العربية' : lang === 'en' ? 'Arabic keyboard' : 'Clavier arabe',
+        delete: lang === 'ar' ? 'حذف' : lang === 'en' ? 'Delete' : 'Supprimer',
+        space: lang === 'ar' ? 'مسافة' : lang === 'en' ? 'Space' : 'Espace',
+        drag: lang === 'ar' ? 'يمكنك سحب لوحة المفاتيح إلى أي مكان على الشاشة.' : lang === 'en' ? 'Drag this keyboard anywhere on the screen.' : 'Déplacez ce clavier où vous le souhaitez à l’écran.',
+    }
     return (
         <motion.div
             drag
@@ -34,7 +42,7 @@ export default function DraggableKeyboard({ onKeyPress, onBackspace, onClose }: 
             <div className="flex items-center justify-between mb-1 select-none">
                 <div className="flex items-center gap-2 text-muted-foreground mr-12">
                     <GripHorizontal className="w-4 h-4 cursor-grab active:cursor-grabbing text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Arabic Keyboard</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">{copy.title}</span>
                 </div>
                 <Button
                     variant="ghost"
@@ -77,7 +85,7 @@ export default function DraggableKeyboard({ onKeyPress, onBackspace, onClose }: 
                                 }}
                                 type="button"
                             >
-                                DELETE
+                                {copy.delete}
                             </Button>
                         )}
                     </div>
@@ -94,12 +102,12 @@ export default function DraggableKeyboard({ onKeyPress, onBackspace, onClose }: 
                     }}
                     type="button"
                 >
-                    مسافة (SPACE)
+                    {copy.space}
                 </Button>
             </div>
 
             <p className="text-[9px] text-muted-foreground text-center mt-1 opacity-50">
-                You can drag this keyboard anywhere on your screen.
+                {copy.drag}
             </p>
         </motion.div>
     )

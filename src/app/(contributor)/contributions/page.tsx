@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import ProfileInteractive from '../profile/ProfileInteractive'
+import { getServerLanguage, translateServer } from '@/lib/server-i18n'
 
 export default async function ContributionsPage() {
     const supabase = await createClient()
@@ -11,6 +12,8 @@ export default async function ContributionsPage() {
     if (!user) {
         redirect('/auth/login')
     }
+
+    const language = await getServerLanguage()
 
     const { data: profile } = await supabase
         .from('profiles')
@@ -64,10 +67,10 @@ export default async function ContributionsPage() {
     })
 
     return (
-        <main className="container max-w-7xl mx-auto px-4 py-8">
+        <main className="container max-w-7xl mx-auto px-4 py-8" dir={language === 'ar' ? 'rtl' : 'ltr'}>
             <div className="mb-10">
-                <h1 className="text-4xl font-heading font-bold text-foreground mb-2">Mes Contributions</h1>
-                <p className="text-muted-foreground">Consultez et modifiez vos transcriptions passees.</p>
+                <h1 className="text-4xl font-heading font-bold text-foreground mb-2">{translateServer('contributions.title', language)}</h1>
+                <p className="text-muted-foreground">{translateServer('contributions.description', language)}</p>
             </div>
 
             <ProfileInteractive

@@ -113,9 +113,11 @@ export async function getSegmentsToVerify() {
                     ...t,
                     profiles: profileMap.get(t.contributor_id) || null
                 }))
+                // The first submission is displayed first because it receives
+                // the highest chronology-based XP reward.
                 .sort(
                     (a: any, b: any) =>
-                        new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
+                        new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime()
                 ),
         }))
         .filter((segment: any) => {
@@ -376,8 +378,6 @@ export async function bulkRejectTranscriptions(transcriptionIds: string[]) {
 
     const adminCheck = await assertAdmin(supabase)
     if (!adminCheck.ok) return { error: adminCheck.error }
-
-    const adminSupabase = await getAdminClient()
 
     // Process each rejection
     const results = await Promise.all(transcriptionIds.map(id => rejectTranscription(id)))

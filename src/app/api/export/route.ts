@@ -70,7 +70,7 @@ export async function GET(req: Request) {
 
                                     metadataLines += JSON.stringify({ file_name: filename, text: item.text, difficulty: item.difficulty }) + '\n'
                                 }
-                            } catch (e) {
+                            } catch {
                                 console.error('Fetch image fail:', item.image_url)
                             }
                         }
@@ -102,7 +102,11 @@ export async function GET(req: Request) {
     }
 
     const filename = `waraka_dataset_${new Date().toISOString().split('T')[0]}.json`
-    const jsonDataset = dataset.map(({ id, ...rest }) => rest)
+    const jsonDataset = dataset.map((item) => {
+        const copy = { ...item } as Record<string, unknown>
+        delete copy.id
+        return copy
+    })
 
     await supabase.from('export_logs').insert({
         admin_id: user.id,

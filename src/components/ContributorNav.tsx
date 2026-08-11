@@ -27,13 +27,13 @@ export function ContributorNav({ email, isAdmin, isFullWidth = false }: { email:
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48">
                     <DropdownMenuItem asChild>
-                        <Link href="/transcribe" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
-                            <Shuffle className="w-4 h-4 text-primary" /> Aléatoire
+                            <Link href="/transcribe" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
+                            <Shuffle className="w-4 h-4 text-primary" /> {t('nav.random')}
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                        <Link href="/browse" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
-                            <BookOpen className="w-4 h-4 text-emerald-600" /> Choisir un manuscrit
+                            <Link href="/browse" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
+                            <BookOpen className="w-4 h-4 text-emerald-600" /> {t('nav.choose_manuscript')}
                         </Link>
                     </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -86,7 +86,7 @@ export function ContributorNav({ email, isAdmin, isFullWidth = false }: { email:
                     <span className="font-heading text-xl lg:text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-primary via-primary/90 to-amber-600 drop-shadow-sm">Khatt-GPT</span>
                 </Link>
             </div>
-            <nav className="hidden md:flex items-center justify-center gap-0.5 lg:gap-1 text-[13px] lg:text-sm font-medium min-w-0">
+            <nav aria-label={t('nav.main')} className="hidden md:flex items-center justify-center gap-0.5 lg:gap-1 text-[13px] lg:text-sm font-medium min-w-0">
                 <NavLinks />
             </nav>
             <div className="flex items-center gap-3">
@@ -122,6 +122,8 @@ export function ContributorNav({ email, isAdmin, isFullWidth = false }: { email:
                 {/* Mobile Toggle */}
                 <button
                     onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    aria-label={t('common.menu')}
+                    aria-expanded={mobileMenuOpen}
                     className="md:hidden p-2 rounded-md hover:bg-muted text-foreground/80"
                 >
                     {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

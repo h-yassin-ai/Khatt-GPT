@@ -5,12 +5,15 @@ import BulkUploadPagesModal from './BulkUploadPagesModal'
 import ReferenceTextUpload from './ReferenceTextUpload'
 import PdfUpload from './PdfUpload'
 import ManuscriptListActions from '../ManuscriptListActions'
+import { getServerLanguage, translateServer } from '@/lib/server-i18n'
 
 export default async function ManuscriptDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     const supabase = await createClient()
+    const language = await getServerLanguage()
+    const tx = (key: string, vars?: Record<string, string | number>) => translateServer(key, language, vars)
 
-    const { data: manuscript } = await supabase
+    const buildQuery = (includeIssueFlag: boolean) => (supabase
         .from('manuscripts')
         .select(`
             *,
@@ -19,14 +22,19 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
                 image_url,
                 order_index,
                 created_at,
-                segments ( id, status, segmentation_issue_reported )
+                segments ( id, status${includeIssueFlag ? ', segmentation_issue_reported' : ''} )
             )
         `)
         .eq('id', id)
-        .single()
+        .single() as any)
+
+    let { data: manuscript, error } = await buildQuery(true)
+    if (error) {
+        ({ data: manuscript, error } = await buildQuery(false))
+    }
 
     if (!manuscript) {
-        return <div className="p-8 text-center py-20 bg-muted/20 rounded-xl border border-dashed">Manuscript not found</div>
+        return <div className="p-8 text-center py-20 bg-muted/20 rounded-xl border border-dashed" dir={language === 'ar' ? 'rtl' : 'ltr'}>{tx('admin.unknown')}</div>
     }
 
     // Sort pages
@@ -37,29 +45,29 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
     const conflictCount = pages.reduce((acc: number, p: any) => acc + (p.segments?.filter((s: any) => s.status === 'conflict' || s.segmentation_issue_reported).length || 0), 0)
     const progressPct = totalLines > 0 ? Math.round((validatedLines / totalLines) * 100) : 0
     const scholarlyChecks = [
-        { label: 'Titre scientifique', complete: Boolean(manuscript.title?.trim()) },
-        { label: 'Institution ou collection', complete: Boolean(manuscript.source?.trim()) },
-        { label: 'Contexte et description', complete: Boolean(manuscript.description?.trim()) },
-        { label: 'Pages numérisées', complete: pages.length > 0 },
-        { label: 'Texte publié de référence', complete: Boolean(manuscript.reference_text_url) },
-        { label: 'Fac-similé PDF', complete: Boolean(manuscript.pdf_url) },
-        { label: 'Données validées', complete: validatedLines > 0 },
+        { label: tx('admin.check_title'), complete: Boolean(manuscript.title?.trim()) },
+        { label: tx('admin.check_institution'), complete: Boolean(manuscript.source?.trim()) },
+        { label: tx('admin.check_context'), complete: Boolean(manuscript.description?.trim()) },
+        { label: tx('admin.check_pages'), complete: pages.length > 0 },
+        { label: tx('admin.check_reference'), complete: Boolean(manuscript.reference_text_url) },
+        { label: tx('admin.check_pdf'), complete: Boolean(manuscript.pdf_url) },
+        { label: tx('admin.check_validated'), complete: validatedLines > 0 },
     ]
     const scholarlyScore = Math.round((scholarlyChecks.filter((check) => check.complete).length / scholarlyChecks.length) * 100)
 
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
 
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div className="flex flex-col gap-2">
                     <Link href="/admin/manuscripts" className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-1 mb-2">
-                        <ChevronLeft className="w-4 h-4" /> Retour aux manuscrits
+                        <ChevronLeft className="w-4 h-4" /> {tx('admin.back_manuscripts')}
                     </Link>
                     <h1 className="text-3xl font-heading font-semibold text-foreground flex items-center gap-3">
                         {manuscript.title}
                         <span className="text-sm font-normal bg-muted/50 px-3 py-1 rounded-full text-muted-foreground border border-border">
-                            {pages.length} pages / {totalLines} lignes
+                            {tx('admin.pages_lines', { pages: pages.length, lines: totalLines })}
                         </span>
                         <ManuscriptListActions
                             id={manuscript.id}
@@ -70,24 +78,24 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
                     </h1>
                     <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                         <span className="rounded-full border border-border bg-card px-2.5 py-1">
-                            Source : {manuscript.source || 'non renseignée'}
+                            {tx('admin.source')} : {manuscript.source || tx('admin.not_provided')}
                         </span>
                         <span className="rounded-full border border-border bg-card px-2.5 py-1">
-                            Progression : {progressPct}%
+                            {tx('admin.progress_label')} : {progressPct}%
                         </span>
                     </div>
                     {manuscript.description && <p className="max-w-3xl text-muted-foreground">{manuscript.description}</p>}
                     <div className="mt-4 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
                         <div className="rounded-xl border border-border bg-card p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Validées</p>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{tx('admin.validated_lines')}</p>
                             <p className="mt-1 text-2xl font-bold text-green-700">{validatedLines}</p>
                         </div>
                         <div className="rounded-xl border border-border bg-card p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">À revoir</p>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{tx('admin.review_count')}</p>
                             <p className="mt-1 text-2xl font-bold text-amber-700">{reviewCount}</p>
                         </div>
                         <div className="rounded-xl border border-border bg-card p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conflits</p>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{tx('admin.conflict_count')}</p>
                             <p className="mt-1 text-2xl font-bold text-destructive">{conflictCount}</p>
                         </div>
                     </div>
@@ -102,21 +110,21 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
                         target="_blank"
                         className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 font-medium shadow-sm transition-colors hover:bg-muted"
                     >
-                        <ExternalLink className="h-4 w-4" /> Notice publique
+                        <ExternalLink className="h-4 w-4" /> {tx('admin.public_notice')}
                     </Link>
                     <BulkUploadPagesModal manuscriptId={manuscript.id} currentMaxOrder={pages.length > 0 ? Math.max(...pages.map((p: any) => p.order_index)) : 0} />
                     <Link
                         href={`/admin/manuscripts/${manuscript.id}/pages/new`}
                         className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md transition-colors shadow-sm font-medium"
                     >
-                        + Ajouter une page
+                        + {tx('admin.add_page')}
                     </Link>
                     {conflictCount > 0 && (
                         <Link
                             href="/admin/verify"
                             className="inline-flex items-center gap-2 bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20 px-4 py-2 rounded-md transition-colors shadow-sm font-medium"
                         >
-                            Examiner {conflictCount} conflit{conflictCount !== 1 ? 's' : ''}
+                            {tx('admin.review_conflicts', { count: conflictCount })}
                         </Link>
                     )}
                 </div>
@@ -124,10 +132,10 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
 
             <section className="grid gap-6 border-y border-border py-6 lg:grid-cols-[220px_1fr]">
                 <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Préparation scientifique</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">{tx('admin.scholarly_preparation')}</p>
                     <div className="mt-3 flex items-end gap-2">
                         <span className="text-4xl font-semibold tabular-nums text-secondary">{scholarlyScore}%</span>
-                        <span className="pb-1 text-sm text-muted-foreground">de complétude</span>
+                        <span className="pb-1 text-sm text-muted-foreground">{tx('admin.completeness')}</span>
                     </div>
                     <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
                         <div className="h-full rounded-full bg-secondary" style={{ width: `${scholarlyScore}%` }} />
@@ -135,7 +143,7 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
                 </div>
                 <div>
                     <p className="text-sm leading-6 text-muted-foreground">
-                        Cette liste contrôle les éléments nécessaires pour qu’une notice soit compréhensible, citable et exploitable par une équipe universitaire.
+                        {tx('admin.scholarly_desc')}
                     </p>
                     <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         {scholarlyChecks.map((check) => (
@@ -167,18 +175,18 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
                                         </div>
                                     )}
                                     <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-md px-2 py-1 rounded text-xs font-bold border border-border">
-                                        Page {page.order_index}
+                                        {tx('admin.page_default')} {page.order_index}
                                     </div>
                                     {conflicts > 0 && (
                                         <div className="absolute top-3 left-3 bg-destructive text-destructive-foreground px-2 py-1 rounded text-[10px] font-bold animate-pulse">
-                                            {conflicts} CONFLIT{conflicts > 1 ? 'S' : ''}
+                                            {tx('admin.conflicts_badge', { count: conflicts })}
                                         </div>
                                     )}
                                 </div>
                                 <div className="p-4 flex flex-col gap-2">
                                     <div className="flex justify-between items-center text-sm">
-                                        <span className="font-medium text-foreground">{lineCount} lignes</span>
-                                        <span className="text-muted-foreground text-xs">{validatedLines} / {lineCount} validées</span>
+                                        <span className="font-medium text-foreground">{tx('admin.page_count', { count: lineCount })}</span>
+                                        <span className="text-muted-foreground text-xs">{tx('admin.validated_fraction', { validated: validatedLines, total: lineCount })}</span>
                                     </div>
                                     <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                                         <div
@@ -195,8 +203,8 @@ export default async function ManuscriptDetailPage({ params }: { params: Promise
                 {pages.length === 0 && (
                     <div className="col-span-full p-20 text-center text-muted-foreground border border-dashed border-border rounded-xl bg-muted/5">
                         <FileImage className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-                        <p className="font-medium">Aucune page n’a encore été ajoutée.</p>
-                        <p className="text-sm">Utilisez « Ajouter une page » pour importer le premier scan complet.</p>
+                        <p className="font-medium">{tx('admin.no_pages')}</p>
+                        <p className="text-sm">{tx('admin.add_first_scan')}</p>
                     </div>
                 )}
             </div>

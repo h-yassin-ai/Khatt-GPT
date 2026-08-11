@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { BookOpen, PenTool, Database, ArrowRight, Sparkles, Users, ScrollText, ChevronLeft, ChevronRight, Search } from "lucide-react";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { createClient } from "@/utils/supabase/client";
 import LineLightbox from "@/components/LineLightbox";
+import { useLanguage } from "@/lib/language-context";
 
 type TranscribedSegment = {
     id: string;
@@ -25,7 +26,9 @@ type LeaderboardUser = {
 }
 
 export default function LandingPage() {
-    const supabase = createClient();
+    const { lang } = useLanguage();
+    const c = landingCopy[lang];
+    const supabase = useMemo(() => createClient(), []);
     const [counts, setCounts] = useState({ manuscripts: 0, segments: 0, contributors: 0 });
     const [transcribed, setTranscribed] = useState<TranscribedSegment[]>([]);
     const [pending, setPending] = useState<PendingSegment[]>([]);
@@ -55,14 +58,7 @@ export default function LandingPage() {
         let isMounted = true;
 
         const fetchData = async () => {
-            const [
-                { count: mCount },
-                { count: sCount },
-                { count: pCount },
-                { data: transcribedData },
-                { data: pendingData },
-                { data: topProfiles }
-            ] = await Promise.all([
+            const dataPromise = Promise.all([
                 supabase.from('manuscripts').select('*', { count: 'exact', head: true }),
                 supabase.from('transcriptions').select('*', { count: 'exact', head: true }),
                 supabase.from('profiles').select('*', { count: 'exact', head: true }),
@@ -84,6 +80,23 @@ export default function LandingPage() {
                     .order('total_contributions', { ascending: false })
                     .limit(10),
             ]);
+            const timeout = new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('stats_timeout')), 5000));
+
+            let results: Awaited<typeof dataPromise>;
+            try {
+                results = await Promise.race([dataPromise, timeout]);
+            } catch {
+                return;
+            }
+
+            const [
+                { count: mCount },
+                { count: sCount },
+                { count: pCount },
+                { data: transcribedData },
+                { data: pendingData },
+                { data: topProfiles }
+            ] = results;
 
             if (!isMounted) return;
 
@@ -135,49 +148,49 @@ export default function LandingPage() {
             isMounted = false;
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [supabase]);
 
     const currentSlide = transcribed[carouselIdx];
     const slideTitle = currentSlide
         ? (Array.isArray(currentSlide.manuscripts)
             ? (currentSlide.manuscripts as any[])[0]?.title
-            : (currentSlide.manuscripts as any)?.title) ?? 'Manuscrit'
+            : (currentSlide.manuscripts as any)?.title) ?? c.manuscript
         : '';
 
     return (
-        <div className="flex flex-col min-h-screen">
+        <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
 
             {/* ═══ HERO ═══ */}
-            <section className="relative w-full py-24 md:py-36 flex flex-col lg:flex-row items-center justify-between px-6 lg:px-16 gap-16 overflow-hidden max-w-7xl mx-auto">
+            <section className="relative w-full min-w-0 py-24 md:py-36 flex flex-col lg:flex-row items-center justify-between px-6 lg:px-16 gap-16 overflow-hidden max-w-7xl mx-auto">
                 {/* Ambient blobs */}
                 <div className="absolute top-[15%] right-[-5%] w-[550px] h-[550px] bg-[#C4622D] rounded-full blur-[160px] opacity-[0.08] pointer-events-none" />
                 <div className="absolute bottom-[5%] left-[-10%] w-[450px] h-[450px] bg-[#1B4E52] rounded-full blur-[160px] opacity-[0.08] pointer-events-none" />
 
-                <div className="z-10 max-w-2xl space-y-8">
-                    <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary bg-primary/8 border border-primary/20 px-4 py-2 rounded-full">
+                <div className="z-10 w-full min-w-0 max-w-2xl space-y-8">
+                    <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 text-center text-[10px] font-semibold uppercase tracking-widest text-primary bg-primary/8 border border-primary/20 px-3 py-2 rounded-full sm:text-xs sm:px-4">
                         <Sparkles className="w-3.5 h-3.5" />
-                        Projet de transcription collaborative
+                        {c.tag}
                     </div>
-                    <h1 className="font-heading text-6xl md:text-7xl lg:text-8xl leading-tight text-foreground font-semibold">
-                        Préservons ce<br />
-                        <span className="text-primary italic">qui fut écrit.</span>
+                    <h1 className="break-words font-heading text-5xl leading-tight text-foreground font-semibold sm:text-6xl md:text-7xl lg:text-8xl">
+                        {c.hero1}<br />
+                        <span className="text-primary italic">{c.hero2}</span>
                     </h1>
-                    <p className="font-sans text-xl text-muted-foreground leading-relaxed max-w-xl">
-                        Khatt-GPT est un effort collaboratif visant à construire un dataset robuste pour l'entraînement de modèles <span className="text-primary font-medium">HTR (Handwritten Text Recognition)</span> spécialisés dans le style Maghribi.
+                    <p className="w-full max-w-xl font-sans text-xl text-muted-foreground leading-relaxed">
+                        {c.heroDesc}
                     </p>
                     <div className="flex flex-wrap items-center gap-4 pt-2">
                         <Link
                             href="/auth/register"
                             className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-8 py-4 rounded-md font-semibold text-lg hover:bg-primary/90 transition-all hover:scale-[1.02] shadow-md"
                         >
-                            Commencer à contribuer
-                            <ArrowRight className="w-5 h-5" />
+                            {c.start}
+                            <ArrowRight className="w-5 h-5 rtl:rotate-180" />
                         </Link>
                         <Link
                             href="#comment-ca-marche"
                             className="inline-flex items-center justify-center gap-2 bg-transparent text-foreground border border-border px-8 py-4 rounded-md font-semibold text-lg hover:bg-muted/50 transition-all"
                         >
-                            En savoir plus
+                            {c.more}
                         </Link>
                     </div>
                 </div>
@@ -204,7 +217,7 @@ export default function LandingPage() {
                                         <>
                                             <img
                                                 src={currentSlide.image_url}
-                                                alt="Ligne manuscrite"
+                                                alt={c.lineAlt}
                                                 className="max-h-[120px] w-full object-contain transition-transform group-hover:scale-105"
                                             />
                                             <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -263,21 +276,21 @@ export default function LandingPage() {
                         <span className="font-sans text-5xl font-bold tracking-tighter text-[#E8DFD0]">
                             {counts.manuscripts}
                         </span>
-                        <span className="text-sm uppercase tracking-widest opacity-70">Manuscrits</span>
+                            <span className="text-sm uppercase tracking-widest opacity-70">{c.manuscripts}</span>
                     </div>
                     <div className="flex flex-col items-center gap-2">
                         <PenTool className="w-6 h-6 opacity-60 mb-1" />
                         <span className="font-sans text-5xl font-bold tracking-tighter text-[#E8DFD0]">
-                            {counts.segments.toLocaleString('fr-FR')}
+                            {counts.segments.toLocaleString(lang === 'ar' ? 'ar' : lang === 'en' ? 'en-GB' : 'fr-FR')}
                         </span>
-                        <span className="text-sm uppercase tracking-widest opacity-70">Segments transcrits</span>
+                            <span className="text-sm uppercase tracking-widest opacity-70">{c.segments}</span>
                     </div>
                     <div className="flex flex-col items-center gap-2">
                         <Users className="w-6 h-6 opacity-60 mb-1" />
                         <span className="font-sans text-5xl font-bold tracking-tighter text-[#E8DFD0]">
                             {counts.contributors}
                         </span>
-                        <span className="text-sm uppercase tracking-widest opacity-70">Contributeurs</span>
+                            <span className="text-sm uppercase tracking-widest opacity-70">{c.contributors}</span>
                     </div>
                 </div>
             </section>
@@ -287,11 +300,11 @@ export default function LandingPage() {
                     <div className="max-w-5xl mx-auto">
                         <div className="flex items-end justify-between mb-8">
                             <div>
-                                <h2 className="font-heading text-3xl font-semibold mb-2">Classement des meilleurs contributeurs</h2>
-                                <p className="text-sm text-muted-foreground">Plus vous transcrivez, plus vous montez dans le ranking.</p>
+                                <h2 className="font-heading text-3xl font-semibold mb-2">{c.leaderboard}</h2>
+                                <p className="text-sm text-muted-foreground">{c.rankDesc}</p>
                             </div>
                             <Link href="/auth/register" className="text-sm font-semibold text-primary hover:underline">
-                                Entrer dans le top
+                                {c.enterTop}
                             </Link>
                         </div>
 
@@ -312,7 +325,7 @@ export default function LandingPage() {
                                             {(user.points || 0).toLocaleString('fr-FR')} XP
                                         </span>
                                         <span className="text-xs px-2 py-1 rounded border border-border bg-muted/30 text-muted-foreground font-medium hidden sm:inline">
-                                            {(user.total_contributions || 0).toLocaleString('fr-FR')} lignes
+                                             {(user.total_contributions || 0).toLocaleString(lang === 'ar' ? 'ar' : lang === 'en' ? 'en-GB' : 'fr-FR')} {c.segments.toLowerCase()}
                                         </span>
                                     </div>
                                 </div>
@@ -327,11 +340,11 @@ export default function LandingPage() {
                     <div className="max-w-7xl mx-auto px-6 mb-10">
                         <div className="flex items-end justify-between">
                             <div>
-                                <h2 className="font-heading text-3xl font-semibold mb-2">Lignes déjà transcrites</h2>
-                                <p className="text-muted-foreground text-sm">Des exemples réels issus du dataset en cours de construction.</p>
+                                 <h2 className="font-heading text-3xl font-semibold mb-2">{c.transcribed}</h2>
+                                 <p className="text-muted-foreground text-sm">{c.transcribedDesc}</p>
                             </div>
                             <Link href="/auth/register" className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
-                                Voir tout <ArrowRight className="w-4 h-4" />
+                                 {c.viewAll} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                             </Link>
                         </div>
                     </div>
@@ -339,7 +352,7 @@ export default function LandingPage() {
                         {transcribed.map((seg) => {
                             const t = Array.isArray(seg.manuscripts)
                                 ? (seg.manuscripts as any[])[0]?.title
-                                : (seg.manuscripts as any)?.title ?? 'Manuscrit';
+                                 : (seg.manuscripts as any)?.title ?? c.manuscript;
                             return (
                                 <div
                                     key={seg.id}
@@ -351,7 +364,7 @@ export default function LandingPage() {
                                             <>
                                                 <img
                                                     src={seg.image_url}
-                                                    alt="Ligne du manuscrit"
+                                                 alt={c.lineAlt}
                                                     className="max-h-[130px] max-w-full object-contain transition-transform group-hover:scale-110"
                                                 />
                                                 <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -368,7 +381,7 @@ export default function LandingPage() {
                                             {seg.consensus_text}
                                         </p>
                                         <span className="mt-auto text-[10px] text-green-600 font-semibold bg-green-500/10 px-2 py-0.5 rounded-full self-end border border-green-500/20">
-                                            ✓ Validée
+                                             ✓ {c.validated}
                                         </span>
                                     </div>
                                 </div>
@@ -383,9 +396,9 @@ export default function LandingPage() {
                 <section className="w-full py-20 border-t border-border">
                     <div className="max-w-7xl mx-auto px-6">
                         <div className="mb-10">
-                            <h2 className="font-heading text-3xl font-semibold mb-2">Ces lignes vous attendent</h2>
+                             <h2 className="font-heading text-3xl font-semibold mb-2">{c.pendingTitle}</h2>
                             <p className="text-muted-foreground text-sm max-w-xl">
-                                Des centaines de lignes manuscrites ne demandent qu'à être lues et transcrites. Chaque contribution compte.
+                                 {c.pendingDesc}
                             </p>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -394,7 +407,7 @@ export default function LandingPage() {
                                     {seg.image_url ? (
                                         <img
                                             src={seg.image_url}
-                                            alt="Ligne en attente"
+                                             alt={c.waitingAlt}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                         />
                                     ) : (
@@ -402,7 +415,7 @@ export default function LandingPage() {
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
                                     <div className="absolute bottom-2 left-2 right-2">
-                                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">En attente</span>
+                                         <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">{c.pending}</span>
                                     </div>
                                 </div>
                             ))}
@@ -412,7 +425,7 @@ export default function LandingPage() {
                                 href="/auth/register"
                                 className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3.5 rounded-md font-semibold hover:bg-primary/90 transition-all hover:scale-[1.02] shadow-sm"
                             >
-                                Rejoindre et transcrire <ArrowRight className="w-4 h-4" />
+                                 {c.join} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                             </Link>
                         </div>
                     </div>
@@ -423,9 +436,9 @@ export default function LandingPage() {
             <section id="comment-ca-marche" className="w-full py-24 px-6 border-t border-border bg-card/30">
                 <div className="max-w-5xl mx-auto">
                     <div className="text-center mb-16">
-                        <h2 className="font-heading text-4xl font-semibold mb-4">Comment ça fonctionne ?</h2>
+                         <h2 className="font-heading text-4xl font-semibold mb-4">{c.how}</h2>
                         <p className="text-muted-foreground font-sans max-w-2xl mx-auto">
-                            Un processus simple en 3 étapes pour transformer des images en texte exploitable par l'IA.
+                            {c.howDesc}
                         </p>
                     </div>
 
@@ -434,27 +447,27 @@ export default function LandingPage() {
                             <div className="w-20 h-20 bg-secondary/10 rounded-2xl flex items-center justify-center mb-6 text-secondary group-hover:scale-110 transition-transform">
                                 <BookOpen className="w-10 h-10" />
                             </div>
-                            <h3 className="font-heading text-2xl font-semibold mb-3">1. Voir un fragment</h3>
+                            <h3 className="font-heading text-2xl font-semibold mb-3">{c.step1}</h3>
                             <p className="text-muted-foreground text-sm font-sans leading-relaxed">
-                                Une ligne d'un manuscrit maghrébin vous est présentée. La ligne à transcrire est mise en surbrillance dans le contexte de la page entière.
+                                {c.step1Desc}
                             </p>
                         </div>
                         <div className="flex flex-col items-center text-center group">
                             <div className="w-20 h-20 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
                                 <PenTool className="w-10 h-10" />
                             </div>
-                            <h3 className="font-heading text-2xl font-semibold mb-3">2. Transcrire sans voyelles</h3>
+                            <h3 className="font-heading text-2xl font-semibold mb-3">{c.step2}</h3>
                             <p className="text-muted-foreground text-sm font-sans leading-relaxed">
-                                Utilisez notre éditeur pour transcrire les lettres. Inutile de mettre les diacritiques (voyelles), sauf si vous le souhaitez.
+                                {c.step2Desc}
                             </p>
                         </div>
                         <div className="flex flex-col items-center text-center group">
                             <div className="w-20 h-20 bg-success/10 rounded-2xl flex items-center justify-center mb-6 text-success group-hover:scale-110 transition-transform">
                                 <Database className="w-10 h-10" />
                             </div>
-                            <h3 className="font-heading text-2xl font-semibold mb-3">3. Entraîner l'IA</h3>
+                            <h3 className="font-heading text-2xl font-semibold mb-3">{c.step3}</h3>
                             <p className="text-muted-foreground text-sm font-sans leading-relaxed">
-                                Vos transcriptions alimentent un dataset qui servira à entraîner un modèle HTR pour la lecture automatique des manuscrits.
+                                {c.step3Desc}
                             </p>
                         </div>
                     </div>
@@ -466,20 +479,20 @@ export default function LandingPage() {
                 <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 text-primary">
                     <ScrollText className="w-8 h-8" />
                 </div>
-                <h2 className="font-heading text-4xl font-semibold mb-4">Prêt à contribuer ?</h2>
+                <h2 className="font-heading text-4xl font-semibold mb-4">{c.finalTitle}</h2>
                 <p className="text-muted-foreground font-sans max-w-lg mx-auto mb-8 text-lg leading-relaxed">
-                    Chaque ligne que vous transcrivez aide à construire le futur de la reconnaissance automatique de manuscrits arabes.
+                    {c.finalDesc}
                 </p>
                 <Link
                     href="/auth/register"
                     className="bg-primary text-primary-foreground px-10 py-4 rounded-md font-semibold text-lg hover:bg-primary/90 transition-all hover:scale-[1.02] shadow-md inline-flex items-center gap-2"
                 >
-                    Créer un compte gratuit <ArrowRight className="w-5 h-5" />
+                    {c.create} <ArrowRight className="w-5 h-5 rtl:rotate-180" />
                 </Link>
                 <p className="mt-4 text-sm text-muted-foreground">
-                    Déjà inscrit ?{' '}
+                    {c.already}{' '}
                     <Link href="/auth/login" className="text-primary hover:underline font-medium">
-                        Se connecter
+                        {c.signIn}
                     </Link>
                 </p>
             </section>
@@ -494,3 +507,15 @@ export default function LandingPage() {
         </div>
     );
 }
+
+const landingCopy = {
+    fr: {
+        tag: 'Projet de transcription collaborative', hero1: 'Préservons ce', hero2: 'qui fut écrit.', heroDesc: 'Khatt-GPT est un effort collaboratif visant à construire un dataset robuste pour l’entraînement de modèles HTR (Handwritten Text Recognition) spécialisés dans le style maghrébin.', start: 'Commencer à contribuer', more: 'En savoir plus', manuscripts: 'Manuscrits', segments: 'Segments transcrits', contributors: 'Contributeurs', leaderboard: 'Classement des meilleurs contributeurs', rankDesc: 'Plus vous transcrivez, plus vous progressez dans le classement.', enterTop: 'Entrer dans le top', transcribed: 'Lignes déjà transcrites', transcribedDesc: 'Des exemples réels issus du dataset en cours de construction.', viewAll: 'Voir tout', validated: 'Validée', pendingTitle: 'Ces lignes vous attendent', pendingDesc: 'Des lignes manuscrites ne demandent qu’à être lues et transcrites. Chaque contribution compte.', pending: 'En attente', join: 'Rejoindre et transcrire', how: 'Comment ça fonctionne ?', howDesc: 'Un processus simple en 3 étapes pour transformer des images en texte exploitable par l’IA.', step1: '1. Voir un fragment', step1Desc: 'Une ligne d’un manuscrit maghrébin vous est présentée. La ligne à transcrire est mise en surbrillance dans le contexte de la page entière.', step2: '2. Transcrire sans voyelles', step2Desc: 'Utilisez notre éditeur pour transcrire les lettres. Les diacritiques sont facultatifs.', step3: '3. Entraîner l’IA', step3Desc: 'Vos transcriptions alimentent un dataset qui servira à entraîner un modèle HTR pour la lecture automatique des manuscrits.', finalTitle: 'Prêt à contribuer ?', finalDesc: 'Chaque ligne que vous transcrivez aide à construire le futur de la reconnaissance automatique de manuscrits arabes.', create: 'Créer un compte gratuit', already: 'Déjà inscrit ?', signIn: 'Se connecter', manuscript: 'Manuscrit', lineAlt: 'Ligne manuscrite', waitingAlt: 'Ligne en attente', noData: 'Aucune donnée disponible pour le moment.'
+    },
+    en: {
+        tag: 'Collaborative transcription project', hero1: 'Preserving what', hero2: 'was written.', heroDesc: 'Khatt-GPT is a collaborative effort to build a robust dataset for training HTR (Handwritten Text Recognition) models specialised in Maghrebi script.', start: 'Start contributing', more: 'Learn more', manuscripts: 'Manuscripts', segments: 'Transcribed segments', contributors: 'Contributors', leaderboard: 'Top contributors', rankDesc: 'The more you transcribe, the further you climb.', enterTop: 'Join the leaderboard', transcribed: 'Transcribed lines', transcribedDesc: 'Real examples from the dataset under construction.', viewAll: 'View all', validated: 'Validated', pendingTitle: 'These lines are waiting for you', pendingDesc: 'Manuscript lines are ready to be read and transcribed. Every contribution matters.', pending: 'Awaiting transcription', join: 'Join and transcribe', how: 'How does it work?', howDesc: 'A simple three-step process turns images into text ready for AI research.', step1: '1. Inspect a fragment', step1Desc: 'A line from a Maghrebi manuscript is presented to you. The target line is highlighted in the context of the full page.', step2: '2. Transcribe without vowels', step2Desc: 'Use our editor to transcribe the letters. Diacritics are optional.', step3: '3. Train AI', step3Desc: 'Your transcriptions feed a dataset for training HTR models that can read Arabic manuscripts.', finalTitle: 'Ready to contribute?', finalDesc: 'Every line you transcribe helps shape the future of automatic Arabic manuscript recognition.', create: 'Create a free account', already: 'Already registered?', signIn: 'Sign in', manuscript: 'Manuscript', lineAlt: 'Manuscript line', waitingAlt: 'Line awaiting transcription', noData: 'No data available yet.'
+    },
+    ar: {
+        tag: 'مشروع تعاوني لنسخ المخطوطات', hero1: 'نحفظ ما', hero2: 'كُتب قديماً.', heroDesc: 'خط-GPT مبادرة تعاونية لبناء مجموعة بيانات موثوقة لتدريب نماذج التعرف على الكتابة اليدوية المتخصصة في الخط المغربي.', start: 'ابدأ المساهمة', more: 'اعرف المزيد', manuscripts: 'المخطوطات', segments: 'الأسطر المنسوخة', contributors: 'المساهمون', leaderboard: 'أفضل المساهمين', rankDesc: 'كلما نسخت أكثر، تقدمت في قائمة المتصدرين.', enterTop: 'انضم إلى القائمة', transcribed: 'أسطر منسوخة', transcribedDesc: 'أمثلة حقيقية من مجموعة البيانات قيد البناء.', viewAll: 'عرض الكل', validated: 'موثق', pendingTitle: 'هذه الأسطر تنتظرك', pendingDesc: 'أسطر مخطوطة جاهزة للقراءة والنسخ. كل مساهمة لها أثر.', pending: 'في انتظار النسخ', join: 'انضم وانسخ', how: 'كيف تعمل المنصة؟', howDesc: 'ثلاث خطوات بسيطة لتحويل الصور إلى نص قابل للاستخدام في أبحاث الذكاء الاصطناعي.', step1: '١. معاينة جزء', step1Desc: 'يظهر لك سطر من مخطوطة مغربية، مع تمييز السطر المطلوب داخل الصفحة كاملة.', step2: '٢. النسخ دون حركات', step2Desc: 'استخدم محررنا لنسخ الحروف. التشكيل اختياري.', step3: '٣. تدريب الذكاء الاصطناعي', step3Desc: 'تغذي نسخك مجموعة بيانات لتدريب نماذج تقرأ المخطوطات العربية.', finalTitle: 'هل أنت مستعد للمساهمة؟', finalDesc: 'كل سطر تنسخه يساعد في بناء مستقبل التعرف الآلي على المخطوطات العربية.', create: 'إنشاء حساب مجاني', already: 'لديك حساب بالفعل؟', signIn: 'تسجيل الدخول', manuscript: 'مخطوطة', lineAlt: 'سطر من المخطوطة', waitingAlt: 'سطر في انتظار النسخ', noData: 'لا تتوفر بيانات بعد.'
+    },
+} as const
