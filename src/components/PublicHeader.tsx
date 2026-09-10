@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Languages, Library, Menu, Microscope, X } from 'lucide-react'
+import { Languages, Library, Menu, Microscope, ScrollText, X } from 'lucide-react'
 import { useLanguage, type Language } from '@/lib/language-context'
 import {
     DropdownMenu,
@@ -11,10 +11,10 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-const copy: Record<Language, { corpus: string; research: string; login: string; register: string }> = {
-    fr: { corpus: 'Corpus', research: 'Méthodologie', login: 'Se connecter', register: 'Contribuer' },
-    en: { corpus: 'Corpus', research: 'Methodology', login: 'Log in', register: 'Contribute' },
-    ar: { corpus: 'المجموعة', research: 'المنهجية', login: 'تسجيل الدخول', register: 'المساهمة' },
+const copy: Record<Language, { corpus: string; research: string; propose: string; login: string; register: string }> = {
+    fr: { corpus: 'Corpus', research: 'Méthodologie', propose: 'Proposer', login: 'Se connecter', register: 'Contribuer' },
+    en: { corpus: 'Corpus', research: 'Methodology', propose: 'Suggest', login: 'Log in', register: 'Contribute' },
+    ar: { corpus: 'المجموعة', research: 'المنهجية', propose: 'اقتراح', login: 'تسجيل الدخول', register: 'المساهمة' },
 }
 
 export function PublicHeader() {
@@ -29,6 +29,9 @@ export function PublicHeader() {
             </Link>
             <Link href="/research" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-foreground/80 hover:bg-muted hover:text-foreground">
                 <Microscope className="h-4 w-4" aria-hidden="true" /> {c.research}
+            </Link>
+            <Link href="/propose" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-foreground/80 hover:bg-muted hover:text-foreground">
+                <ScrollText className="h-4 w-4" aria-hidden="true" /> {c.propose}
             </Link>
         </>
     )

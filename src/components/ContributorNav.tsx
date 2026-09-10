@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { LayoutDashboard, PenLine, User, LogOut, BookOpen, ShieldCheck, GraduationCap, Languages, History, Menu, X, Feather, ChevronDown, Shuffle, Landmark } from 'lucide-react'
+import { LayoutDashboard, PenLine, User, LogOut, BookOpen, ShieldCheck, GraduationCap, Languages, History, Menu, X, Feather, ChevronDown, Shuffle, Landmark, ScrollText } from 'lucide-react'
 import { useLanguage } from '@/lib/language-context'
 import { useState } from 'react'
 import {
@@ -47,13 +47,15 @@ export function ContributorNav({ email, isAdmin, isFullWidth = false }: { email:
             <Link href="/research" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
                 <Landmark className="w-4 h-4" /> {t('nav.research')}
             </Link>
+            <Link href="/propose" onClick={onItemClick} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap">
+                <ScrollText className="w-4 h-4 text-amber-600" /> {t('nav.propose')}
+            </Link>
             
             <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground whitespace-nowrap outline-none">
                     <User className="w-4 h-4" /> <ChevronDown className="w-3 h-3 opacity-50" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-
                     <DropdownMenuItem asChild>
                         <Link href="/profile" onClick={onItemClick} className="flex w-full items-center gap-2 cursor-pointer">
                             <User className="w-4 h-4" /> {t('nav.profile')}

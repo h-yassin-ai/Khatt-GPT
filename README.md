@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Khatt-GPT Platform
 
-## Getting Started
+A collaborative web application designed for crowdsourcing, annotating, curating, and validating historical Arabic manuscript transcriptions. 
 
-First, run the development server:
+The platform features an automated quality-control pipeline (consensus engine), user roles, gamification hooks, and real-time database notifications to streamline dataset creation for HTR/OCR research.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 🚀 Key Features
+
+* **Data Quality & Consensus Engine:**
+  * Implemented an algorithmic consensus verifier ([consensus.ts](file:///J:/UnivHm_NextJS/site-collaboratif-dataset/src/lib/consensus.ts)) to enforce transcription quality.
+  * Cleans and normalizes Arabic orthography (standardizing spaces, letter forms of Alef, and stripping decorative tatweel).
+  * Computes pairwise text similarity using **Levenshtein Distance**.
+  * Automatically validates transcriptions that cross a similarity threshold (>85%) and flags disagreements as "conflicts" for expert/admin resolution.
+* **Relational Database Design:**
+  * Powered by `PostgreSQL` and `Supabase` backend.
+  * Structured schema to track users, badges, document segments, transcription submissions, consensus scores, and notifications.
+  * Enforced Row-Level Security (RLS) policies to isolate admin actions from contributor actions.
+* **Gamification & Curation UI:**
+  * Interactive dashboards for annotators to transcribe manuscript line segments.
+  * Real-time user stats, XP, achievement badges, and reward triggers to incentivize crowdsourced participation.
+
+---
+
+## 🛠️ Data Quality Workflow (Consensus Engine)
+
+```mermaid
+graph TD
+    A[New Transcription Submitted] --> B[Retrieve all Segment Transcriptions]
+    B -->|Check Threshold| C{Count >= Min Transcriptions?}
+    C -->|No| D[Status: Pending]
+    C -->|Yes| E[Normalize Arabic Text]
+    E --> F[Calculate Pairwise Levenshtein Distance]
+    F --> G{Consensus Ratio >= 66%?}
+    G -->|Yes| H[Select Central Best Candidate]
+    H --> I[Update Status: Validated]
+    I --> J[Award XP & Trigger Notification]
+    G -->|No| K[Update Status: Conflict]
+    K --> L[Flag for Admin Review]
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 💻 Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+* **Frontend:** Next.js (App Router), TypeScript, Tailwind CSS, Shadcn UI, Lucide React.
+* **Backend & Database:** Supabase (PostgreSQL), Next.js API Routes, Database RLS policies.
+* **Development Tools:** ESLint, Turborepo, npm workspaces.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## ⚙️ Setup & Installation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/h-yassin-ai/Khatt-GPT.git
+   cd Khatt-GPT
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-## Deploy on Vercel
+3. **Configure Environment Variables:**
+   Create a `.env.local` file at the root:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. **Start local development server:**
+   ```bash
+   npm run dev
+   ```

@@ -11,6 +11,7 @@ import {
     Layers3,
     Library,
     PenLine,
+    ScrollText,
     Search,
 } from 'lucide-react'
 import { useLanguage, type Language } from '@/lib/language-context'
@@ -192,6 +193,29 @@ export function ManuscriptCatalog({
                     <SummaryItem icon={Layers3} label={c.lines} value={available ? summary.segments : null} />
                     <SummaryItem icon={CheckCircle2} label={c.validated} value={available ? summary.validated : null} />
                 </div>
+
+                <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border border-primary/20 bg-primary/5">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+                            <ScrollText className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-foreground">
+                                {lang === 'ar' ? 'هل تُجري بحثاً على مخطوط أو تمتلك وثيقة تاريخية؟' : lang === 'fr' ? 'Vous travaillez sur un manuscrit ou disposez d’un fonds ?' : 'Working on a manuscript or holding a historical witness?'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {lang === 'ar' ? 'اقترح شواهد جديدة لإدراجها في مسار النسخ التعاوني المفتوح وتدريب نماذج التعرف الآلي.' : lang === 'fr' ? 'Proposez un témoin pour enrichir le corpus scientifique et l’entraînement des modèles HTR maghrébins.' : 'Suggest a witness to enrich our open scholarly HTR dataset and critical corpus.'}
+                            </p>
+                        </div>
+                    </div>
+                    <Link
+                        href="/propose"
+                        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all shrink-0"
+                    >
+                        <span>{lang === 'ar' ? 'اقتراح مخطوط' : lang === 'fr' ? 'Proposer un manuscrit' : 'Suggest Manuscript'}</span>
+                        <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
+                    </Link>
+                </div>
             </header>
 
             {available && manuscripts.length > 0 ? (
@@ -221,11 +245,38 @@ export function ManuscriptCatalog({
                                         <span>{manuscript.pageCount} {c.pages.toLowerCase()}</span>
                                         <span aria-hidden="true">·</span>
                                         <span>{manuscript.totalSegments} {c.lines.toLowerCase()}</span>
+                                        {manuscript.shelfmark && (
+                                            <>
+                                                <span aria-hidden="true">·</span>
+                                                <span className="font-mono text-primary">{manuscript.shelfmark}</span>
+                                            </>
+                                        )}
                                     </div>
                                     <h2 className="mt-2 line-clamp-2 font-heading text-xl font-semibold leading-tight text-foreground sm:text-2xl">
                                         {manuscript.title}
                                     </h2>
                                     <p className="mt-1 truncate text-sm text-muted-foreground">{manuscript.source || c.sourceUnknown}</p>
+                                    
+                                    {(manuscript.scriptType || manuscript.century || manuscript.author) && (
+                                        <div className="mt-2.5 flex flex-wrap gap-1.5 text-xs">
+                                            {manuscript.author && (
+                                                <span className="rounded bg-muted/70 px-2 py-0.5 text-[11px] font-medium text-foreground">
+                                                    {manuscript.author}
+                                                </span>
+                                            )}
+                                            {manuscript.scriptType && (
+                                                <span className="rounded border border-border bg-card px-2 py-0.5 text-[11px] text-muted-foreground font-mono">
+                                                    {manuscript.scriptType}
+                                                </span>
+                                            )}
+                                            {manuscript.century && (
+                                                <span className="rounded border border-border bg-card px-2 py-0.5 text-[11px] text-muted-foreground">
+                                                    {manuscript.century}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
                                     {manuscript.description ? (
                                         <p className="mt-3 line-clamp-2 text-sm leading-5 text-muted-foreground">{manuscript.description}</p>
                                     ) : null}

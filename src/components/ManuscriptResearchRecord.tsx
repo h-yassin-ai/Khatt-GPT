@@ -210,6 +210,73 @@ export function ManuscriptResearchRecord({
         URL.revokeObjectURL(url)
     }
 
+    const downloadTeiXml = () => {
+        const teiXml = `<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>${record.title}</title>
+        <author>${record.author || 'Anonyme'}</author>
+        <respStmt>
+          <resp>HTR Transcription & Collaborative Consensus</resp>
+          <name>Khatt-GPT</name>
+        </respStmt>
+      </titleStmt>
+      <publicationStmt>
+        <distributor>Khatt-GPT Open Research Corpus</distributor>
+        <idno type="KHATT">${identifier}</idno>
+        <availability>
+          <licence target="https://creativecommons.org/licenses/by/4.0/">${record.license || 'CC-BY 4.0 / Open Access'}</licence>
+        </availability>
+        <date when="${publishedYear}">${publishedYear}</date>
+      </publicationStmt>
+      <sourceDesc>
+        <msDesc>
+          <msIdentifier>
+            <institution>${record.source || 'Non renseignée'}</institution>
+            <idno>${record.shelfmark || identifier}</idno>
+          </msIdentifier>
+          <msContents>
+            <summary>${(record.description || '').replace(/[<>&]/g, '')}</summary>
+          </msContents>
+          <physDesc>
+            <objectDesc form="codex">
+              <supportDesc>
+                <extent>
+                  <measure unit="page" quantity="${record.pageCount}">${record.pageCount} pages numérisées</measure>
+                  <measure unit="line" quantity="${record.totalSegments}">${record.totalSegments} lignes segmentées</measure>
+                </extent>
+              </supportDesc>
+            </objectDesc>
+            <scriptDesc>
+              <scriptNote script="${record.scriptType || 'Maghrebi'}">${record.scriptType || 'Maghrébin'}</scriptNote>
+            </scriptDesc>
+          </physDesc>
+          <history>
+            <origin>
+              <origDate>${record.century || 'Non daté'}</origDate>
+            </origin>
+          </history>
+        </msDesc>
+      </sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <p><!-- Khatt-GPT Corpus: ${record.validatedSegments} / ${record.totalSegments} validated segments --></p>
+    </body>
+  </text>
+</TEI>`
+        const blob = new Blob([teiXml], { type: 'application/xml' })
+        const url = URL.createObjectURL(blob)
+        const anchor = document.createElement('a')
+        anchor.href = url
+        anchor.download = `${identifier.toLowerCase()}-tei.xml`
+        anchor.click()
+        URL.revokeObjectURL(url)
+    }
+
     return (
         <article className="w-full pb-14" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             <header className="border-b border-border pb-8">
@@ -235,10 +302,15 @@ export function ManuscriptResearchRecord({
                         <h1 className="mt-4 max-w-4xl font-heading text-3xl font-semibold leading-tight text-foreground sm:text-4xl">{record.title}</h1>
                         <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">{record.description || c.incomplete}</p>
 
-                        <dl className="mt-7 grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2 xl:grid-cols-3">
+                        <dl className="mt-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
                             <div><dt className="font-semibold text-muted-foreground">{c.source}</dt><dd className="mt-1 text-foreground">{source}</dd></div>
                             <div><dt className="font-semibold text-muted-foreground">{c.identifier}</dt><dd className="mt-1 font-mono text-foreground">{identifier}</dd></div>
                             <div><dt className="font-semibold text-muted-foreground">{c.added}</dt><dd className="mt-1 text-foreground">{formatDate(record.createdAt, lang)}</dd></div>
+                            {record.shelfmark && <div><dt className="font-semibold text-muted-foreground">{lang === 'ar' ? 'رقم الحفظ (Cote)' : lang === 'fr' ? 'Cote d’inventaire' : 'Shelfmark'}</dt><dd className="mt-1 font-mono text-primary font-medium">{record.shelfmark}</dd></div>}
+                            {record.author && <div><dt className="font-semibold text-muted-foreground">{lang === 'ar' ? 'المؤلف / الناسخ' : lang === 'fr' ? 'Auteur / Copiste' : 'Author / Scribe'}</dt><dd className="mt-1 text-foreground">{record.author}</dd></div>}
+                            {record.scriptType && <div><dt className="font-semibold text-muted-foreground">{lang === 'ar' ? 'نوع الخط' : lang === 'fr' ? 'Graphie maghrébine' : 'Script style'}</dt><dd className="mt-1 text-foreground font-mono">{record.scriptType}</dd></div>}
+                            {record.century && <div><dt className="font-semibold text-muted-foreground">{lang === 'ar' ? 'الحقبة / التاريخ' : lang === 'fr' ? 'Datation estimée' : 'Period / Century'}</dt><dd className="mt-1 text-foreground">{record.century}</dd></div>}
+                            <div><dt className="font-semibold text-muted-foreground">{lang === 'ar' ? 'الترخيص الأكاديمي' : lang === 'fr' ? 'Licence de diffusion' : 'Scholarly License'}</dt><dd className="mt-1 text-xs text-muted-foreground">{record.license || 'Open Access / CC-BY 4.0'}</dd></div>
                         </dl>
 
                         <div className="mt-7 flex flex-wrap gap-2">
@@ -373,9 +445,14 @@ export function ManuscriptResearchRecord({
                         </div>
                         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
                             <p className="max-w-xl text-xs leading-5 text-muted-foreground">{c.dataNotice}</p>
-                            <button type="button" onClick={downloadMetadata} className="inline-flex h-9 items-center gap-2 rounded-md bg-secondary px-3 text-sm font-semibold text-secondary-foreground hover:bg-secondary/90">
-                                <Download className="h-4 w-4" aria-hidden="true" /> {c.downloadMetadata}
-                            </button>
+                            <div className="flex flex-wrap gap-2">
+                                <button type="button" onClick={downloadTeiXml} className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-background px-3 text-sm font-semibold hover:bg-muted transition-colors">
+                                    <Download className="h-4 w-4 text-primary" aria-hidden="true" /> {lang === 'ar' ? 'تصدير TEI-XML' : lang === 'fr' ? 'Exporter TEI-XML' : 'Export TEI-XML'}
+                                </button>
+                                <button type="button" onClick={downloadMetadata} className="inline-flex h-9 items-center gap-2 rounded-md bg-secondary px-3 text-sm font-semibold text-secondary-foreground hover:bg-secondary/90">
+                                    <Download className="h-4 w-4" aria-hidden="true" /> {c.downloadMetadata}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -1,0 +1,170 @@
+version: '3.8'
+
+# ==============================================================================
+# Khatt-GPT & Local Supabase Stack for Coolify on VPS (2TB Hard Drive Storage)
+# ==============================================================================
+# Variables à renseigner dans Coolify Environment Variables:
+# - DATA_PATH : Chemin vers votre disque dur de 2 To (ex: /mnt/data2tb/khatt-gpt)
+# - POSTGRES_PASSWORD : Mot de passe fort pour PostgreSQL
+# - JWT_SECRET : Secret JWT (au moins 32 caractères aléatoires)
+# - ANON_KEY : Clé Supabase Anon générée avec le JWT_SECRET
+# - SERVICE_ROLE_KEY : Clé Supabase Service Role générée avec le JWT_SECRET
+# - SITE_URL : Domaine public de votre site (ex: https://khatt-gpt.mondomaine.com)
+# - ADMIN_EMAILS : Emails autorisés en tant qu'administrateurs
+# ==============================================================================
+
+networks:
+  khatt_network:
+    driver: bridge
+
+services:
+
+  # ----------------------------------------------------------------------------
+  # 1. Khatt-GPT - Application Next.js
+  # ----------------------------------------------------------------------------
+  khatt-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_SUPABASE_URL=${PUBLIC_SUPABASE_URL:-${SITE_URL}/supabase}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
+      - ADMIN_EMAILS=${ADMIN_EMAILS}
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      supabase-kong:
+        condition: service_started
+    networks:
+      - khatt_network
+
+  # ----------------------------------------------------------------------------
+  # 2. Supabase Database - PostgreSQL 15 + pgvector (Stockage sur Disque 2 To)
+  # ----------------------------------------------------------------------------
+  supabase-db:
+    image: supabase/postgres:15.8.1.085
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SuperSecretPostgresPassword123}
+      POSTGRES_DB: postgres
+    volumes:
+      # Stockage massif sur votre disque 2 To
+      - ${DATA_PATH:-/mnt/data2tb/khatt-gpt}/postgres:/var/lib/postgresql/data
+    networks:
+      - khatt_network
+
+  # ----------------------------------------------------------------------------
+  # 3. Supabase Auth - GoTrue
+  # ----------------------------------------------------------------------------
+  supabase-auth:
+    image: supabase/gotrue:v2.164.0
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${SITE_URL}/supabase/auth/v1
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-SuperSecretPostgresPassword123}@supabase-db:5432/postgres?sslmode=disable
+      GOTRUE_SITE_URL: ${SITE_URL}
+      GOTRUE_URI_ALLOW_LIST: "${SITE_URL}/*"
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-at-least-32-chars-long}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+    networks:
+      - khatt_network
+
+  # ----------------------------------------------------------------------------
+  # 4. Supabase PostgREST - API REST instantanée
+  # ----------------------------------------------------------------------------
+  supabase-rest:
+    image: postgrest/postgrest:v12.2.0
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD:-SuperSecretPostgresPassword123}@supabase-db:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-at-least-32-chars-long}
+    networks:
+      - khatt_network
+
+  # ----------------------------------------------------------------------------
+  # 5. Supabase Storage - Scans & Médias Haute Résolution (Disque 2 To)
+  # ----------------------------------------------------------------------------
+  supabase-storage:
+    image: supabase/storage-api:v1.11.13
+    restart: unless-stopped
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      POSTGREST_URL: http://supabase-rest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-at-least-32-chars-long}
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-SuperSecretPostgresPassword123}@supabase-db:5432/postgres
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: default
+      REGION: local
+      GLOBAL_S3_BUCKET: manuscripts
+      ENABLE_IMAGE_TRANSFORMATION: "true"
+    volumes:
+      # Stockage de tous les fichiers images / PDF sur le disque 2 To
+      - ${DATA_PATH:-/mnt/data2tb/khatt-gpt}/storage:/var/lib/storage
+    networks:
+      - khatt_network
+
+  # ----------------------------------------------------------------------------
+  # 6. Supabase Kong - API Gateway Unifiée (Route Auth, Rest, Storage)
+  # ----------------------------------------------------------------------------
+  supabase-kong:
+    image: kong:2.8.1
+    restart: unless-stopped
+    ports:
+      - "${KONG_PORT:-8000}:8000"
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl
+    volumes:
+      - ./supabase/kong.yml:/var/lib/kong/kong.yml:ro
+    networks:
+      - khatt_network
+
+  # ----------------------------------------------------------------------------
+  # 7. Supabase Studio (Optionnel) - Dashboard d'Administration
+  # ----------------------------------------------------------------------------
+  supabase-studio:
+    image: supabase/studio:20241028-1f1f786
+    restart: unless-stopped
+    ports:
+      - "${STUDIO_PORT:-3001}:3000"
+    environment:
+      STUDIO_PG_META_URL: http://supabase-rest:3000
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SuperSecretPostgresPassword123}
+      DEFAULT_ORGANIZATION_NAME: Khatt-GPT
+      DEFAULT_PROJECT_NAME: Khatt-GPT Corpus
+      SUPABASE_URL: http://supabase-kong:8000
+      SUPABASE_PUBLIC_URL: ${SITE_URL}/supabase
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+    networks:
+      - khatt_network

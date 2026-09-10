@@ -3,13 +3,9 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-// Note: Direct file upload via Server Action is subject to body size limits (default ~1MB/4MB often in Vercel)
-// For a batch uploader of 50 images, the standard practice is to use pre-signed URLs or direct Supabase Storage JS Client from the browser.
-// So this Server Action only handles DB metadata creation.
-
 function isAdminEmail(email?: string | null) {
     const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()).filter(Boolean) || []
-    return !!email && adminEmails.includes(email)
+    return !email && adminEmails.includes(email)
 }
 
 async function requireAdmin() {
@@ -70,9 +66,22 @@ async function syncManuscriptSegmentCount(supabase: any, manuscriptId: string) {
 }
 
 export async function createManuscriptRecord({
-    title, description, source, segmentsCount, coverUrl, pdfUrl
-}: { title: string, description: string, source: string, segmentsCount: number, coverUrl: string, pdfUrl?: string }) {
-
+    title, description, source, segmentsCount, coverUrl, pdfUrl,
+    author, shelfmark, scriptType, century, license, iiifManifestUrl
+}: { 
+    title: string
+    description: string
+    source: string
+    segmentsCount: number
+    coverUrl: string
+    pdfUrl?: string
+    author?: string
+    shelfmark?: string
+    scriptType?: string
+    century?: string
+    license?: string
+    iiifManifestUrl?: string
+}) {
     const admin = await requireAdmin()
     if ('error' in admin) return { error: admin.error }
 
@@ -91,8 +100,30 @@ export async function createManuscriptRecord({
         cover_image_url: coverUrl.trim(),
     }
     if (safePdfUrl) insertPayload.pdf_url = safePdfUrl
+    if (author?.trim()) insertPayload.author = author.trim()
+    if (shelfmark?.trim()) insertPayload.shelfmark = shelfmark.trim()
+    if (scriptType?.trim()) insertPayload.script_type = scriptType.trim()
+    if (century?.trim()) insertPayload.century = century.trim()
+    if (license?.trim()) insertPayload.license = license.trim()
+    if (iiifManifestUrl?.trim()) insertPayload.iiif_manifest_url = iiifManifestUrl.trim()
 
-    const { data, error } = await admin.supabase.from('manuscripts').insert(insertPayload).select('id').single()
+    let { data, error } = await admin.supabase.from('manuscripts').insert(insertPayload).select('id').single()
+
+    // Fallback if optional columns don't exist yet
+    if (error && (error.message.includes('column') || error.code === '42703')) {
+        const basePayload = {
+            title: safeTitle,
+            description: description.trim(),
+            source: source.trim(),
+            uploaded_by: admin.user.id,
+            total_segments: Math.max(0, segmentsCount || 0),
+            cover_image_url: coverUrl.trim(),
+        }
+        if (safePdfUrl) Object.assign(basePayload, { pdf_url: safePdfUrl })
+        const fallback = await admin.supabase.from('manuscripts').insert(basePayload).select('id').single()
+        data = fallback.data
+        error = fallback.error
+    }
 
     if (error) return { error: error.message }
     return { id: data.id }
@@ -102,7 +133,6 @@ export async function bulkInsertSegments(manuscriptId: string, segmentDetails: {
     const admin = await requireAdmin()
     if ('error' in admin) return { error: admin.error }
 
-    // Add the manuscript_id to each
     const toInsert = segmentDetails.map(s => ({
         ...s,
         manuscript_id: manuscriptId,

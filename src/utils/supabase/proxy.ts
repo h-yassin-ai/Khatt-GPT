@@ -6,6 +6,7 @@ const publicRoutes = (pathname: string) =>
     pathname === '/corpus' ||
     pathname.startsWith('/corpus/') ||
     pathname === '/research' ||
+    pathname === '/propose' ||
     pathname.startsWith('/auth') ||
     pathname === '/manifest.webmanifest' ||
     pathname === '/favicon.ico' ||
@@ -16,6 +17,7 @@ const publicRoutesWithoutSession = (pathname: string) =>
     pathname === '/corpus' ||
     pathname.startsWith('/corpus/') ||
     pathname === '/research' ||
+    pathname === '/propose' ||
     pathname.startsWith('/auth') ||
     pathname === '/manifest.webmanifest' ||
     pathname === '/favicon.ico' ||

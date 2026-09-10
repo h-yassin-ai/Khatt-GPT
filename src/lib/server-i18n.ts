@@ -23,6 +23,7 @@ const translations: Record<string, Record<ServerLanguage, string>> = {
     'auth.error_database': { en: 'The platform is not fully configured yet. Please contact the administrator.', fr: 'La plateforme n’est pas encore totalement configurée. Contactez l’administrateur.', ar: 'لم تكتمل تهيئة المنصة بعد. يرجى التواصل مع المشرف.' },
     'admin.overview': { en: 'Overview', fr: 'Vue d’ensemble', ar: 'نظرة عامة' },
     'admin.manuscripts': { en: 'Manuscripts', fr: 'Manuscrits', ar: 'المخطوطات' },
+    'admin.proposals': { en: 'Proposals', fr: 'Propositions', ar: 'المقترحات' },
     'admin.verification': { en: 'Verification', fr: 'Vérification', ar: 'المراجعة' },
     'admin.search': { en: 'Search', fr: 'Recherche', ar: 'البحث' },
     'admin.analytics': { en: 'Analytics', fr: 'Analytique', ar: 'التحليلات' },

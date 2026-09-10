@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { LayoutDashboard, Library, Download, LogOut, PieChart, Search, Settings, CheckCircle } from 'lucide-react'
+import { LayoutDashboard, Library, Download, LogOut, PieChart, Search, Settings, CheckCircle, ScrollText } from 'lucide-react'
 import { AdminRealtimeAlerts } from './AdminRealtimeAlerts'
 import { getServerLanguage, translateServer } from '@/lib/server-i18n'
 
@@ -31,6 +31,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                     </Link>
                     <Link href="/admin/manuscripts" className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
                         <Library className="w-4 h-4" /> {t('admin.manuscripts')}
+                    </Link>
+                    <Link href="/admin/proposals" className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
+                        <ScrollText className="w-4 h-4 text-amber-600" /> {t('admin.proposals')}
                     </Link>
                     <Link href="/admin/verify" className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-muted text-foreground/80 hover:text-foreground">
                         <CheckCircle className="w-4 h-4" /> {t('admin.verification')}

@@ -29,6 +29,12 @@ type RawManuscript = {
     created_at: string
     pdf_url?: string | null
     reference_text_url?: string | null
+    author?: string | null
+    shelfmark?: string | null
+    script_type?: string | null
+    century?: string | null
+    license?: string | null
+    iiif_manifest_url?: string | null
     pages?: RawPage[] | null
     segments?: RawSegment[] | null
 }
@@ -48,6 +54,12 @@ export type ManuscriptCatalogItem = {
     reviewSegments: number
     conflictSegments: number
     progress: number
+    author?: string | null
+    shelfmark?: string | null
+    scriptType?: string | null
+    century?: string | null
+    license?: string | null
+    iiifManifestUrl?: string | null
 }
 
 export type ManuscriptCatalogSummary = {
@@ -154,6 +166,12 @@ function toCatalogItem(manuscript: RawManuscript): ManuscriptCatalogItem {
         reviewSegments,
         conflictSegments,
         progress,
+        author: manuscript.author || null,
+        shelfmark: manuscript.shelfmark || null,
+        scriptType: manuscript.script_type || null,
+        century: manuscript.century || null,
+        license: manuscript.license || null,
+        iiifManifestUrl: manuscript.iiif_manifest_url || null,
     }
 }
 
@@ -281,6 +299,17 @@ export const getManuscriptRecord = cache(async (id: string): Promise<ManuscriptR
         .eq('id', id)
         .maybeSingle()
     if (resources) Object.assign(data, resources)
+
+    try {
+        const { data: scholarlyData } = await supabase
+            .from('manuscripts')
+            .select('author, shelfmark, script_type, century, license, iiif_manifest_url')
+            .eq('id', id)
+            .maybeSingle()
+        if (scholarlyData) Object.assign(data, scholarlyData)
+    } catch {
+        // Optional scholarly columns if migration pending
+    }
 
     const manuscript = data as unknown as RawManuscript
     const pages = orderedPages(manuscript.pages)
