@@ -6,7 +6,7 @@ import { createManuscriptRecord } from '../manuscripts/actions'
 
 function isAdminEmail(email?: string | null) {
     const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()).filter(Boolean) || []
-    return !email && adminEmails.includes(email)
+    return Boolean(email && adminEmails.includes(email))
 }
 
 async function requireAdmin() {

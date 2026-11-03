@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 
 function isAdminEmail(email?: string | null) {
     const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()).filter(Boolean) || []
-    return !email && adminEmails.includes(email)
+    return Boolean(email && adminEmails.includes(email))
 }
 
 async function requireAdmin() {
@@ -125,7 +125,7 @@ export async function createManuscriptRecord({
         error = fallback.error
     }
 
-    if (error) return { error: error.message }
+    if (error || !data) return { error: error?.message || 'Erreur lors de la création du manuscrit' }
     return { id: data.id }
 }
 
