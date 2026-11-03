@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(find /j/UnivHm_NextJS/site-collaboratif-dataset -path */api/* -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
-      "Bash(find /j/UnivHm_NextJS/site-collaboratif-dataset/src -type f \\\\\\(-name *schema* -o -name *db* -o -name *database* -o -name *supabase* \\\\\\))",
-      "Bash(find /j/UnivHm_NextJS/site-collaboratif-dataset -path */pages/* -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))"
-    ]
-  }
-}
